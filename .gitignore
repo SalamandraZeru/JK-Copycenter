@@ -18,4 +18,4 @@ dist/
 # Mantido somente no ambiente local e fora da publicação no Git.
 PROCESSO/
 tests/
-.github/workflows
+.github/
