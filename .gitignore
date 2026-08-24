@@ -1,0 +1,19 @@
+node_modules
+.env
+.env.*
+.next
+artifacts/
+supabase/.temp/
+supabase/.branches/
+*.tsbuildinfo
+.vercel/
+.wrangler/
+.open-next/
+tmp/
+coverage/
+dist/
+*.log
+
+# Histórico de execução, materiais de IA, evidências e documentação interna.
+# Mantido somente no ambiente local e fora da publicação no Git.
+PROCESSO/

@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --jk-navy: #0d2b5c;
+  --jk-navy-deep: #081d40;
+  --jk-blue: #1769aa;
+  --jk-blue-soft: #e8f1fa;
+  --jk-red: #b4232d;
+  --jk-red-hover: #951c25;
+  --jk-paper: #f8fafc;
+  --jk-ink: #13233b;
+  --jk-muted: #526276;
+  --jk-line: #d9e2ec;
+  --background: var(--jk-paper);
+  --foreground: var(--jk-ink);
+  color-scheme: light;
+}
+
+html {
+  background: var(--jk-paper);
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+  min-width: 320px;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 3px solid #1769aa;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    width: auto;
+    min-width: 0;
+    background: #fff !important;
+  }
+
+  .admin-shell {
+    display: block !important;
+    min-height: 0 !important;
+    background: #fff !important;
+  }
+
+  .admin-sidebar,
+  .admin-header {
+    display: none !important;
+  }
+
+  .admin-main {
+    display: block !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .os-document {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
