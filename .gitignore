@@ -17,3 +17,5 @@ dist/
 # Histórico de execução, materiais de IA, evidências e documentação interna.
 # Mantido somente no ambiente local e fora da publicação no Git.
 PROCESSO/
+tests/
+.github/workflows
