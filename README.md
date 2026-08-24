@@ -1,149 +1,108 @@
+
+
 # JK Copycenter
 
-Aplicação web para a operação de gráfica rápida e papelaria da JK Copycenter. Ela reúne catálogo público, configurador de serviços, orçamento calculado no servidor, upload de arquivos, checkout com encaminhamento ao WhatsApp, portal do cliente e administração de produção.
+A full-stack web application built to manage the daily operations of the JK Copycenter print shop and stationery store. It handles everything from a public catalog and a dynamic service configurator to server-side pricing, file processing, WhatsApp-integrated checkout, and a dedicated admin panel for production management.
 
-## Funcionalidades
+## Features
 
-- Catálogo de produtos e serviços gráficos, com categorias administráveis.
-- Campos de serviço dinâmicos: o administrador define opções, obrigatoriedade e combinações por serviço.
-- Precificação por regras vinculadas ao serviço e aos seus campos reais; o valor final é recalculado no servidor.
-- Upload de PDF, DOCX, imagens, ZIP e RAR, com validação estrutural, isolamento de processamento e aviso quando a contagem de páginas for estimada.
-- Carrinho e checkout idempotente, com criação do pedido antes do redirecionamento para o WhatsApp e mensagem pré-formatada.
-- Área do cliente para pedidos, arquivos, endereços, favoritos e perfil; inclui navegação móvel inferior.
-- Área administrativa com RBAC (`super_admin`, `admin`, `producao` e `catalogo`), catálogo, regras de preço, pedidos, produção, usuários e auditoria.
-- Dois PWAs independentes: a loja pública e a área administrativa, esta com escopo restrito a `/admin/`.
+* **Service Configurator:** Admins can define custom print options, required fields, and rules for each service.
+* **Server-Side Pricing:** The final price is calculated in the backend based on active rules, preventing any client-side tampering.
+* **File Processing:** Upload support for PDF, DOCX, images, ZIP, and RAR. Includes file signature validation, isolated processing, and smart page-count estimation.
+* **WhatsApp Checkout:** Idempotent checkout flow that registers the order in the database before redirecting the user to WhatsApp with a pre-formatted message.
+* **Client Portal:** A PWA for customers to track orders, manage uploaded files, and update their profile.
+* **Admin Dashboard:** Role-based access control (`super_admin`, `admin`, `producao`, `catalogo`) to manage the catalog, pricing, production queues, and audit logs.
+* **Dual PWAs:** The public storefront and the `/admin/` area operate as two independent Progressive Web Apps.
 
-## Arquitetura e tecnologias
+## Tech Stack
 
-| Camada | Tecnologia |
-| --- | --- |
-| Aplicação | Next.js 16, React 19 e TypeScript |
-| Interface | Tailwind CSS, Lucide, React Hook Form, SWR e Recharts |
-| Dados e identidade | Supabase: PostgreSQL, Auth, Storage e RLS |
-| Validação | Zod |
-| Arquivos | `pdf-lib`, `sharp`, `yauzl` e `node-unrar-js` |
-| Hospedagem | Cloudflare Workers via OpenNext |
-| Qualidade | Vitest, ESLint, TypeScript e Playwright |
+* **Framework:** Next.js 16, React 19, TypeScript
+* **Styling & UI:** Tailwind CSS, Lucide, React Hook Form, SWR, Recharts
+* **Database & Auth:** Supabase (PostgreSQL, Auth, Storage, RLS)
+* **Validation:** Zod
+* **File Handling:** `pdf-lib`, `sharp`, `yauzl`, `node-unrar-js`
+* **Hosting:** Cloudflare Workers (via OpenNext)
+* **Quality & Testing:** Vitest, Playwright, ESLint
 
-Estrutura principal:
+## Security
 
-```text
-src/app/                 rotas públicas, autenticação, cliente, admin e APIs
-src/components/          componentes de interface e navegação
-src/lib/                 domínio: preço, checkout, upload, autenticação e Supabase
-supabase/migrations/     histórico executável do banco e das políticas RLS
-public/                  imagens, ícones, manifests e service workers
-tests/                   testes unitários, integração e segurança
-scripts/                 auxiliares necessários ao processamento seguro de arquivos
+* Prices, discounts, and delivery fees are strictly calculated on the server.
+* Idempotency keys are used to prevent duplicate orders during checkout.
+* File uploads are verified by signature (not just extension), checked for path traversal, and processed in isolation.
+* `SUPABASE_SERVICE_ROLE_KEY` is fully isolated in the backend and never exposed to the client.
+
+## Local Development
+
+You will need Node.js 20+, a Supabase project, and a Cloudflare account with Wrangler authenticated.
+
+1. Install dependencies:
+```bash
+npm ci
+
 ```
 
-## Pré-requisitos
 
-- Node.js 20 ou superior.
-- Projeto Supabase com Auth, Database e Storage configurados.
-- Conta Cloudflare com permissão para publicar o Worker.
-- Supabase CLI e Wrangler autenticados para operar os ambientes remotos.
+2. Setup your environment variables:
+```bash
+cp .env.example .env.local
 
-## Executar localmente
+```
 
-1. Instale as dependências:
 
-   ```bash
-   npm ci
-   ```
+3. Fill in `.env.local` (never commit real credentials to the repo):
+* `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
+* `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Public client key
+* `SUPABASE_SERVICE_ROLE_KEY`: Private server key
+* `NEXT_PUBLIC_SITE_URL`: Canonical store URL
+* `CRON_SECRET`: Token for protected cron jobs
 
-2. Crie o arquivo de ambiente a partir do modelo:
 
-   ```powershell
-   Copy-Item .env.example .env.local
-   ```
+4. Start the development server:
+```bash
+npm run dev
 
-3. Preencha `.env.local` sem publicar valores reais:
+```
 
-   | Variável | Uso |
-   | --- | --- |
-   | `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública usada pelo cliente |
-   | `SUPABASE_SERVICE_ROLE_KEY` | Chave privada, exclusivamente no servidor |
-   | `NEXT_PUBLIC_SITE_URL` | URL canônica da loja |
-   | `CRON_SECRET` | Autorização de rotinas protegidas, quando aplicável |
 
-4. Inicie o ambiente de desenvolvimento:
+The application will be available at `http://localhost:3000`.
 
-   ```bash
-   npm run dev
-   ```
+## Database & Migrations
 
-   A loja ficará disponível em `http://localhost:3000`.
-
-## Banco de dados e Supabase
-
-As migrations em `supabase/migrations/` são parte do produto e devem permanecer versionadas. Para aplicar em um projeto Supabase já revisado:
+Migrations are kept in `supabase/migrations/` and must be versioned. To push them to your linked Supabase project:
 
 ```bash
 npx supabase login
 npx supabase link --project-ref <PROJECT_REF>
 npx supabase db push
+
 ```
 
-Antes de executar migrations em ambiente remoto, confirme o projeto de destino e mantenha um backup apropriado. Buckets, políticas, dados de configuração e URLs permitidas no Auth devem corresponder ao ambiente publicado.
+*Note: For Google OAuth, ensure your callback URLs are properly configured in Supabase. Admin login is restricted to email and password only.*
 
-Para Google OAuth, habilite o provedor no Supabase e cadastre a URL de callback exata da aplicação em **Authentication → URL Configuration**. O login administrativo permanece restrito a e-mail e senha.
+## Cloudflare Workers Deployment
 
-## Segurança
-
-- Preços, descontos e taxa de entrega não são confiados ao navegador: o checkout recalcula os valores a partir das regras persistidas.
-- O pedido é persistido antes de abrir o WhatsApp; abrir a conversa não confirma pagamento.
-- Operações repetidas de checkout usam chave de idempotência para impedir pedidos duplicados.
-- As APIs validam entrada e as áreas administrativas verificam papel e conta ativa.
-- Uploads passam por validação de assinatura, limites estruturais, proteção contra path traversal e isolamento do processamento.
-- A `SUPABASE_SERVICE_ROLE_KEY` nunca deve receber prefixo `NEXT_PUBLIC_`, entrar em código, README, issues ou commits.
-- Arquivos `.env` são ignorados pelo Git.
-
-## Qualidade
-
-Execute estes comandos antes de publicar uma alteração:
+Before deploying, make sure your code passes all quality checks:
 
 ```bash
 npm run check
 npm test
 npm run build
+
 ```
 
-Para validar o pacote de Cloudflare sem publicar:
+To deploy to Cloudflare:
 
+1. Apply migrations to your production database.
+2. Add your environment variables to the Worker. **Important:** Set `SUPABASE_SERVICE_ROLE_KEY` as a secret.
+3. Update `NEXT_PUBLIC_SITE_URL` and Supabase Auth redirect URLs to match your production domain.
+4. Run the deploy command:
 ```bash
-npm run preview
+npm run deploy
+
 ```
 
-## Deploy no Cloudflare Workers
 
-1. Aplique e valide as migrations no projeto Supabase correto.
-2. Cadastre as variáveis de ambiente no Worker. A chave `SUPABASE_SERVICE_ROLE_KEY` deve ser cadastrada como secret; não a coloque no repositório.
-3. Atualize `NEXT_PUBLIC_SITE_URL` e as URLs de redirecionamento permitidas no Supabase Auth para o domínio final do Worker.
-4. Rode a validação local descrita acima.
-5. Publique:
 
-   ```bash
-   npm run deploy
-   ```
+## License
 
-6. Em produção, teste cadastro/login, OAuth de cliente, configurador, upload, checkout/WhatsApp, painel do cliente, permissões administrativas e instalação dos dois PWAs.
-
-O arquivo `wrangler.jsonc` é a configuração de publicação do Worker.
-
-## Publicação no GitHub
-
-Antes do primeiro push, revise o que será enviado:
-
-```bash
-git status
-git diff --check
-git check-ignore -v .env.local
-```
-
-Versione código, migrations, testes, arquivos de configuração, assets usados e este README. Não versione `.env.local`, chaves, dumps de banco, relatórios internos, materiais de IA ou evidências de execução.
-
-## Licença
-
-Código proprietário da JK Copycenter. Todos os direitos reservados.
+Proprietary code of JK Copycenter. All rights reserved.
