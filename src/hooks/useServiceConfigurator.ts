@@ -213,6 +213,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     isValid,
     validationErrors,
     fieldOptionAvailability,
-    error
+    error,
+    pricingResult: result,
   };
 }

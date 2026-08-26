@@ -11,7 +11,7 @@ import { TextField } from './fields/TextField';
 import { TextareaField } from './fields/TextareaField';
 import { CheckboxField } from './fields/CheckboxField';
 import { FileUploadDropzone, type UploadedFileItem } from './FileUploadDropzone';
-import { useCartStore } from '@/lib/cart/store';
+import { createCartDisplaySnapshot, useCartStore } from '@/lib/cart/store';
 import { ShoppingCart } from 'lucide-react';
 
 interface ServiceConfiguratorProps {
@@ -33,7 +33,8 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
     isValid,
     validationErrors,
     fieldOptionAvailability,
-    error: apiError
+    error: apiError,
+    pricingResult,
   } = useServiceConfigurator(service);
 
   const hasRequiredSelections = service.fields
@@ -43,7 +44,7 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
     )));
 
   const handleAddToCart = () => {
-    if (validate()) {
+    if (validate() && pricingResult) {
       addItem({
         serviceId: service.id,
         type: 'service',
@@ -58,6 +59,33 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
         quantity: config.quantity,
         fileIds: uploadedFiles.map(f => f.fileId),
         bindingFileIds: config.bindingFileIds,
+        displaySnapshot: createCartDisplaySnapshot({
+          serviceId: service.id,
+          attributeIds: [],
+          fieldValues: config.fieldValues,
+          pageCount: config.pageCount,
+          isFrontAndBack: false,
+          quantity: config.quantity,
+          bindingFileIds: config.bindingFileIds,
+          name: pricingResult.serviceSnapshot.name,
+          imageUrl: service.imageUrl,
+          estimatedTotal: pricingResult.totalCents / 100,
+        }, {
+          title: pricingResult.serviceSnapshot.name,
+          imageUrl: service.imageUrl,
+          summary: [
+            ...pricingResult.fieldsSnapshot.map((field) => `${field.fieldLabel}: ${field.valueLabel}`),
+            ...(pricingResult.bindingSelections.length > 0
+              ? [`Encadernação: ${pricingResult.bindingSelections.length} arquivo(s) selecionado(s)`]
+              : []),
+          ],
+          fileNames: uploadedFiles.map((file) => file.originalName),
+          estimatedTotalCents: pricingResult.totalCents,
+          estimatedUnitCents: pricingResult.unitPriceCents,
+          calculatedAt: new Date().toISOString(),
+          pricingVersion: pricingResult.serviceSnapshot.pricingVersion,
+          isEstimate: pricingResult.isEstimate,
+        }),
       });
     }
   };
@@ -175,17 +203,21 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
         <PriceDisplay 
           estimatedPrice={config.estimatedPrice} 
           isLoading={config.isLoadingPrice} 
-          hasEstimate={false} 
+          hasEstimate={pricingResult?.isEstimate ?? false}
           error={hasRequiredSelections ? apiError : null}
         />
         
         <button
           onClick={handleAddToCart}
-          disabled={!isValid || config.isLoadingPrice}
+          disabled={!isValid || config.isLoadingPrice || !pricingResult}
           className="w-full bg-blue-600 text-white px-6 py-3.5 rounded-xl font-bold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2"
         >
           <ShoppingCart className="w-5 h-5" />
-          {config.isLoadingPrice ? 'Calculando Preço...' : 'Adicionar ao Carrinho'}
+          {config.isLoadingPrice
+            ? 'Calculando Preço...'
+            : !pricingResult
+              ? 'Aguardando cotação'
+              : 'Adicionar ao Carrinho'}
         </button>
       </div>
     </div>

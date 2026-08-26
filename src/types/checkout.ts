@@ -14,6 +14,14 @@ export interface CheckoutFieldValue {
   fieldKey: string;
   value: string | number | boolean;
   label?: string;
+  /**
+   * Presentation metadata captured with the cart intent. The checkout API
+   * ignores it and resolves the actual option again on the server.
+   */
+  selectedOption?: {
+    value: string;
+    label: string;
+  };
 }
 
 export interface CheckoutItem {
