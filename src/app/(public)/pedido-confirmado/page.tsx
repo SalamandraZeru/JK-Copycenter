@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Copy, Loader2, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import type { CheckoutResult } from '@/types/checkout';
+import { formatCurrency } from '@/lib/utils/format';
 
 type ConfirmationData = CheckoutResult & { isGuest: boolean };
 
@@ -55,6 +56,7 @@ export default function PedidoConfirmadoPage() {
         <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-6 mb-6">
           <p className="text-sm text-slate-500 uppercase font-semibold">Número do Pedido</p>
           <p className="text-3xl font-extrabold text-slate-900">#{order.orderNumber}</p>
+          <p className="mt-3 text-sm text-slate-600">{order.hasEstimates ? 'Total estimado' : 'Total calculado'}: <strong className="text-slate-900">{formatCurrency(order.total)}</strong></p>
         </div>
 
         {order.isGuest && (
@@ -69,7 +71,7 @@ export default function PedidoConfirmadoPage() {
         )}
 
         <div className="w-full space-y-3">
-          <a href={order.whatsappUrl} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center gap-2 bg-green-500 text-white font-bold py-4 rounded-xl"><MessageCircle className="w-5 h-5" />Abrir WhatsApp novamente</a>
+          <a href={order.whatsappUrl} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center gap-2 bg-green-500 text-white font-bold py-4 rounded-xl"><MessageCircle className="w-5 h-5" />Enviar pedido pelo WhatsApp</a>
           <Link href={order.isGuest ? '/pedido' : `/dashboard/pedidos/${order.orderId}`} className="w-full block bg-slate-900 text-white font-bold py-4 rounded-xl">Acompanhar Pedido</Link>
           <Link href="/grafica" className="w-full block bg-white border border-slate-200 text-slate-700 font-bold py-4 rounded-xl">Novo Pedido</Link>
         </div>

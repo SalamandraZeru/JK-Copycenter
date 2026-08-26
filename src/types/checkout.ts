@@ -59,6 +59,26 @@ export interface CheckoutResult {
   whatsappUrl: string;   // deep link wa.me pré-preenchido
 }
 
+/** Server-authoritative quote shown immediately before order creation. */
+export interface CheckoutQuoteItem {
+  name: string;
+  description: string | null;
+  quantity: number;
+  pageCount: number;
+  pageCountMethod: 'exact' | 'estimated' | 'manual';
+  unitPriceCents: number;
+  totalPriceCents: number;
+  discountCents: number;
+}
+
+export interface CheckoutQuote {
+  items: CheckoutQuoteItem[];
+  subtotalCents: number;
+  deliveryFeeCents: number;
+  totalCents: number;
+  hasEstimates: boolean;
+}
+
 export interface CheckoutResponseSuccess {
   success: true;
   data: CheckoutResult;

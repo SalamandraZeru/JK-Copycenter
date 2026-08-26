@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/types/supabase';
 import type {
   CheckoutPayload,
+  CheckoutQuote,
   CheckoutResult,
   OrderItemWithFiles,
   PageCountMethod,
@@ -450,5 +451,161 @@ export async function processCheckout(
     hasEstimates: filesForWhatsApp.some((file) => file.page_count_method !== 'exact'),
     paymentMethod: committed.payment_method as PaymentMethod,
     whatsappUrl,
+  };
+}
+
+/**
+ * Calculates the exact order quote without creating an order. This uses the
+ * same catalog, stock, file-ownership and pricing checks as checkout; client
+ * snapshots and submitted monetary values are never considered.
+ */
+export async function previewCheckout(
+  payload: CheckoutPayload,
+  context: { userId?: string; guestEmail?: string; guestUploadSessionHash?: string },
+  supabase: SupabaseClient<Database>,
+): Promise<CheckoutQuote> {
+  const config = await loadSystemConfig(supabase, [
+    'delivery_fee_cents',
+    'delivery_city',
+    'delivery_state',
+    'delivery_enabled',
+    'pickup_enabled',
+  ]);
+
+  if (payload.deliveryType === 'delivery' && config.delivery_enabled !== 'true') {
+    throw new Error('DELIVERY_UNAVAILABLE');
+  }
+  if (payload.deliveryType === 'pickup' && config.pickup_enabled !== 'true') {
+    throw new Error('PICKUP_UNAVAILABLE');
+  }
+
+  if (payload.deliveryType === 'delivery') {
+    let address = payload.deliveryAddress;
+    if (!address && payload.deliveryAddressId && context.userId) {
+      const { data: savedAddress } = await supabase
+        .from('addresses')
+        .select('street, number, complement, neighborhood, city, state, zip_code')
+        .eq('id', payload.deliveryAddressId)
+        .eq('user_id', context.userId)
+        .maybeSingle();
+      if (savedAddress) {
+        address = {
+          street: savedAddress.street,
+          number: savedAddress.number,
+          ...(savedAddress.complement ? { complement: savedAddress.complement } : {}),
+          neighborhood: savedAddress.neighborhood,
+          city: savedAddress.city,
+          state: savedAddress.state,
+          zipCode: savedAddress.zip_code,
+        };
+      }
+    }
+    if (!address) throw new Error('DELIVERY_ADDRESS_REQUIRED');
+    if (!config.delivery_city || !/^[A-Z]{2}$/.test(config.delivery_state || '')
+      || address.city !== config.delivery_city || address.state !== config.delivery_state) {
+      throw new Error('DELIVERY_AREA_UNAVAILABLE');
+    }
+  }
+
+  const allFileIds = payload.items.flatMap((item) => item.fileIds);
+  const uniqueFileIds = Array.from(new Set(allFileIds));
+  if (uniqueFileIds.length !== allFileIds.length) throw new Error('FILE_ACCESS_DENIED');
+
+  const filesById = new Map<string, AuthorizedCheckoutFile>();
+  if (uniqueFileIds.length > 0) {
+    const files = await loadAuthorizedReadyFiles(supabase, uniqueFileIds, context);
+    for (const file of files) filesById.set(file.id, file);
+  }
+
+  const items: CheckoutQuote['items'] = [];
+  let subtotalCents = 0;
+  let hasEstimates = false;
+
+  for (const item of payload.items) {
+    if (item.productId) {
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('name, description, price_cents, stock_quantity')
+        .eq('id', item.productId)
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .maybeSingle();
+      if (productError || !product) throw new Error('QUOTE_UNAVAILABLE: Produto inexistente ou inativo.');
+      if (product.stock_quantity !== null && product.stock_quantity < item.quantity) {
+        throw new Error('QUOTE_UNAVAILABLE: Estoque insuficiente.');
+      }
+      const totalPriceCents = product.price_cents * item.quantity;
+      items.push({
+        name: product.name,
+        description: product.description,
+        quantity: item.quantity,
+        pageCount: 0,
+        pageCountMethod: 'exact',
+        unitPriceCents: product.price_cents,
+        totalPriceCents,
+        discountCents: 0,
+      });
+      subtotalCents += totalPriceCents;
+      continue;
+    }
+
+    if (!item.serviceId) throw new Error('QUOTE_UNAVAILABLE: Item sem referência.');
+    const itemFiles = item.fileIds
+      .map((fileId) => filesById.get(fileId))
+      .filter((file): file is AuthorizedCheckoutFile => Boolean(file));
+    if (itemFiles.length !== item.fileIds.length) throw new Error('FILE_ACCESS_DENIED');
+    const pageCount = itemFiles.length > 0
+      ? itemFiles.reduce((sum, file) => sum + Math.max(1, file.page_count), 0)
+      : 1;
+    const pageCountMethod: PageCountMethod = itemFiles.some((file) => file.page_count_method !== 'exact')
+      ? 'estimated'
+      : 'exact';
+    const pricingResult = await validateAndRecalculate({
+      serviceId: item.serviceId,
+      attributeIds: item.attributeIds,
+      fieldValues: item.fieldValues,
+      pageCount,
+      isFrontAndBack: item.isFrontAndBack,
+      quantity: item.quantity,
+      fileIds: item.fileIds,
+      bindingFileIds: item.bindingFileIds ?? [],
+      bindingFiles: (item.bindingFileIds ?? []).map((fileId) => {
+        const file = filesById.get(fileId);
+        if (!file) throw new Error('FILE_ACCESS_DENIED');
+        return { fileId, pageCount: Math.max(1, file.page_count) };
+      }),
+    }, supabase);
+    if (!pricingResult.success) throw new Error(`${pricingResult.error.code}: ${pricingResult.error.message}`);
+
+    const quote = pricingResult.data;
+    const fieldDescription = quote.fieldsSnapshot
+      .map((field) => `${field.fieldLabel}: ${field.valueLabel}`)
+      .join(', ');
+    const bindingDescription = quote.bindingSelections.length > 0
+      ? `Encadernação: ${quote.bindingSelections.length} ${quote.bindingSelections.length === 1 ? 'arquivo' : 'arquivos'}`
+      : '';
+    items.push({
+      name: quote.serviceSnapshot.name,
+      description: [fieldDescription, bindingDescription].filter(Boolean).join(' · ') || quote.serviceSnapshot.description,
+      quantity: item.quantity,
+      pageCount,
+      pageCountMethod,
+      unitPriceCents: quote.unitPriceCents,
+      totalPriceCents: quote.totalCents,
+      discountCents: quote.discountCents,
+    });
+    subtotalCents += quote.totalCents;
+    hasEstimates ||= pageCountMethod !== 'exact';
+  }
+
+  const deliveryFeeCents = payload.deliveryType === 'delivery'
+    ? requireConfigInteger(config, 'delivery_fee_cents')
+    : 0;
+  return {
+    items,
+    subtotalCents,
+    deliveryFeeCents,
+    totalCents: subtotalCents + deliveryFeeCents,
+    hasEstimates,
   };
 }

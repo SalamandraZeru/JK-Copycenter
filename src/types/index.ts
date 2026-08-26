@@ -52,6 +52,8 @@ export type {
   CheckoutItem,
   CheckoutPayload,
   CheckoutResult,
+  CheckoutQuote,
+  CheckoutQuoteItem,
   CheckoutResponseSuccess,
   CheckoutResponseError,
   CheckoutResponse,
