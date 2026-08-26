@@ -115,8 +115,8 @@ export default function CategoriasPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 font-serif">Categorias do Catálogo</h1>
-          <p className="text-sm font-medium text-slate-600">Organize os serviços e produtos de papelaria por grupos.</p>
+          <h1 className="text-2xl font-extrabold text-slate-900 font-serif">Categorias da Papelaria</h1>
+          <p className="text-sm font-medium text-slate-600">Organize somente os produtos de papelaria por grupos.</p>
         </div>
         <button 
           onClick={startNew}

@@ -29,6 +29,16 @@ const pricingRuleSchema = z.object({
 
 type ScalarFieldValue = string | number | boolean | null;
 
+function pricingRuleErrorMessage(message: string): string {
+  if (message.includes('PRICING_RULE_FIELD_SERVICE_MISMATCH')) {
+    return 'Os campos deste serviço foram alterados. Atualize a página e monte a regra novamente com as opções atuais.';
+  }
+  if (message.includes('AMBIGUOUS_PRICING_RULE')) {
+    return 'Já existe uma regra ativa com a mesma especificidade para esta combinação. Ajuste as condições ou exclua a regra conflitante.';
+  }
+  return message;
+}
+
 function optionValues(options: Json): Set<string> {
   if (!Array.isArray(options)) return new Set();
   return new Set(options.flatMap((option) => {
@@ -225,8 +235,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json(activated, { status: 201 });
   } catch (caught: unknown) {
     if (createdRuleId) await supabase.from('pricing_rules').delete().eq('id', createdRuleId);
-    const message = caught instanceof Error ? caught.message : 'Erro ao criar regra de preço';
-    const status = message.includes('AMBIGUOUS_PRICING_RULE') ? 409 : 500;
+    const rawMessage = caught instanceof Error ? caught.message : 'Erro ao criar regra de preço';
+    const message = pricingRuleErrorMessage(rawMessage);
+    const status = rawMessage.includes('AMBIGUOUS_PRICING_RULE') ? 409 : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }
@@ -241,17 +252,21 @@ export async function DELETE(request: Request): Promise<NextResponse> {
     const supabase = createServiceRoleClient();
     const { data, error } = await supabase
       .from('pricing_rules')
-      .update({ is_active: false })
+      .delete()
       .eq('id', id)
-      .select('id')
+      .select('id, name, service_id')
       .maybeSingle();
     if (error) throw error;
     if (!data) return NextResponse.json({ error: 'Regra não encontrada' }, { status: 404 });
-    await logAdminAction(supabase, auth.session.id, 'deactivate_pricing_rule', 'pricing_rules', id);
+    await logAdminAction(supabase, auth.session.id, 'delete_pricing_rule', 'pricing_rules', id, {
+      name: data.name,
+      service_id: data.service_id,
+      permanent: true,
+    });
     return NextResponse.json({ success: true });
   } catch (caught: unknown) {
     return NextResponse.json({
-      error: caught instanceof Error ? caught.message : 'Erro ao inativar regra',
+      error: caught instanceof Error ? caught.message : 'Erro ao excluir regra',
     }, { status: 500 });
   }
 }

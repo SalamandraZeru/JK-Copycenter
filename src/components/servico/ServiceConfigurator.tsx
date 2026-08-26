@@ -28,9 +28,11 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
     updatePageCount,
     updateQuantity,
     replaceFiles,
+    setBindingFileIds,
     validate,
     isValid,
     validationErrors,
+    fieldOptionAvailability,
     error: apiError
   } = useServiceConfigurator(service);
 
@@ -55,28 +57,58 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
         isFrontAndBack: false,
         quantity: config.quantity,
         fileIds: uploadedFiles.map(f => f.fileId),
+        bindingFileIds: config.bindingFileIds,
       });
     }
   };
 
   const renderField = (field: ServiceField) => {
     const error = validationErrors[field.key];
+    const availability = fieldOptionAvailability.get(field.id);
+    const checkboxUnavailable = field.fieldType === 'checkbox'
+      && availability?.isRestricted
+      && !availability.allowedOptionValues.has('true');
+    if (checkboxUnavailable) {
+      return (
+        <div key={field.key} className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
+          <span className="font-semibold">{field.label}:</span> indisponível para a configuração selecionada.
+        </div>
+      );
+    }
+    const resolvedField = availability?.isRestricted
+      ? {
+        ...field,
+        options: field.options.filter((option) => availability.allowedOptionValues.has(option.value)),
+      }
+      : field;
     const props = {
-      field,
+      field: resolvedField,
       value: config.fieldValues.find(fv => fv.fieldKey === field.key),
       onChange: (val: FieldValue) => updateFieldValue(field.key, val),
       ...(error ? { error } : {}),
     };
 
+    let content: React.ReactNode = null;
     switch (field.fieldType) {
-      case 'select': return <SelectField key={field.key} {...props} />;
-      case 'radio': return <RadioField key={field.key} {...props} />;
-      case 'number': return <NumberField key={field.key} {...props} />;
-      case 'text': return <TextField key={field.key} {...props} />;
-      case 'textarea': return <TextareaField key={field.key} {...props} />;
-      case 'checkbox': return <CheckboxField key={field.key} {...props} />;
+      case 'select': content = <SelectField {...props} />; break;
+      case 'radio': content = <RadioField {...props} />; break;
+      case 'number': content = <NumberField {...props} />; break;
+      case 'text': content = <TextField {...props} />; break;
+      case 'textarea': content = <TextareaField {...props} />; break;
+      case 'checkbox': content = <CheckboxField {...props} />; break;
       default: return null;
     }
+
+    return (
+      <div key={field.key} className="contents">
+        {content}
+        {availability?.isRestricted && (
+          <p className="-mt-4 text-xs font-medium text-slate-500">
+            Opções disponíveis conforme as escolhas anteriores.
+          </p>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -102,6 +134,9 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
               replaceFiles(files.map((file) => file.fileId));
             }}
             onPageCountUpdate={updatePageCount}
+            bindingAvailable={service.bindingAvailable}
+            bindingFileIds={config.bindingFileIds}
+            onBindingFileIdsChange={setBindingFileIds}
           />
         </div>
 

@@ -15,12 +15,18 @@ interface FileUploadDropzoneProps {
   files: UploadedFileItem[];
   onFilesChange: (files: UploadedFileItem[]) => void;
   onPageCountUpdate: (totalPageCount: number) => void;
+  bindingAvailable?: boolean;
+  bindingFileIds?: string[];
+  onBindingFileIdsChange?: (fileIds: string[]) => void;
 }
 
 export function FileUploadDropzone({
   files,
   onFilesChange,
   onPageCountUpdate,
+  bindingAvailable = false,
+  bindingFileIds = [],
+  onBindingFileIdsChange,
 }: FileUploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -124,6 +130,9 @@ export function FileUploadDropzone({
     }
     const updated = files.filter((_, i) => i !== index);
     onFilesChange(updated);
+    if (selected && bindingFileIds.includes(selected.fileId)) {
+      onBindingFileIdsChange?.(bindingFileIds.filter((fileId) => fileId !== selected.fileId));
+    }
 
     const totalPages = updated.reduce((sum, item) => sum + item.pageCount, 0);
     onPageCountUpdate(totalPages > 0 ? totalPages : 1);
@@ -241,6 +250,22 @@ export function FileUploadDropzone({
                         {file.countMethod !== 'exact' && ' (sujeito à conferência)'}
                       </span>
                     </div>
+                    {bindingAvailable && (
+                      <label className="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={bindingFileIds.includes(file.fileId)}
+                          onChange={(event) => {
+                            const next = event.target.checked
+                              ? [...bindingFileIds, file.fileId]
+                              : bindingFileIds.filter((fileId) => fileId !== file.fileId);
+                            onBindingFileIdsChange?.(next);
+                          }}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        Encadernar este arquivo
+                      </label>
+                    )}
                   </div>
                 </div>
 
@@ -255,6 +280,11 @@ export function FileUploadDropzone({
               </div>
             ))}
           </div>
+          {bindingAvailable && (
+            <p className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-800">
+              O valor da encadernação é definido automaticamente pela quantidade de páginas detectada em cada arquivo selecionado.
+            </p>
+          )}
         </div>
       )}
     </div>

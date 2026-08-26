@@ -1,4 +1,5 @@
 import type {
+  BindingSelectionSnapshot,
   PricingCalculationInput,
   PricingContext,
   PricingFieldSnapshot,
@@ -7,6 +8,7 @@ import type {
   PricingRule,
   ServerFieldPriceEffect,
 } from '@/types/pricing';
+import { isFieldOptionSelectionAllowed, resolveFieldOptionAvailability } from '@/lib/services/field-option-dependencies';
 
 const BPS_SCALE = 10_000;
 
@@ -100,10 +102,11 @@ function resolveFields(
   const snapshots: PricingFieldSnapshot[] = [];
   const effects: ServerFieldPriceEffect[] = [];
   const selectedByFieldId = new Map<string, string | number | boolean>();
+  const missingRequiredFields: typeof activeFields = [];
   for (const field of activeFields) {
     const selectedValue = selections.get(field.key);
     if (selectedValue === undefined || selectedValue === '') {
-      if (field.isRequired) return null;
+      if (field.isRequired) missingRequiredFields.push(field);
       continue;
     }
 
@@ -139,7 +142,70 @@ function resolveFields(
     selectedByFieldId.set(field.id, selectedValue);
     effects.push(priceEffect);
   }
+
+  for (const field of missingRequiredFields) {
+    const availability = resolveFieldOptionAvailability(
+      context.fieldOptionDependencies,
+      selectedByFieldId,
+      field.id,
+    );
+    const checkboxUnavailable = field.fieldType === 'checkbox'
+      && availability.isRestricted
+      && !availability.allowedOptionValues.has('true');
+    if (!checkboxUnavailable) return null;
+  }
+
+  for (const field of activeFields) {
+    const selectedValue = selectedByFieldId.get(field.id);
+    if (!isFieldOptionSelectionAllowed(
+      context.fieldOptionDependencies,
+      selectedByFieldId,
+      field.id,
+      selectedValue,
+    )) return null;
+  }
+
   return { snapshots, effects, selectedByFieldId };
+}
+
+function resolveBinding(
+  input: PricingCalculationInput,
+  context: PricingContext,
+): { unitCents: number; totalCents: number; selections: BindingSelectionSnapshot[] } | null {
+  const bindingFileIds = input.bindingFileIds ?? [];
+  if (bindingFileIds.length === 0) return { unitCents: 0, totalCents: 0, selections: [] };
+
+  const uniqueBindingIds = new Set(bindingFileIds);
+  const selectedFiles = input.bindingFiles ?? [];
+  const availableFileIds = new Set(input.fileIds ?? []);
+  if (uniqueBindingIds.size !== bindingFileIds.length
+      || bindingFileIds.some((fileId) => !availableFileIds.has(fileId))
+      || selectedFiles.length !== bindingFileIds.length) {
+    return null;
+  }
+
+  const filesById = new Map(selectedFiles.map((file) => [file.fileId, file]));
+  if (filesById.size !== selectedFiles.length || bindingFileIds.some((fileId) => !filesById.has(fileId))) return null;
+
+  let unitCents = 0;
+  const selections: BindingSelectionSnapshot[] = [];
+  for (const fileId of bindingFileIds) {
+    const file = filesById.get(fileId)!;
+    if (!Number.isSafeInteger(file.pageCount) || file.pageCount < 1 || file.pageCount > 1_000_000) return null;
+    const tier = context.bindingTiers.find((candidate) => (
+      candidate.isActive
+      && candidate.minPages <= file.pageCount
+      && (candidate.maxPages === null || candidate.maxPages >= file.pageCount)
+    ));
+    if (!tier || !Number.isSafeInteger(tier.priceCents) || tier.priceCents < 0) return null;
+    unitCents += tier.priceCents;
+    if (!Number.isSafeInteger(unitCents)) return null;
+    selections.push({ fileId, pageCount: file.pageCount, tierId: tier.id, priceCents: tier.priceCents });
+  }
+
+  const totalCents = unitCents * input.quantity;
+  if (!Number.isSafeInteger(totalCents)) return null;
+  return { unitCents, totalCents, selections };
 }
 
 export function calculatePrice(input: PricingCalculationInput, context: PricingContext): PricingResult {
@@ -195,9 +261,17 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
     return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
   }
 
-  const unitPriceCents = perPageCents * input.pageCount;
-  const subtotalBeforeDiscountCents = unitPriceCents * input.quantity;
-  if (!Number.isSafeInteger(subtotalBeforeDiscountCents)) {
+  const printUnitPriceCents = perPageCents * input.pageCount;
+  const printSubtotalCents = printUnitPriceCents * input.quantity;
+  if (!Number.isSafeInteger(printSubtotalCents)) {
+    return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
+  }
+
+  const binding = resolveBinding(input, context);
+  if (!binding) return error('QUOTE_UNAVAILABLE', 'Encadernação indisponível para um ou mais arquivos selecionados.');
+  const unitPriceCents = printUnitPriceCents + binding.unitCents;
+  const subtotalBeforeDiscountCents = printSubtotalCents + binding.totalCents;
+  if (!Number.isSafeInteger(unitPriceCents) || !Number.isSafeInteger(subtotalBeforeDiscountCents)) {
     return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
   }
 
@@ -210,7 +284,9 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
   }
 
   const discountBps = applicableDiscounts[0]?.discountBps ?? 0;
-  const discountCents = applyBps(subtotalBeforeDiscountCents, discountBps, context.roundingMode);
+  // Descontos de volume continuam incidindo somente na impressão. A
+  // encadernação é um acabamento físico cobrado por cópia e arquivo.
+  const discountCents = applyBps(printSubtotalCents, discountBps, context.roundingMode);
   const totalCents = subtotalBeforeDiscountCents - discountCents;
 
   return {
@@ -231,6 +307,9 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
       discountBps,
       discountCents,
       totalCents,
+      bindingUnitCents: binding.unitCents,
+      bindingTotalCents: binding.totalCents,
+      bindingSelections: binding.selections,
       fieldsSnapshot: resolvedFields.snapshots,
       attributeIdsSnapshot: [...input.attributeIds],
       pageCount: input.pageCount,

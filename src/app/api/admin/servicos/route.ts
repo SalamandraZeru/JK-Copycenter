@@ -13,7 +13,6 @@ const serviceFields = {
   name: z.string().trim().min(1).max(200),
   slug: z.string().trim().min(1).max(200).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   description: z.string().trim().max(5000).nullable().optional(),
-  category_id: z.string().uuid().nullable().optional(),
   image_url: z.string().trim().max(2_000_000).nullable().optional(),
   base_price: z.coerce.number().min(0).max(1_000_000).optional(),
   is_active: z.boolean().optional(),
@@ -32,7 +31,7 @@ export async function GET() {
     
     const { data, error } = await supabase
       .from('services')
-      .select('*, categories (id, name)')
+      .select('*')
       .is('deleted_at', null)
       .order('sort_order', { ascending: true });
 
@@ -62,7 +61,7 @@ export async function POST(request: Request) {
         name: body.name,
         slug: body.slug,
         description: body.description || null,
-        category_id: body.category_id || null,
+        category_id: null,
         image_url: body.image_url || null,
         base_price_cents: reaisToCents(body.base_price ?? 0),
         is_active: body.is_active ?? true,
@@ -98,7 +97,8 @@ export async function PUT(request: Request) {
     if (body.name !== undefined) updatePayload.name = body.name;
     if (body.slug !== undefined) updatePayload.slug = body.slug;
     if (body.description !== undefined) updatePayload.description = body.description;
-    if (body.category_id !== undefined) updatePayload.category_id = body.category_id;
+    // Categorias pertencem apenas aos produtos de papelaria.
+    updatePayload.category_id = null;
     if (body.image_url !== undefined) updatePayload.image_url = body.image_url;
     if (body.base_price !== undefined) updatePayload.base_price_cents = reaisToCents(body.base_price);
     if (body.is_active !== undefined) updatePayload.is_active = body.is_active;

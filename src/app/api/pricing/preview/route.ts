@@ -17,6 +17,7 @@ const previewSchema = z.object({
     value: z.union([z.string().max(5_000), z.number().finite(), z.boolean()]),
   })).max(100).default([]),
   fileIds: z.array(z.string().uuid()).max(100).default([]),
+  bindingFileIds: z.array(z.string().uuid()).max(100).default([]),
   pageCount: z.number().int().optional(),
   isFrontAndBack: z.boolean().default(false),
   quantity: z.number().int().min(1).max(100_000_000),
@@ -92,6 +93,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
 
     let pageCount = 1;
     let isEstimate = false;
+    let bindingFiles: Array<{ fileId: string; pageCount: number }> = [];
     if (intent.fileIds.length > 0) {
       let files;
       try {
@@ -107,6 +109,23 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
       }
       pageCount = files.reduce((sum, file) => sum + Math.max(1, file.page_count), 0);
       isEstimate = files.some((file) => file.page_count_method !== 'exact');
+      const filesById = new Map(files.map((file) => [file.id, file]));
+      if (new Set(intent.bindingFileIds).size !== intent.bindingFileIds.length
+          || intent.bindingFileIds.some((fileId) => !filesById.has(fileId))) {
+        return NextResponse.json({
+          success: false,
+          error: { code: 'INVALID_INPUT', message: 'Arquivo de encadernação inválido.' },
+        }, { status: 400 });
+      }
+      bindingFiles = intent.bindingFileIds.map((fileId) => ({
+        fileId,
+        pageCount: Math.max(1, filesById.get(fileId)!.page_count),
+      }));
+    } else if (intent.bindingFileIds.length > 0) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'INVALID_INPUT', message: 'Selecione arquivos enviados para encadernação.' },
+      }, { status: 400 });
     }
 
     const result = await validateAndRecalculate({
@@ -117,6 +136,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
       isFrontAndBack: intent.isFrontAndBack,
       quantity: intent.quantity,
       fileIds: intent.fileIds,
+      bindingFileIds: intent.bindingFileIds,
+      bindingFiles,
     }, supabaseAdmin);
 
     if (!result.success) {

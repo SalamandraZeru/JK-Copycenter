@@ -43,6 +43,19 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
       : `
         *,
         order_items (*),
+        order_price_adjustments (
+          id,
+          order_item_id,
+          previous_item_total_cents,
+          new_item_total_cents,
+          previous_order_subtotal_cents,
+          new_order_subtotal_cents,
+          previous_order_total_cents,
+          new_order_total_cents,
+          reason,
+          created_at,
+          admin_users (full_name)
+        ),
         order_events (*),
         order_payment_events (*),
         order_files (id, original_name, size_bytes, mime_type, status, expires_at, deleted_at)

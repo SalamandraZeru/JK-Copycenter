@@ -71,6 +71,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         isFrontAndBack: item.isFrontAndBack,
         quantity: item.quantity,
         fileIds: item.fileIds,
+        bindingFileIds: item.bindingFileIds,
       })),
       deliveryType: validData.deliveryType,
       deliveryAddressId: validData.deliveryAddressId,

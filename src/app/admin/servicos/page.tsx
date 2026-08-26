@@ -10,30 +10,21 @@ import { ImageUploader } from '@/components/admin/ImageUploader';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
-interface ServiceCategory {
-  id: string;
-  name: string;
-}
-
 interface Service {
   id: string;
   name: string;
   slug: string;
   description: string | null;
-  category_id: string | null;
   image_url: string | null;
   base_price: number;
   is_active: boolean;
   sort_order: number;
-  categories?: ServiceCategory | null;
 }
 
 export default function ServicosPage() {
   const { data: rawServices, error: servError, isLoading: servLoading, mutate: mutateServices } = useSWR<Service[]>('/api/admin/servicos', fetcher);
-  const { data: rawCategories } = useSWR<ServiceCategory[]>('/api/admin/categorias', fetcher);
 
   const servicos: Service[] = Array.isArray(rawServices) ? rawServices : [];
-  const categorias: ServiceCategory[] = Array.isArray(rawCategories) ? rawCategories : [];
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<{
@@ -41,7 +32,6 @@ export default function ServicosPage() {
     name: string;
     slug: string;
     description: string;
-    category_id: string;
     image_url: string | null;
     base_price: number;
     is_active: boolean;
@@ -50,7 +40,6 @@ export default function ServicosPage() {
     name: '',
     slug: '',
     description: '',
-    category_id: '',
     image_url: null,
     base_price: 0,
     is_active: true,
@@ -64,7 +53,6 @@ export default function ServicosPage() {
       name: '',
       slug: '',
       description: '',
-      category_id: categorias[0]?.id || '',
       image_url: null,
       base_price: 0.50,
       is_active: true,
@@ -79,7 +67,6 @@ export default function ServicosPage() {
       name: serv.name || '',
       slug: serv.slug || '',
       description: serv.description || '',
-      category_id: serv.category_id || '',
       image_url: serv.image_url || null,
       base_price: serv.base_price || 0,
       is_active: serv.is_active ?? true,
@@ -229,22 +216,6 @@ export default function ServicosPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
-                    Categoria
-                  </label>
-                  <select
-                    value={formData.category_id}
-                    onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none cursor-pointer transition"
-                  >
-                    <option value="">Sem categoria</option>
-                    {categorias.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
                     Preço Base Inicial (R$) *
                   </label>
                   <input
@@ -305,7 +276,6 @@ export default function ServicosPage() {
               <tr>
                 <th className="px-6 py-4 w-20">Foto</th>
                 <th className="px-6 py-4">Nome & Slug</th>
-                <th className="px-6 py-4">Categoria</th>
                 <th className="px-6 py-4">Preço Base</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Ações</th>
@@ -326,9 +296,6 @@ export default function ServicosPage() {
                   <td className="px-6 py-4">
                     <p className="font-extrabold text-slate-900">{serv.name}</p>
                     <p className="text-xs text-slate-600 font-mono font-medium">{serv.slug}</p>
-                  </td>
-                  <td className="px-6 py-4 text-sm font-bold text-slate-800">
-                    {serv.categories?.name || 'Sem categoria'}
                   </td>
                   <td className="px-6 py-4 font-bold text-slate-900">
                     A partir de {formatCurrency(serv.base_price)}

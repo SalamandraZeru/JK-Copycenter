@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/types/supabase';
 import type {
+  BindingPriceTier,
+  FieldOptionDependency,
   FallbackBehavior,
   PricingContext,
   PricingDiscount,
@@ -103,7 +105,7 @@ export async function loadPricingData(
     throw new QuoteUnavailableError('Serviço inexistente ou inativo.');
   }
 
-  const [fieldsResult, attributesResult, rulesResult, discountsResult, settingsResult] = await Promise.all([
+  const [fieldsResult, attributesResult, rulesResult, discountsResult, bindingTiersResult, dependenciesResult, settingsResult] = await Promise.all([
     supabase
       .from('service_fields')
       .select('id, key, label, field_type, options, is_required, is_active')
@@ -138,6 +140,16 @@ export async function loadPricingData(
       .eq('service_id', service.id)
       .eq('is_active', true),
     supabase
+      .from('service_binding_price_tiers')
+      .select('id, service_id, min_pages, max_pages, price_cents, is_active')
+      .eq('service_id', service.id)
+      .eq('is_active', true)
+      .order('min_pages', { ascending: true }),
+    supabase
+      .from('service_field_option_dependencies')
+      .select('source_field_id, source_option_value, source_conditions, target_field_id, target_option_value')
+      .eq('service_id', service.id),
+    supabase
       .from('store_settings')
       .select('key, value')
       .in('key', ['double_sided_multiplier_bps', 'pricing_rounding_mode']),
@@ -147,6 +159,8 @@ export async function loadPricingData(
     ?? attributesResult.error
     ?? rulesResult.error
     ?? discountsResult.error
+    ?? bindingTiersResult.error
+    ?? dependenciesResult.error
     ?? settingsResult.error;
   if (firstError) throw new QuoteUnavailableError(`Falha ao carregar catálogo: ${firstError.message}`);
 
@@ -194,6 +208,32 @@ export async function loadPricingData(
     discountBps: Math.round(Number(discount.discount_percent) * 100),
   }));
 
+  const bindingTiers: BindingPriceTier[] = (bindingTiersResult.data ?? []).map((tier) => ({
+    id: tier.id,
+    serviceId: tier.service_id,
+    minPages: tier.min_pages,
+    maxPages: tier.max_pages,
+    priceCents: tier.price_cents,
+    isActive: tier.is_active,
+  }));
+
+  const fieldOptionDependencies: FieldOptionDependency[] = (dependenciesResult.data ?? []).map((dependency) => ({
+    sourceFieldId: dependency.source_field_id,
+    sourceOptionValue: dependency.source_option_value,
+    sourceConditions: Array.isArray(dependency.source_conditions)
+      ? dependency.source_conditions.flatMap((condition) => {
+        if (!condition || typeof condition !== 'object' || Array.isArray(condition)) return [];
+        const fieldId = condition.field_id;
+        const optionValue = condition.option_value;
+        return typeof fieldId === 'string' && typeof optionValue === 'string'
+          ? [{ fieldId, optionValue }]
+          : [];
+      })
+      : [{ fieldId: dependency.source_field_id, optionValue: dependency.source_option_value }],
+    targetFieldId: dependency.target_field_id,
+    targetOptionValue: dependency.target_option_value,
+  }));
+
   const settings = new Map((settingsResult.data ?? []).map((setting) => [setting.key, setting.value]));
   const doubleSidedMultiplierBps = requireIntegerSetting(settings, 'double_sided_multiplier_bps');
   const roundingValue = settings.get('pricing_rounding_mode');
@@ -218,6 +258,8 @@ export async function loadPricingData(
     fields,
     rules,
     discounts,
+    bindingTiers,
+    fieldOptionDependencies,
     doubleSidedMultiplierBps,
     roundingMode: roundingValue as PricingRoundingMode,
   };

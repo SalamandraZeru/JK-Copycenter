@@ -63,6 +63,7 @@ export const useCartStore = create<CartState>()(
             return {
               ...item,
               fileIds: [],
+              bindingFileIds: [],
               requiresFileReupload: Boolean(item.requiresFileReupload || hasPersistedFile),
             };
           }),

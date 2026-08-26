@@ -136,6 +136,7 @@ export default function CheckoutPage() {
           isFrontAndBack: Boolean(i.isFrontAndBack),
           quantity: i.quantity,
           fileIds: i.fileIds || [],
+          bindingFileIds: i.bindingFileIds || [],
         })),
         deliveryType,
         paymentMethod,

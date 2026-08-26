@@ -16,6 +16,19 @@ export interface ServiceField {
   sortOrder: number;
 }
 
+export interface ServiceFieldOptionDependency {
+  sourceFieldId: string;
+  sourceOptionValue: string;
+  sourceConditions?: ServiceFieldOptionCondition[];
+  targetFieldId: string;
+  targetOptionValue: string;
+}
+
+export interface ServiceFieldOptionCondition {
+  fieldId: string;
+  optionValue: string;
+}
+
 export interface ServiceWithFields {
   id: string;
   name: string;
@@ -23,7 +36,9 @@ export interface ServiceWithFields {
   description: string | null;
   imageUrl: string | null;
   basePrice: number;
+  bindingAvailable: boolean;
   fields: ServiceField[];
+  fieldOptionDependencies: ServiceFieldOptionDependency[];
 }
 
 export interface FieldValue {
@@ -41,6 +56,7 @@ export interface ServiceConfiguration {
   isFrontAndBack: boolean;
   quantity: number;
   fileIds: string[];
+  bindingFileIds: string[];
   estimatedPrice: number | null;
   isLoadingPrice: boolean;
 }

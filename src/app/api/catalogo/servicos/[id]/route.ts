@@ -33,6 +33,23 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
     return NextResponse.json({ success: false, error: 'Serviço não encontrado.' }, { status: 404 });
   }
 
+  const [bindingResult, dependenciesResult] = await Promise.all([
+    supabase
+      .from('service_binding_price_tiers')
+      .select('id')
+      .eq('service_id', service.id)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('service_field_option_dependencies')
+      .select('source_field_id, source_option_value, source_conditions, target_field_id, target_option_value')
+      .eq('service_id', service.id),
+  ]);
+  if (bindingResult.error || dependenciesResult.error) {
+    return NextResponse.json({ success: false, error: 'Não foi possível carregar os acabamentos do serviço.' }, { status: 500 });
+  }
+
   const result: ServiceWithFields = {
     id: service.id,
     name: service.name,
@@ -40,6 +57,7 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
     description: service.description,
     imageUrl: service.image_url,
     basePrice: service.base_price,
+    bindingAvailable: Boolean(bindingResult.data),
     fields: (service.service_fields ?? [])
       .filter((field) => field.is_active)
       .sort((left, right) => left.sort_order - right.sort_order)
@@ -53,6 +71,22 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
         isRequired: field.is_required,
         sortOrder: field.sort_order,
       })),
+    fieldOptionDependencies: (dependenciesResult.data ?? []).map((dependency) => ({
+      sourceFieldId: dependency.source_field_id,
+      sourceOptionValue: dependency.source_option_value,
+      sourceConditions: Array.isArray(dependency.source_conditions)
+        ? dependency.source_conditions.flatMap((condition) => {
+          if (!condition || typeof condition !== 'object' || Array.isArray(condition)) return [];
+          const fieldId = condition.field_id;
+          const optionValue = condition.option_value;
+          return typeof fieldId === 'string' && typeof optionValue === 'string'
+            ? [{ fieldId, optionValue }]
+            : [];
+        })
+        : [{ fieldId: dependency.source_field_id, optionValue: dependency.source_option_value }],
+      targetFieldId: dependency.target_field_id,
+      targetOptionValue: dependency.target_option_value,
+    })),
   };
   return NextResponse.json({ success: true, data: result });
 }

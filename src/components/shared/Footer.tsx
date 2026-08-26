@@ -108,10 +108,24 @@ export function Footer() {
           <p className="text-sm text-slate-500">
             &copy; {new Date().getFullYear()} JK Copycenter. Todos os direitos reservados.
           </p>
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Image src="/images/brand/noctem-technology.webp" alt="" width={236} height={219} className="h-5 w-auto opacity-80" />
-            Desenvolvido por <span className="font-medium text-slate-300">Noctem Technology</span>
-          </div>
+          <a
+            href="https://noctem.agency"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Visitar o site da Noctem Technology"
+            className="group flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-slate-300"
+          >
+            <Image
+              src="/images/brand/noctem-logo.png"
+              alt="Logo Noctem Technology"
+              width={512}
+              height={512}
+              className="h-7 w-7 object-contain opacity-90 transition-opacity group-hover:opacity-100"
+            />
+            <span>
+              Desenvolvido por <span className="font-medium text-slate-300">Noctem Technology</span>
+            </span>
+          </a>
         </div>
       </div>
     </footer>

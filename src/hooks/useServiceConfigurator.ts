@@ -1,6 +1,36 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { ServiceWithFields, ServiceConfiguration, FieldValue } from '@/types/service';
 import { usePricingPreview } from './usePricingPreview';
+import { isFieldOptionSelectionAllowed, resolveFieldOptionAvailability } from '@/lib/services/field-option-dependencies';
+
+function selectedValuesByFieldId(service: ServiceWithFields, values: FieldValue[]) {
+  const fieldsByKey = new Map(service.fields.map((field) => [field.key, field]));
+  const selected = new Map<string, string | number | boolean>();
+  for (const value of values) {
+    const field = fieldsByKey.get(value.fieldKey);
+    if (field) selected.set(field.id, value.value);
+  }
+  return selected;
+}
+
+function normalizeDependentFieldValues(service: ServiceWithFields, values: FieldValue[]): FieldValue[] {
+  let normalized = values;
+  for (let attempt = 0; attempt < service.fields.length; attempt += 1) {
+    const selected = selectedValuesByFieldId(service, normalized);
+    const next = normalized.filter((value) => {
+      const field = service.fields.find((candidate) => candidate.key === value.fieldKey);
+      return !field || isFieldOptionSelectionAllowed(
+        service.fieldOptionDependencies,
+        selected,
+        field.id,
+        value.value,
+      );
+    });
+    if (next.length === normalized.length) return normalized;
+    normalized = next;
+  }
+  return normalized;
+}
 
 export function useServiceConfigurator(service: ServiceWithFields) {
   const [config, setConfig] = useState<ServiceConfiguration>({
@@ -11,6 +41,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     isFrontAndBack: false,
     quantity: 1,
     fileIds: [],
+    bindingFileIds: [],
     estimatedPrice: service.basePrice,
     isLoadingPrice: false,
   });
@@ -19,15 +50,28 @@ export function useServiceConfigurator(service: ServiceWithFields) {
 
   const { fetchPreview, result, isLoading, error } = usePricingPreview();
 
+  const fieldOptionAvailability = useMemo(() => {
+    const selected = selectedValuesByFieldId(service, config.fieldValues);
+    return new Map(service.fields.map((field) => [
+      field.id,
+      resolveFieldOptionAvailability(service.fieldOptionDependencies, selected, field.id),
+    ]));
+  }, [config.fieldValues, service]);
+
   const isConfigurationComplete = useMemo(() => {
     if (config.quantity < 1 || config.pageCount < 1) return false;
     return service.fields
       .filter((field) => field.isRequired)
       .every((field) => {
+        const availability = fieldOptionAvailability.get(field.id);
+        if (field.fieldType === 'checkbox' && availability?.isRestricted
+            && !availability.allowedOptionValues.has('true')) {
+          return true;
+        }
         const value = config.fieldValues.find((fieldValue) => fieldValue.fieldKey === field.key);
         return Boolean(value && value.value !== '' && value.value !== false);
       });
-  }, [config.fieldValues, config.pageCount, config.quantity, service.fields]);
+  }, [config.fieldValues, config.pageCount, config.quantity, fieldOptionAvailability, service.fields]);
 
   useEffect(() => {
     if (!isConfigurationComplete) return;
@@ -40,6 +84,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
           value: field.value,
         })),
         fileIds: config.fileIds,
+        bindingFileIds: config.bindingFileIds,
         pageCount: config.pageCount,
         isFrontAndBack: config.isFrontAndBack,
         quantity: config.quantity,
@@ -53,6 +98,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     config.fieldValues,
     config.pageCount,
     config.fileIds,
+    config.bindingFileIds,
     config.isFrontAndBack,
     config.quantity,
     fetchPreview,
@@ -83,7 +129,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
       const existing = prev.fieldValues.filter(fv => fv.fieldKey !== fieldKey);
       return {
         ...prev,
-        fieldValues: [...existing, value]
+        fieldValues: normalizeDependentFieldValues(service, [...existing, value])
       };
     });
     
@@ -92,7 +138,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
       delete next[fieldKey];
       return next;
     });
-  }, []);
+  }, [service]);
 
   const updatePageCount = useCallback((count: number) => {
     setConfig(prev => ({ ...prev, pageCount: count }));
@@ -111,7 +157,18 @@ export function useServiceConfigurator(service: ServiceWithFields) {
   }, []);
 
   const replaceFiles = useCallback((fileIds: string[]) => {
-    setConfig(prev => ({ ...prev, fileIds }));
+    setConfig(prev => ({
+      ...prev,
+      fileIds,
+      bindingFileIds: prev.bindingFileIds.filter((fileId) => fileIds.includes(fileId)),
+    }));
+  }, []);
+
+  const setBindingFileIds = useCallback((bindingFileIds: string[]) => {
+    setConfig((prev) => ({
+      ...prev,
+      bindingFileIds: Array.from(new Set(bindingFileIds)).filter((fileId) => prev.fileIds.includes(fileId)),
+    }));
   }, []);
 
   const validate = useCallback(() => {
@@ -120,6 +177,11 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     
     service.fields.forEach(field => {
       if (field.isRequired) {
+        const availability = fieldOptionAvailability.get(field.id);
+        if (field.fieldType === 'checkbox' && availability?.isRestricted
+            && !availability.allowedOptionValues.has('true')) {
+          return;
+        }
         const val = config.fieldValues.find(fv => fv.fieldKey === field.key);
         if (!val || val.value === '' || val.value === false) {
           errors[field.key] = 'Campo obrigatório';
@@ -133,7 +195,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     
     setValidationErrors(errors);
     return valid;
-  }, [config.fieldValues, config.quantity, config.pageCount, service.fields]);
+  }, [config.fieldValues, config.quantity, config.pageCount, fieldOptionAvailability, service.fields]);
 
   const isValid = isConfigurationComplete;
 
@@ -146,9 +208,11 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     addFile,
     removeFile,
     replaceFiles,
+    setBindingFileIds,
     validate,
     isValid,
     validationErrors,
+    fieldOptionAvailability,
     error
   };
 }

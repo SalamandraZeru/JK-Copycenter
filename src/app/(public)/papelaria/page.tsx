@@ -40,18 +40,47 @@ export default async function PapelariaPage(
       categories = dbCategories;
     }
 
-    let query = supabase
-      .from('products')
-      .select('id, name, slug, description, image_url, price, stock_quantity', { count: 'exact' })
-      .eq('is_active', true)
-      .is('deleted_at', null)
-      .order('sort_order')
-      .range(offset, offset + limit - 1);
+    // Categorias pertencem exclusivamente à Papelaria. Um produto pode estar
+    // em várias categorias, por isso o filtro usa a relação N:N canônica.
+    if (categoriaSlug && categoriaSlug !== 'todas') {
+      const { data: selectedCategory } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', categoriaSlug)
+        .eq('is_active', true)
+        .maybeSingle();
 
-    const { data: dbProducts, count: dbCount } = await query;
-    if (dbProducts && dbProducts.length > 0) {
-      products = dbProducts;
-      count = dbCount || dbProducts.length;
+      if (!selectedCategory) {
+        products = [];
+        count = 0;
+      } else {
+      const { data: dbProducts, count: dbCount } = await supabase
+        .from('products')
+        .select('id, name, slug, description, image_url, price, stock_quantity, product_categories!inner(category_id)', { count: 'exact' })
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .eq('product_categories.category_id', selectedCategory.id)
+        .order('sort_order')
+        .range(offset, offset + limit - 1);
+
+      if (dbProducts && dbProducts.length > 0) {
+        products = dbProducts;
+        count = dbCount || dbProducts.length;
+      }
+      }
+    } else {
+      const { data: dbProducts, count: dbCount } = await supabase
+        .from('products')
+        .select('id, name, slug, description, image_url, price, stock_quantity', { count: 'exact' })
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .order('sort_order')
+        .range(offset, offset + limit - 1);
+
+      if (dbProducts && dbProducts.length > 0) {
+        products = dbProducts;
+        count = dbCount || dbProducts.length;
+      }
     }
   } catch {}
 

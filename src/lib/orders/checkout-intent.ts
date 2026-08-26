@@ -36,6 +36,7 @@ export const checkoutIntentSchema = z.object({
     isFrontAndBack: z.boolean().default(false),
     quantity: z.number().int().min(1, 'Quantidade mínima é 1').max(100_000_000),
     fileIds: z.array(z.string().uuid()).max(100).default([]),
+    bindingFileIds: z.array(z.string().uuid()).max(100).default([]),
   }).refine((item) => Boolean(item.serviceId || item.productId), {
     message: 'Item deve indicar serviço ou produto.',
   })).min(1, 'Carrinho não pode estar vazio').max(1_000),

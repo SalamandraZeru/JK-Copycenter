@@ -49,6 +49,16 @@ function normalizedOptions(options: z.infer<typeof optionSchema>[]): Json {
   return JSON.parse(JSON.stringify(normalized)) as Json;
 }
 
+function serviceFieldErrorMessage(message: string): string {
+  if (message.includes('SERVICE_FIELD_DEPENDENCY_FIELD_STILL_REFERENCED')) {
+    return 'Este campo possui vínculos entre opções. Exclua os vínculos antes de desativá-lo.';
+  }
+  if (message.includes('SERVICE_FIELD_DEPENDENCY_OPTION_STILL_REFERENCED')) {
+    return 'Uma opção removida ou inativada ainda é usada em vínculos. Exclua esses vínculos antes de salvar o campo.';
+  }
+  return message;
+}
+
 export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
@@ -123,7 +133,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
     return NextResponse.json(data);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Erro ao criar campo';
+    const message = serviceFieldErrorMessage(error instanceof Error ? error.message : 'Erro ao criar campo');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -166,7 +176,7 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
 
     return NextResponse.json(data);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Erro ao atualizar campo';
+    const message = serviceFieldErrorMessage(error instanceof Error ? error.message : 'Erro ao atualizar campo');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -203,7 +213,7 @@ export async function DELETE(request: Request, props: { params: Promise<{ id: st
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Erro ao excluir campo';
+    const message = serviceFieldErrorMessage(error instanceof Error ? error.message : 'Erro ao excluir campo');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

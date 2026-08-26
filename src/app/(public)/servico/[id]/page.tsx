@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { ServiceConfigurator } from '@/components/servico/ServiceConfigurator';
 import type { ServiceFieldOption, ServiceWithFields } from '@/types/service';
 import type { Json } from '@/types/supabase';
@@ -23,7 +23,7 @@ function publicOptions(value: Json): ServiceFieldOption[] {
 
 async function loadService(idOrSlug: string): Promise<ServiceWithFields | null> {
   if (!UUID_PATTERN.test(idOrSlug) && !SLUG_PATTERN.test(idOrSlug)) return null;
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   let query = supabase
     .from('services')
     .select('id, name, slug, description, image_url, base_price, service_fields(id, service_id, key, label, field_type, options, is_required, sort_order, is_active)')
@@ -33,6 +33,21 @@ async function loadService(idOrSlug: string): Promise<ServiceWithFields | null> 
   const { data: service, error } = await query.maybeSingle();
   if (error || !service) return null;
 
+  const [bindingResult, dependenciesResult] = await Promise.all([
+    supabase
+      .from('service_binding_price_tiers')
+      .select('id')
+      .eq('service_id', service.id)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('service_field_option_dependencies')
+      .select('source_field_id, source_option_value, source_conditions, target_field_id, target_option_value')
+      .eq('service_id', service.id),
+  ]);
+  if (bindingResult.error || dependenciesResult.error) return null;
+
   return {
     id: service.id,
     name: service.name,
@@ -40,6 +55,7 @@ async function loadService(idOrSlug: string): Promise<ServiceWithFields | null> 
     description: service.description,
     imageUrl: service.image_url,
     basePrice: service.base_price,
+    bindingAvailable: Boolean(bindingResult.data),
     fields: (service.service_fields ?? [])
       .filter((field) => field.is_active)
       .sort((left, right) => left.sort_order - right.sort_order)
@@ -53,6 +69,22 @@ async function loadService(idOrSlug: string): Promise<ServiceWithFields | null> 
         isRequired: field.is_required,
         sortOrder: field.sort_order,
       })),
+    fieldOptionDependencies: (dependenciesResult.data ?? []).map((dependency) => ({
+      sourceFieldId: dependency.source_field_id,
+      sourceOptionValue: dependency.source_option_value,
+      sourceConditions: Array.isArray(dependency.source_conditions)
+        ? dependency.source_conditions.flatMap((condition) => {
+          if (!condition || typeof condition !== 'object' || Array.isArray(condition)) return [];
+          const fieldId = condition.field_id;
+          const optionValue = condition.option_value;
+          return typeof fieldId === 'string' && typeof optionValue === 'string'
+            ? [{ fieldId, optionValue }]
+            : [];
+        })
+        : [{ fieldId: dependency.source_field_id, optionValue: dependency.source_option_value }],
+      targetFieldId: dependency.target_field_id,
+      targetOptionValue: dependency.target_option_value,
+    })),
   };
 }
 

@@ -25,6 +25,7 @@ export interface CheckoutItem {
   isFrontAndBack: boolean;
   quantity: number;
   fileIds: string[];
+  bindingFileIds?: string[];
 }
 
 export interface CheckoutPayload {

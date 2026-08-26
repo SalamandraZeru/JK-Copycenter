@@ -440,6 +440,23 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
         </div>
       )}
 
+      <section className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 font-serif">Compatibilidades entre escolhas</h2>
+            <p className="text-xs font-medium text-slate-600 mt-1">
+              Configure em uma árvore quais materiais, gramaturas, acabamentos e caixas de marcar ficam disponíveis em cada combinação.
+            </p>
+          </div>
+          <Link
+            href={`/admin/servicos/${service.id}/compatibilidades`}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#0F2040] hover:bg-[#CC1A1A] text-white font-bold text-sm shadow-md transition"
+          >
+            Configurar compatibilidades
+          </Link>
+        </div>
+      </section>
+
       {/* Fields List */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">

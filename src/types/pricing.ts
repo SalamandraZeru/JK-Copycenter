@@ -29,6 +29,40 @@ export interface PricingDiscount {
   discountBps: number;
 }
 
+export interface BindingPriceTier {
+  id: string;
+  serviceId: string;
+  minPages: number;
+  maxPages: number | null;
+  priceCents: number;
+  isActive: boolean;
+}
+
+export interface FieldOptionDependency {
+  sourceFieldId: string;
+  sourceOptionValue: string;
+  sourceConditions?: FieldOptionCondition[];
+  targetFieldId: string;
+  targetOptionValue: string;
+}
+
+export interface FieldOptionCondition {
+  fieldId: string;
+  optionValue: string;
+}
+
+export interface BindingFileSelection {
+  fileId: string;
+  pageCount: number;
+}
+
+export interface BindingSelectionSnapshot {
+  fileId: string;
+  pageCount: number;
+  tierId: string;
+  priceCents: number;
+}
+
 export type ServerFieldPriceEffect =
   | { type: 'none' }
   | { type: 'fixed' | 'per_page'; valueCents: number }
@@ -70,6 +104,8 @@ export interface PricingContext {
   fields: ServerPricingField[];
   rules: PricingRule[];
   discounts: PricingDiscount[];
+  bindingTiers: BindingPriceTier[];
+  fieldOptionDependencies: FieldOptionDependency[];
   doubleSidedMultiplierBps: number;
   roundingMode: PricingRoundingMode;
 }
@@ -87,6 +123,10 @@ export interface PricingCalculationInput {
   isFrontAndBack: boolean;
   quantity: number;
   fileIds?: string[];
+  bindingFileIds?: string[];
+  // Esta lista só é preenchida pelo servidor, após conferir a titularidade e
+  // os metadados dos arquivos. Nunca é montada diretamente pelo navegador.
+  bindingFiles?: BindingFileSelection[];
 }
 
 export interface PricingFieldSnapshot {
@@ -113,6 +153,9 @@ export interface PricingCalculationResult {
   discountBps: number;
   discountCents: number;
   totalCents: number;
+  bindingUnitCents: number;
+  bindingTotalCents: number;
+  bindingSelections: BindingSelectionSnapshot[];
   fieldsSnapshot: PricingFieldSnapshot[];
   attributeIdsSnapshot: string[];
   pageCount: number;

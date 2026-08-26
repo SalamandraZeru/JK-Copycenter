@@ -128,6 +128,39 @@ export interface Database {
           }
         ];
       };
+      product_categories: {
+        Row: {
+          product_id: string;
+          category_id: string;
+          created_at: string;
+        };
+        Insert: {
+          product_id: string;
+          category_id: string;
+          created_at?: string;
+        };
+        Update: {
+          product_id?: string;
+          category_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'product_categories_product_id_fkey';
+            columns: ['product_id'];
+            isOneToOne: false;
+            referencedRelation: 'products';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'product_categories_category_id_fkey';
+            columns: ['category_id'];
+            isOneToOne: false;
+            referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
       services: {
         Row: {
           id: string;
@@ -233,6 +266,61 @@ export interface Database {
             columns: ['service_id'];
             isOneToOne: false;
             referencedRelation: 'services';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+      service_field_option_dependencies: {
+        Row: {
+          id: string;
+          service_id: string;
+          source_field_id: string;
+          source_option_value: string;
+          source_conditions: Json;
+          target_field_id: string;
+          target_option_value: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          service_id: string;
+          source_field_id: string;
+          source_option_value: string;
+          source_conditions?: Json;
+          target_field_id: string;
+          target_option_value: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          service_id?: string;
+          source_field_id?: string;
+          source_option_value?: string;
+          source_conditions?: Json;
+          target_field_id?: string;
+          target_option_value?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'service_field_option_dependencies_service_id_fkey';
+            columns: ['service_id'];
+            isOneToOne: false;
+            referencedRelation: 'services';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'service_field_option_dependencies_source_field_id_fkey';
+            columns: ['source_field_id'];
+            isOneToOne: false;
+            referencedRelation: 'service_fields';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'service_field_option_dependencies_target_field_id_fkey';
+            columns: ['target_field_id'];
+            isOneToOne: false;
+            referencedRelation: 'service_fields';
             referencedColumns: ['id'];
           }
         ];
@@ -450,6 +538,47 @@ export interface Database {
         Relationships: [
           {
             foreignKeyName: 'pricing_discounts_service_id_fkey';
+            columns: ['service_id'];
+            isOneToOne: false;
+            referencedRelation: 'services';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+      service_binding_price_tiers: {
+        Row: {
+          id: string;
+          service_id: string;
+          min_pages: number;
+          max_pages: number | null;
+          price_cents: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          service_id: string;
+          min_pages: number;
+          max_pages?: number | null;
+          price_cents: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          service_id?: string;
+          min_pages?: number;
+          max_pages?: number | null;
+          price_cents?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'service_binding_price_tiers_service_id_fkey';
             columns: ['service_id'];
             isOneToOne: false;
             referencedRelation: 'services';
@@ -788,6 +917,76 @@ export interface Database {
             columns: ['product_id'];
             isOneToOne: false;
             referencedRelation: 'products';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+      order_price_adjustments: {
+        Row: {
+          id: string;
+          order_id: string;
+          order_item_id: string;
+          admin_user_id: string | null;
+          idempotency_key: string;
+          previous_item_total_cents: number;
+          new_item_total_cents: number;
+          previous_order_subtotal_cents: number;
+          new_order_subtotal_cents: number;
+          previous_order_total_cents: number;
+          new_order_total_cents: number;
+          reason: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          order_item_id: string;
+          admin_user_id?: string | null;
+          idempotency_key: string;
+          previous_item_total_cents: number;
+          new_item_total_cents: number;
+          previous_order_subtotal_cents: number;
+          new_order_subtotal_cents: number;
+          previous_order_total_cents: number;
+          new_order_total_cents: number;
+          reason: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          order_item_id?: string;
+          admin_user_id?: string | null;
+          idempotency_key?: string;
+          previous_item_total_cents?: number;
+          new_item_total_cents?: number;
+          previous_order_subtotal_cents?: number;
+          new_order_subtotal_cents?: number;
+          previous_order_total_cents?: number;
+          new_order_total_cents?: number;
+          reason?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'order_price_adjustments_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'orders';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'order_price_adjustments_order_item_id_fkey';
+            columns: ['order_item_id'];
+            isOneToOne: false;
+            referencedRelation: 'order_items';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'order_price_adjustments_admin_user_id_fkey';
+            columns: ['admin_user_id'];
+            isOneToOne: false;
+            referencedRelation: 'admin_users';
             referencedColumns: ['id'];
           }
         ];
@@ -1338,6 +1537,38 @@ export interface Database {
           payment_status: Database['public']['Enums']['payment_status'];
           replayed: boolean;
         }[];
+      };
+      adjust_order_item_price: {
+        Args: {
+          p_order_id: string;
+          p_order_item_id: string;
+          p_admin_user_id: string;
+          p_new_total_cents: number;
+          p_reason: string;
+          p_idempotency_key: string;
+        };
+        Returns: {
+          order_id: string;
+          subtotal_cents: number;
+          total_cents: number;
+          replayed: boolean;
+        }[];
+      };
+      replace_service_field_option_dependencies: {
+        Args: {
+          p_service_id: string;
+          p_root_field_id: string;
+          p_root_option_value: string;
+          p_dependencies: Json;
+        };
+        Returns: number;
+      };
+      replace_product_categories: {
+        Args: {
+          p_product_id: string;
+          p_category_ids: string[];
+        };
+        Returns: undefined;
       };
       transition_order_status: {
         Args: {

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils/format';
 import { 
   ArrowLeft, Package, User, MapPin, Download, CheckCircle, 
-  MessageCircle, Loader2, Save, FileText, Printer
+  MessageCircle, Loader2, Save, FileText, Printer, PencilLine
 } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
@@ -57,6 +57,10 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
   const [operatorNote, setOperatorNote] = useState('');
   const [externalReference, setExternalReference] = useState('');
   const [openingFileId, setOpeningFileId] = useState<string | null>(null);
+  const [adjustmentItemId, setAdjustmentItemId] = useState('');
+  const [adjustmentTotal, setAdjustmentTotal] = useState('');
+  const [adjustmentReason, setAdjustmentReason] = useState('');
+  const [updatingPrice, setUpdatingPrice] = useState(false);
 
   if (isLoading) return <div className="p-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>;
   if (error || !order) return <div className="p-20 text-center text-red-500">Erro ao carregar pedido.</div>;
@@ -121,6 +125,42 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
       alert(caught instanceof Error ? caught.message : 'Não foi possível registrar o pagamento.');
     } finally {
       setUpdatingPayment(false);
+    }
+  };
+
+  const handlePriceAdjustment = async () => {
+    const parsedTotal = Number(adjustmentTotal.trim().replace(',', '.'));
+    if (!adjustmentItemId || !Number.isFinite(parsedTotal) || parsedTotal < 0) {
+      alert('Selecione um item e informe o novo total em reais.');
+      return;
+    }
+    if (adjustmentReason.trim().length < 3) {
+      alert('Explique o motivo do ajuste para registrar no pedido.');
+      return;
+    }
+
+    setUpdatingPrice(true);
+    try {
+      const response = await fetch(`/api/admin/pedidos/${order.id}/preco`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderItemId: adjustmentItemId,
+          newTotalCents: Math.round(parsedTotal * 100),
+          reason: adjustmentReason.trim(),
+          idempotencyKey: crypto.randomUUID(),
+        }),
+      });
+      const result = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok || result?.error) throw new Error(result?.error || 'Não foi possível ajustar o preço.');
+      setAdjustmentItemId('');
+      setAdjustmentTotal('');
+      setAdjustmentReason('');
+      await mutate();
+    } catch (caught) {
+      alert(caught instanceof Error ? caught.message : 'Não foi possível ajustar o preço.');
+    } finally {
+      setUpdatingPrice(false);
     }
   };
 
@@ -324,6 +364,29 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
             </div>}
           </div>
 
+          {!isProductionView && Array.isArray(order.order_price_adjustments) && order.order_price_adjustments.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
+              <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <PencilLine className="w-5 h-5 text-blue-600" /> Histórico de ajustes de valor
+              </h2>
+              <div className="space-y-3">
+                {order.order_price_adjustments.map((adjustment: any) => (
+                  <div key={adjustment.id} className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <span className="font-bold text-slate-900">
+                        Item: {formatCurrency(Number(adjustment.previous_item_total_cents) / 100)} → {formatCurrency(Number(adjustment.new_item_total_cents) / 100)}
+                      </span>
+                      <span className="text-xs font-medium text-slate-600">
+                        {new Date(adjustment.created_at).toLocaleString('pt-BR')}{adjustment.admin_users?.full_name ? ` · ${adjustment.admin_users.full_name}` : ''}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-700"><strong>Motivo:</strong> {adjustment.reason}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Arquivos do Cliente com Download Direto e Impressão Nativa */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
             <div className="flex items-center justify-between mb-4">
@@ -423,6 +486,32 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
               </button>
             </div>
           </div>
+
+          {!isProductionView && <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2"><PencilLine className="w-5 h-5 text-blue-600" /> Ajuste final do valor</h2>
+            <p className="text-sm text-slate-600 mb-4">Use após revisar os arquivos ou conceder desconto. O motivo e os valores anterior/novo ficam registrados no pedido.</p>
+            {order.payment_status !== 'pending_contact' ? (
+              <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600">O valor fica bloqueado após a confirmação ou cancelamento do pagamento.</p>
+            ) : (
+              <div className="space-y-3">
+                <select value={adjustmentItemId} onChange={(event) => {
+                  const itemId = event.target.value;
+                  setAdjustmentItemId(itemId);
+                  const item = (order.order_items || []).find((candidate: any) => candidate.id === itemId);
+                  if (item) setAdjustmentTotal(String(Number(item.total_price ?? (Number(item.total_price_cents ?? 0) / 100)).toFixed(2)));
+                }} className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white text-sm">
+                  <option value="">Selecione o item...</option>
+                  {(order.order_items || []).map((item: any) => <option key={item.id} value={item.id}>{item.service_name_snapshot || item.product_name_snapshot || 'Item'} — {formatCurrency(Number(item.total_price ?? (Number(item.total_price_cents ?? 0) / 100)))}</option>)}
+                </select>
+                <input value={adjustmentTotal} onChange={(event) => setAdjustmentTotal(event.target.value)} inputMode="decimal" placeholder="Novo total do item (R$)" className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white text-sm" />
+                <textarea value={adjustmentReason} onChange={(event) => setAdjustmentReason(event.target.value)} maxLength={2000} placeholder="Motivo obrigatório: desconto, página removida, revisão técnica..." className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white text-sm min-h-24" />
+                <button onClick={handlePriceAdjustment} disabled={!adjustmentItemId || !adjustmentTotal.trim() || adjustmentReason.trim().length < 3 || updatingPrice} className="w-full py-2.5 bg-amber-600 text-white font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-colors hover:bg-amber-700 text-sm">
+                  {updatingPrice ? <Loader2 className="w-4 h-4 animate-spin" /> : <PencilLine className="w-4 h-4" />}
+                  Registrar ajuste
+                </button>
+              </div>
+            )}
+          </div>}
 
           {!isProductionView && <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-2">Confirmação manual de pagamento</h2>

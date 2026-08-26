@@ -12,6 +12,12 @@ const fetcher = (url: string) => fetch(url).then(res => res.json());
 interface ProductCategory {
   id: string;
   name: string;
+  is_active?: boolean;
+}
+
+interface ProductCategoryLink {
+  category_id: string;
+  categories?: ProductCategory | null;
 }
 
 interface Product {
@@ -19,13 +25,17 @@ interface Product {
   name: string;
   slug: string;
   description: string | null;
-  category_id: string | null;
   image_url: string | null;
   price: number;
   stock_quantity: number | null;
   is_active: boolean;
   sort_order: number;
-  categories?: ProductCategory | null;
+  product_categories?: ProductCategoryLink[] | null;
+}
+
+function productCategories(product: Product): ProductCategory[] {
+  return (product.product_categories ?? [])
+    .flatMap((link) => link.categories ? [link.categories] : []);
 }
 
 export default function ProdutosPage() {
@@ -41,7 +51,7 @@ export default function ProdutosPage() {
     name: string;
     slug: string;
     description: string;
-    category_id: string;
+    category_ids: string[];
     image_url: string | null;
     price: number;
     stock_quantity: number | '';
@@ -51,7 +61,7 @@ export default function ProdutosPage() {
     name: '',
     slug: '',
     description: '',
-    category_id: '',
+    category_ids: [],
     image_url: null,
     price: 0,
     stock_quantity: '',
@@ -66,7 +76,7 @@ export default function ProdutosPage() {
       name: '',
       slug: '',
       description: '',
-      category_id: categorias[0]?.id || '',
+      category_ids: [],
       image_url: null,
       price: 0,
       stock_quantity: '',
@@ -82,7 +92,7 @@ export default function ProdutosPage() {
       name: prod.name || '',
       slug: prod.slug || '',
       description: prod.description || '',
-      category_id: prod.category_id || '',
+      category_ids: productCategories(prod).map((category) => category.id),
       image_url: prod.image_url || null,
       price: prod.price || 0,
       stock_quantity: prod.stock_quantity !== null && prod.stock_quantity !== undefined ? prod.stock_quantity : '',
@@ -136,17 +146,26 @@ export default function ProdutosPage() {
     }
   };
 
+  const toggleCategory = (categoryId: string) => {
+    setFormData((current) => ({
+      ...current,
+      category_ids: current.category_ids.includes(categoryId)
+        ? current.category_ids.filter((id) => id !== categoryId)
+        : [...current.category_ids, categoryId],
+    }));
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 font-serif">Produtos de Papelaria</h1>
-          <p className="text-sm font-medium text-slate-600">Cadastre e gerencie itens físicos com preço fixo e controle de estoque.</p>
+          <p className="text-sm font-medium text-slate-600">Cadastre produtos de papelaria, vincule uma ou mais categorias e controle preços, estoque e fotos.</p>
         </div>
         <button 
           onClick={startNew}
           disabled={editingId !== null}
-          className="inline-flex items-center gap-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center gap-2 bg-[#0F2040] px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#CC1A1A] disabled:opacity-50 sm:w-auto"
         >
           <Plus className="w-4 h-4" /> Novo Produto
         </button>
@@ -155,11 +174,11 @@ export default function ProdutosPage() {
       {/* Editor Box */}
       {editingId && (
         <div className="bg-white rounded-3xl border-2 border-blue-500 shadow-xl p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
-          <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+          <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-bold text-slate-900 font-serif">
               {editingId === 'new' ? 'Cadastrar Novo Produto' : 'Editar Produto'}
             </h2>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
                 onClick={cancelEdit}
@@ -230,22 +249,7 @@ export default function ProdutosPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
-                    Categoria
-                  </label>
-                  <select
-                    value={formData.category_id}
-                    onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none cursor-pointer transition"
-                  >
-                    <option value="">Sem categoria</option>
-                    {categorias.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
@@ -274,6 +278,38 @@ export default function ProdutosPage() {
                   />
                 </div>
               </div>
+
+              <fieldset className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-800">
+                  Categorias de exibição
+                </legend>
+                <p className="mb-3 text-xs leading-5 text-slate-600">
+                  Marque todas as categorias em que este produto deve aparecer na Papelaria.
+                </p>
+                {categorias.length === 0 ? (
+                  <p className="text-sm font-medium text-slate-600">Cadastre categorias antes de vincular este produto.</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {categorias.map((category) => {
+                      const checked = formData.category_ids.includes(category.id);
+                      return (
+                        <label
+                          key={category.id}
+                          className="flex min-w-0 cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 transition hover:border-blue-300 hover:bg-blue-50/40"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleCategory(category.id)}
+                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                          />
+                          <span className="min-w-0 break-words leading-5">{category.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </fieldset>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
@@ -305,7 +341,7 @@ export default function ProdutosPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         {prodLoading ? (
           <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
         ) : prodError ? (
@@ -317,12 +353,13 @@ export default function ProdutosPage() {
             <p className="text-xs text-slate-500 mt-1">Clique em &ldquo;Novo Produto&rdquo; para adicionar materiais de papelaria.</p>
           </div>
         ) : (
-          <table className="w-full text-left">
+          <div className="overflow-x-auto">
+          <table className="min-w-[920px] w-full text-left">
             <thead className="bg-slate-50 text-slate-800 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4 w-20">Foto</th>
                 <th className="px-6 py-4">Nome & Slug</th>
-                <th className="px-6 py-4">Categoria</th>
+                <th className="px-6 py-4">Categorias</th>
                 <th className="px-6 py-4">Preço</th>
                 <th className="px-6 py-4">Estoque</th>
                 <th className="px-6 py-4">Status</th>
@@ -346,7 +383,15 @@ export default function ProdutosPage() {
                     <p className="text-xs text-slate-600 font-mono font-medium">{prod.slug}</p>
                   </td>
                   <td className="px-6 py-4 text-sm font-bold text-slate-800">
-                    {prod.categories?.name || 'Sem categoria'}
+                    {productCategories(prod).length > 0 ? (
+                      <div className="flex min-w-[170px] flex-wrap gap-1.5">
+                        {productCategories(prod).map((category) => (
+                          <span key={category.id} className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-800">
+                            {category.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : 'Sem categoria'}
                   </td>
                   <td className="px-6 py-4 font-bold text-slate-900">
                     {formatCurrency(prod.price)}
@@ -383,6 +428,7 @@ export default function ProdutosPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

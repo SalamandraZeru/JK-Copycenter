@@ -73,6 +73,7 @@ function checkoutRequestHash(
       isFrontAndBack: item.isFrontAndBack,
       quantity: item.quantity,
       fileIds: [...item.fileIds].sort(),
+      bindingFileIds: [...(item.bindingFileIds ?? [])].sort(),
     })),
     deliveryType: payload.deliveryType,
     deliveryAddressId: payload.deliveryAddressId || null,
@@ -295,6 +296,12 @@ export async function processCheckout(
       isFrontAndBack: item.isFrontAndBack,
       quantity: item.quantity,
       fileIds: item.fileIds,
+      bindingFileIds: item.bindingFileIds ?? [],
+      bindingFiles: (item.bindingFileIds ?? []).map((fileId) => {
+        const file = filesById.get(fileId);
+        if (!file) throw new Error('FILE_ACCESS_DENIED');
+        return { fileId, pageCount: Math.max(1, file.page_count) };
+      }),
     };
     const pricingResult = await validateAndRecalculate(pricingInput, supabase);
     if (!pricingResult.success) throw new Error(`${pricingResult.error.code}: ${pricingResult.error.message}`);
@@ -305,9 +312,13 @@ export async function processCheckout(
       ...quote,
     });
     const fieldsSnapshot = toJson(quote.fieldsSnapshot);
-    const description = quote.fieldsSnapshot
+    const fieldsDescription = quote.fieldsSnapshot
       .map((field) => `${field.fieldLabel}: ${field.valueLabel}`)
       .join(', ');
+    const bindingDescription = quote.bindingSelections.length > 0
+      ? `Encadernação: ${quote.bindingSelections.length} ${quote.bindingSelections.length === 1 ? 'arquivo' : 'arquivos'}`
+      : '';
+    const description = [fieldsDescription, bindingDescription].filter(Boolean).join(' · ');
 
     processedItems.push({
       id: crypto.randomUUID(),

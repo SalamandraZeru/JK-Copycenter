@@ -13,7 +13,7 @@ const productFields = {
   name: z.string().trim().min(1).max(200),
   slug: z.string().trim().min(1).max(200).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   description: z.string().trim().max(5000).nullable().optional(),
-  category_id: z.string().uuid().nullable().optional(),
+  category_ids: z.array(z.string().uuid()).max(50).optional(),
   image_url: z.string().trim().max(2_000_000).nullable().optional(),
   price: z.coerce.number().min(0).max(1_000_000).optional(),
   stock_quantity: z.union([z.coerce.number().int().min(0).max(100_000_000), z.literal(''), z.null()]).optional(),
@@ -24,6 +24,19 @@ const productSchema = z.object(productFields);
 const createProductSchema = productSchema.strict();
 const updateProductSchema = productSchema.partial().extend({ id: z.string().uuid() }).strict();
 
+async function replaceProductCategories(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  productId: string,
+  categoryIds: string[],
+) {
+  const uniqueCategoryIds = Array.from(new Set(categoryIds));
+  const { error } = await supabase.rpc('replace_product_categories', {
+    p_product_id: productId,
+    p_category_ids: uniqueCategoryIds,
+  });
+  if (error) throw error;
+}
+
 export async function GET() {
   try {
     const auth = await requireApiAdminPermission('manage_catalog');
@@ -33,7 +46,7 @@ export async function GET() {
     
     const { data, error } = await supabase
       .from('products')
-      .select('*, categories (id, name)')
+      .select('*, product_categories (category_id, categories (id, name))')
       .is('deleted_at', null)
       .order('sort_order', { ascending: true });
 
@@ -63,7 +76,7 @@ export async function POST(request: Request) {
         name: body.name,
         slug: body.slug,
         description: body.description || null,
-        category_id: body.category_id || null,
+        category_id: null,
         image_url: body.image_url || null,
         price_cents: reaisToCents(body.price ?? 0),
         stock_quantity: body.stock_quantity !== null && body.stock_quantity !== '' && body.stock_quantity !== undefined ? Number(body.stock_quantity) : null,
@@ -75,7 +88,21 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
-    await logAdminAction(supabase, auth.session.id, 'create_product', 'products', data.id, { name: data.name });
+    try {
+      await replaceProductCategories(supabase, data.id, body.category_ids ?? []);
+    } catch (categoryError) {
+      // O produto nunca deve ficar público se a associação de categorias falhar.
+      await supabase
+        .from('products')
+        .update({ is_active: false, deleted_at: new Date().toISOString() })
+        .eq('id', data.id);
+      throw categoryError;
+    }
+
+    await logAdminAction(supabase, auth.session.id, 'create_product', 'products', data.id, {
+      name: data.name,
+      category_count: (body.category_ids ?? []).length,
+    });
 
     return NextResponse.json(data);
   } catch (error: unknown) {
@@ -100,7 +127,6 @@ export async function PUT(request: Request) {
     if (body.name !== undefined) updatePayload.name = body.name;
     if (body.slug !== undefined) updatePayload.slug = body.slug;
     if (body.description !== undefined) updatePayload.description = body.description;
-    if (body.category_id !== undefined) updatePayload.category_id = body.category_id;
     if (body.image_url !== undefined) updatePayload.image_url = body.image_url;
     if (body.price !== undefined) updatePayload.price_cents = reaisToCents(body.price);
     if (body.stock_quantity !== undefined) {
@@ -120,7 +146,14 @@ export async function PUT(request: Request) {
 
     if (error) throw error;
 
-    await logAdminAction(supabase, auth.session.id, 'update_product', 'products', data.id, { name: data.name });
+    if (body.category_ids !== undefined) {
+      await replaceProductCategories(supabase, data.id, body.category_ids);
+    }
+
+    await logAdminAction(supabase, auth.session.id, 'update_product', 'products', data.id, {
+      name: data.name,
+      category_count: body.category_ids?.length,
+    });
 
     return NextResponse.json(data);
   } catch (error: unknown) {

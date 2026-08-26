@@ -13,16 +13,43 @@ export async function GET(request: Request) {
   const offset = (page - 1) * limit;
 
   try {
+    let selectedCategoryId: string | null = null;
+    if (categoriaSlug && categoriaSlug !== 'todas') {
+      const { data: category, error: categoryError } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('slug', categoriaSlug)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (categoryError) throw categoryError;
+
+      if (!category) {
+        return NextResponse.json({
+          success: true,
+          data: [],
+          count: 0,
+          totalPages: 0,
+          currentPage: page,
+        });
+      }
+      selectedCategoryId = category.id;
+    }
+
     let query = supabase
       .from('products')
-      .select('id, category_id, name, slug, description, image_url, price, stock_quantity, sort_order, categories!inner(slug)', { count: 'exact' })
+      .select(
+        selectedCategoryId
+          ? 'id, name, slug, description, image_url, price, stock_quantity, sort_order, product_categories!inner(category_id)'
+          : 'id, name, slug, description, image_url, price, stock_quantity, sort_order',
+        { count: 'exact' },
+      )
       .eq('is_active', true)
       .is('deleted_at', null)
       .order('sort_order', { ascending: true })
       .range(offset, offset + limit - 1);
 
-    if (categoriaSlug && categoriaSlug !== 'todas') {
-      query = query.eq('categories.slug', categoriaSlug);
+    if (selectedCategoryId) {
+      query = query.eq('product_categories.category_id', selectedCategoryId);
     }
 
     const { data, count, error } = await query;
