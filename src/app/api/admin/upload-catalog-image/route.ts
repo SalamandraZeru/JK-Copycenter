@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireApiAdminPermission } from '@/lib/auth/api-admin';
+import { validateMagicBytes } from '@/lib/upload/validator';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,8 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Nenhum arquivo enviado.' }, { status: 400 });
     }
 
-    const fileExtension = EXTENSION_BY_MIME[file.type];
-    if (!fileExtension) {
+    if (!EXTENSION_BY_MIME[file.type]) {
       return NextResponse.json(
         { error: 'Formato de arquivo inválido. Apenas PNG, JPEG e WEBP são permitidos.' },
         { status: 400 }
@@ -44,9 +44,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Pasta de destino inválida.' }, { status: 400 });
     }
 
-    const supabase = createServiceRoleClient();
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const validation = validateMagicBytes(buffer, file.type);
+    if (!validation.valid || !EXTENSION_BY_MIME[validation.detectedMime]) {
+      return NextResponse.json(
+        { error: 'O conteúdo da imagem não corresponde a um PNG, JPEG ou WEBP válido.' },
+        { status: 400 },
+      );
+    }
+
+    const supabase = createServiceRoleClient();
+    const fileExtension = EXTENSION_BY_MIME[validation.detectedMime];
 
     const cleanFileName = `${folder}/${crypto.randomUUID()}.${fileExtension}`;
 
@@ -54,7 +63,7 @@ export async function POST(request: Request) {
     const { error: uploadError } = await supabase.storage
       .from('catalog-images')
       .upload(cleanFileName, buffer, {
-        contentType: file.type,
+        contentType: validation.detectedMime,
         upsert: false,
       });
 
@@ -70,10 +79,9 @@ export async function POST(request: Request) {
       url: publicUrlData.publicUrl,
       fileName: cleanFileName,
     });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Erro ao fazer upload da imagem.';
+  } catch {
     return NextResponse.json(
-      { error: message },
+      { error: 'Não foi possível processar a imagem com segurança.' },
       { status: 500 }
     );
   }

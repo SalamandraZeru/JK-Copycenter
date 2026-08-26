@@ -6,24 +6,9 @@ import { processUpload } from '@/lib/upload/orchestrator';
 import { validateCsrfOrigin } from '@/lib/security/csrf';
 import { isUuid } from '@/lib/security/admin-input';
 import { readGuestUploadSession } from '@/lib/upload/guest-session';
+import { enforceCloudflareRateLimit } from '@/lib/security/cloudflare-rate-limit';
 
 export const dynamic = 'force-dynamic';
-
-const rateLimitCache = new Map<string, { count: number; timestamp: number }>();
-const RATE_LIMIT_WINDOW = 60 * 1000;
-const MAX_REQUESTS = 15;
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const record = rateLimitCache.get(ip);
-  if (!record || now - record.timestamp > RATE_LIMIT_WINDOW) {
-    rateLimitCache.set(ip, { count: 1, timestamp: now });
-    return true;
-  }
-  if (record.count >= MAX_REQUESTS) return false;
-  record.count += 1;
-  return true;
-}
 
 function publicUploadError(error: unknown): { message: string; status: number } {
   const code = error instanceof Error ? error.message : 'UPLOAD_FAILED';
@@ -61,24 +46,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!validateCsrfOrigin(request.headers.get('origin'), request.headers.get('host'))) {
     return NextResponse.json({ success: false, error: 'Requisição não autorizada.' }, { status: 403 });
   }
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ success: false, error: 'Muitas requisições. Aguarde um instante.' }, { status: 429 });
-  }
-
   try {
-    const formData = await request.formData();
-    const fileValue = formData.get('file');
-    const intentValue = formData.get('intentId');
-    if (!(fileValue instanceof File) || typeof intentValue !== 'string' || !isUuid(intentValue)) {
-      return NextResponse.json({ success: false, error: 'Upload inválido.' }, { status: 400 });
-    }
-
     const sessionClient = await createClient();
     const { data: { user } } = await sessionClient.auth.getUser();
     const guestSession = user ? null : readGuestUploadSession(request);
     if (!user && !guestSession) {
       return NextResponse.json({ success: false, error: 'Sessão de upload obrigatória.' }, { status: 401 });
+    }
+
+    const limit = await enforceCloudflareRateLimit(
+      request,
+      'JK_UPLOAD_RATE_LIMIT',
+      'upload',
+      { userId: user?.id ?? null, guestSessionHash: guestSession?.hash ?? null },
+    );
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Muitas requisições. Aguarde um instante.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } },
+      );
+    }
+
+    const formData = await request.formData();
+    const fileValue = formData.get('file');
+    const intentValue = formData.get('intentId');
+    if (!(fileValue instanceof File) || typeof intentValue !== 'string' || !isUuid(intentValue)) {
+      return NextResponse.json({ success: false, error: 'Upload inválido.' }, { status: 400 });
     }
 
     const owner = user

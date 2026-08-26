@@ -10,21 +10,9 @@ import {
   attachGuestUploadCookie,
   ensureGuestUploadSession,
 } from '@/lib/upload/guest-session';
+import { enforceCloudflareRateLimit } from '@/lib/security/cloudflare-rate-limit';
 
 export const dynamic = 'force-dynamic';
-
-const intentRateLimit = new Map<string, { count: number; startedAt: number }>();
-function allowIntent(ip: string): boolean {
-  const now = Date.now();
-  const current = intentRateLimit.get(ip);
-  if (!current || now - current.startedAt > 60_000) {
-    intentRateLimit.set(ip, { count: 1, startedAt: now });
-    return true;
-  }
-  if (current.count >= 20) return false;
-  current.count += 1;
-  return true;
-}
 
 const intentSchema = z.object({
   originalName: z.string().min(1).max(500),
@@ -42,11 +30,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!validateCsrfOrigin(request.headers.get('origin'), request.headers.get('host'))) {
     return NextResponse.json({ success: false, error: 'Requisição não autorizada.' }, { status: 403 });
   }
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-  if (!allowIntent(ip)) {
-    return NextResponse.json({ success: false, error: 'Muitas intenções de upload.' }, { status: 429 });
-  }
-
   const parsed = intentSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ success: false, error: 'Metadados de arquivo inválidos.' }, { status: 400 });
@@ -57,6 +40,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const sessionClient = await createClient();
     const { data: { user } } = await sessionClient.auth.getUser();
     const guestSession = user ? null : ensureGuestUploadSession(request);
+    const limit = await enforceCloudflareRateLimit(
+      request,
+      'JK_UPLOAD_INTENTS_RATE_LIMIT',
+      'upload-intent',
+      { userId: user?.id ?? null, guestSessionHash: guestSession?.hash ?? null },
+    );
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Muitas intenções de upload. Aguarde um instante.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } },
+      );
+    }
     const admin = createServiceRoleClient();
     const settings = await loadSystemConfig(admin, [
       'upload_max_size_bytes',

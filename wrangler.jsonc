@@ -4,6 +4,23 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-08-24",
   "compatibility_flags": ["nodejs_compat"],
+  "ratelimits": [
+    {
+      "name": "JK_PRICING_PREVIEW_RATE_LIMIT",
+      "namespace_id": "2026082601",
+      "simple": { "limit": 30, "period": 60 }
+    },
+    {
+      "name": "JK_UPLOAD_INTENTS_RATE_LIMIT",
+      "namespace_id": "2026082602",
+      "simple": { "limit": 20, "period": 60 }
+    },
+    {
+      "name": "JK_UPLOAD_RATE_LIMIT",
+      "namespace_id": "2026082603",
+      "simple": { "limit": 15, "period": 60 }
+    }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

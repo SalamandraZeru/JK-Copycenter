@@ -8,6 +8,7 @@ import { validateCsrfOrigin } from '@/lib/security/csrf';
 import { createClient } from '@/lib/supabase/server';
 import { readGuestUploadSession } from '@/lib/upload/guest-session';
 import { loadAuthorizedReadyFiles } from '@/lib/upload/access';
+import { enforceCloudflareRateLimit } from '@/lib/security/cloudflare-rate-limit';
 
 const previewSchema = z.object({
   serviceId: z.string().uuid(),
@@ -23,33 +24,6 @@ const previewSchema = z.object({
   quantity: z.number().int().min(1).max(100_000_000),
 });
 
-// Simple in-memory rate limiting mock
-const rateLimitCache = new Map<string, { count: number; timestamp: number }>();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 30;
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const userRecord = rateLimitCache.get(ip);
-
-  if (!userRecord) {
-    rateLimitCache.set(ip, { count: 1, timestamp: now });
-    return true;
-  }
-
-  if (now - userRecord.timestamp > RATE_LIMIT_WINDOW) {
-    rateLimitCache.set(ip, { count: 1, timestamp: now });
-    return true;
-  }
-
-  if (userRecord.count >= MAX_REQUESTS_PER_WINDOW) {
-    return false;
-  }
-
-  userRecord.count++;
-  return true;
-}
-
 export async function POST(req: NextRequest): Promise<NextResponse<PricingResult>> {
   try {
     if (!validateCsrfOrigin(req.headers.get('origin'), req.headers.get('host'))) {
@@ -59,16 +33,27 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
       }, { status: 403 });
     }
 
-    const ip = req.headers.get("x-forwarded-for")?.split(',')[0]?.trim() || "unknown-ip";
-    if (!checkRateLimit(ip)) {
+    const sessionClient = await createClient();
+    const { data: { user } } = await sessionClient.auth.getUser();
+    const guestSession = user ? null : readGuestUploadSession(req);
+    const limit = await enforceCloudflareRateLimit(
+      req,
+      'JK_PRICING_PREVIEW_RATE_LIMIT',
+      'pricing-preview',
+      { userId: user?.id ?? null, guestSessionHash: guestSession?.hash ?? null },
+    );
+    if (!limit.allowed) {
       const result: PricingResult = {
         success: false,
         error: {
           code: "INVALID_INPUT",
-          message: "Too many requests. Please try again later.",
+          message: "Muitas requisições. Tente novamente em instantes.",
         },
       };
-      return NextResponse.json(result, { status: 429 });
+      return NextResponse.json(result, {
+        status: 429,
+        headers: { 'Retry-After': String(limit.retryAfterSeconds) },
+      });
     }
 
     const body = (await req.json()) as unknown;
@@ -87,10 +72,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
 
     const intent = parseResult.data;
     const supabaseAdmin = createServiceRoleClient();
-    const sessionClient = await createClient();
-    const { data: { user } } = await sessionClient.auth.getUser();
-    const guestSession = user ? null : readGuestUploadSession(req);
-
     let pageCount = 1;
     let isEstimate = false;
     let bindingFiles: Array<{ fileId: string; pageCount: number }> = [];
