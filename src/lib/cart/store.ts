@@ -325,6 +325,17 @@ export const useCartStore = create<CartState>()(
                 revalidationStatus: hasExpectedFiles ? 'requires_file_reupload' : item.revalidationStatus,
               };
             }
+            const alreadyRestored = item.fileIds.length === files.fileIds.length
+              && item.fileIds.every((fileId) => files.fileIds.includes(fileId))
+              && (item.bindingFileIds ?? []).length === files.bindingFileIds.length
+              && (item.bindingFileIds ?? []).every((fileId) => files.bindingFileIds.includes(fileId));
+            // Keep an item already revalidated by the cart ready when checkout
+            // mounts in the same tab. After hydration (where fileIds are
+            // intentionally empty), `alreadyRestored` is false and the cart
+            // still performs an authoritative preview before checkout.
+            if (alreadyRestored && item.revalidationStatus === 'ready' && !item.requiresFileReupload) {
+              return item;
+            }
             return {
               ...item,
               fileIds: files.fileIds,
