@@ -24,9 +24,16 @@ export default async function AdminLayout({
 }) {
   const session = await getAdminSession();
 
-  // If not authenticated (e.g. login page), render child page directly without admin frame
+  // O PWA administrativo precisa ser registrável desde o login. O worker tem
+  // escopo /admin/ e só armazena ativos estáticos; não persiste páginas nem
+  // dados autenticados.
   if (!session) {
-    return <>{children}</>;
+    return (
+      <>
+        <AdminPwaRegistration />
+        {children}
+      </>
+    );
   }
 
   return (
