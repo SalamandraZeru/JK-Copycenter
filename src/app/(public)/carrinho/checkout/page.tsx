@@ -374,7 +374,7 @@ export default function CheckoutPage() {
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div><h2 className="text-xl font-bold text-slate-900">Cotação final</h2><p className="mt-1 text-sm text-slate-600">Atualize sempre que mudar itens, entrega ou dados do pedido.</p></div>
-            <button type="button" onClick={handleRefreshQuote} disabled={isQuoting || checkoutBlocked} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 font-semibold text-blue-700 disabled:cursor-not-allowed disabled:opacity-60">{isQuoting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{isQuoting ? 'Atualizando…' : 'Atualizar cotação'}</button>
+            <button type="button" onClick={handleRefreshQuote} disabled={!checkoutSettings || isQuoting || checkoutBlocked} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 font-semibold text-blue-700 disabled:cursor-not-allowed disabled:opacity-60">{!checkoutSettings || isQuoting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{!checkoutSettings ? 'Carregando…' : isQuoting ? 'Atualizando…' : 'Atualizar cotação'}</button>
           </div>
 
           {quote ? <div className="mb-6 space-y-4 rounded-xl border border-slate-200 bg-white p-4">
@@ -387,7 +387,7 @@ export default function CheckoutPage() {
           {checkoutBlocked && <div className="mb-6 flex gap-2 rounded-xl border border-amber-300 bg-amber-100 p-4 text-sm text-amber-900"><AlertCircle className="h-4 w-4 flex-shrink-0" />Volte ao carrinho e conclua a revisão dos itens antes de finalizar.</div>}
           {error && <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</div>}
 
-          <button type="submit" disabled={isSubmitting || isQuoting || checkoutBlocked} className="w-full rounded-xl bg-slate-900 py-4 font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70">{isSubmitting ? 'Criando pedido…' : quote ? 'Criar pedido' : 'Atualizar cotação para continuar'}</button>
+          <button type="submit" disabled={!checkoutSettings || isSubmitting || isQuoting || checkoutBlocked} className="w-full rounded-xl bg-slate-900 py-4 font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70">{!checkoutSettings ? 'Carregando configuração…' : isSubmitting ? 'Criando pedido…' : quote ? 'Criar pedido' : 'Atualizar cotação para continuar'}</button>
           <p className="mt-3 text-center text-xs text-slate-500">Depois da confirmação, você poderá abrir o WhatsApp com a mensagem pronta. O pedido não depende de popup.</p>
         </section>
       </form>
