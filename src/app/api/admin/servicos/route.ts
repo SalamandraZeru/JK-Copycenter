@@ -3,10 +3,12 @@ import { z } from 'zod';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireApiAdminPermission } from '@/lib/auth/api-admin';
 import { logAdminAction } from '@/lib/auth/admin';
-import type { TablesUpdate } from '@/types';
+import type { Json, TablesUpdate } from '@/types';
 import { isUuid, parseAdminJson } from '@/lib/security/admin-input';
 import { reaisToCents } from '@/lib/pricing/money';
 import { inspectServicePublication, type CatalogState } from '@/lib/catalog/publication';
+import { isPricingProfile, validatePricingProfileConfig } from '@/lib/pricing/profiles';
+import type { PricingProfile } from '@/types/pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +20,8 @@ const serviceFields = {
   base_price: z.coerce.number().min(0).max(1_000_000).optional(),
   catalog_state: z.enum(['draft', 'review', 'published', 'inactive']).optional(),
   pricing_fallback_behavior: z.enum(['use_base', 'block']).optional(),
+  pricing_profile: z.enum(['per_page', 'per_item', 'per_sheet', 'per_square_meter', 'per_linear_meter', 'binding_by_file_pages', 'booklet_imposition', 'manual_quote']).optional(),
+  pricing_profile_config: z.record(z.string(), z.unknown()).refine((value) => JSON.stringify(value).length <= 10_000, 'Configuração técnica muito extensa.').optional(),
   sort_order: z.coerce.number().int().min(-100_000).max(100_000).optional(),
 };
 const serviceSchema = z.object(serviceFields);
@@ -56,6 +60,12 @@ export async function POST(request: Request) {
     const parsed = await parseAdminJson(request, createServiceSchema);
     if (!parsed.success) return parsed.errorResponse;
     const body = parsed.data;
+    const pricingProfile = body.pricing_profile ?? 'per_page';
+    const pricingProfileConfig = (body.pricing_profile_config ?? {}) as Json;
+    const profileErrors = validatePricingProfileConfig(pricingProfile, pricingProfileConfig);
+    if (profileErrors.length > 0) {
+      return NextResponse.json({ error: profileErrors.join(' ') }, { status: 422 });
+    }
 
     const { data, error } = await supabase
       .from('services')
@@ -68,6 +78,8 @@ export async function POST(request: Request) {
         base_price_cents: reaisToCents(body.base_price ?? 0),
         catalog_state: 'draft',
         pricing_fallback_behavior: body.pricing_fallback_behavior ?? 'block',
+        pricing_profile: pricingProfile,
+        pricing_profile_config: pricingProfileConfig,
         is_active: false,
         sort_order: Number(body.sort_order) || 0,
         catalog_updated_by: auth.session.id,
@@ -98,7 +110,7 @@ export async function PUT(request: Request) {
 
     const { data: current, error: currentError } = await supabase
       .from('services')
-      .select('id, name, slug, base_price_cents, pricing_fallback_behavior, catalog_state, published_at')
+      .select('id, name, slug, base_price_cents, pricing_fallback_behavior, pricing_profile, pricing_profile_config, catalog_state, published_at')
       .eq('id', body.id)
       .is('deleted_at', null)
       .maybeSingle();
@@ -110,11 +122,21 @@ export async function PUT(request: Request) {
       ? current.base_price_cents
       : reaisToCents(body.base_price);
     const nextFallbackBehavior = body.pricing_fallback_behavior ?? current.pricing_fallback_behavior;
+    const nextPricingProfile = (body.pricing_profile ?? current.pricing_profile) as PricingProfile;
+    const nextPricingProfileConfig = (body.pricing_profile_config ?? current.pricing_profile_config) as Json;
+    if (!isPricingProfile(nextPricingProfile)) {
+      return NextResponse.json({ error: 'Perfil de cobrança inválido.' }, { status: 422 });
+    }
+    const profileErrors = validatePricingProfileConfig(nextPricingProfile, nextPricingProfileConfig);
+    if (profileErrors.length > 0) {
+      return NextResponse.json({ error: profileErrors.join(' ') }, { status: 422 });
+    }
     const readiness = await inspectServicePublication(supabase, current.id, {
       name: body.name ?? current.name,
       slug: body.slug ?? current.slug,
       basePriceCents: nextBasePriceCents,
       fallbackBehavior: nextFallbackBehavior,
+      pricingProfile: nextPricingProfile,
       state: nextState,
     });
     if (!readiness.ready) {
@@ -133,6 +155,8 @@ export async function PUT(request: Request) {
     if (body.image_url !== undefined) updatePayload.image_url = body.image_url;
     if (body.base_price !== undefined) updatePayload.base_price_cents = nextBasePriceCents;
     if (body.pricing_fallback_behavior !== undefined) updatePayload.pricing_fallback_behavior = nextFallbackBehavior;
+    if (body.pricing_profile !== undefined) updatePayload.pricing_profile = nextPricingProfile;
+    if (body.pricing_profile_config !== undefined) updatePayload.pricing_profile_config = nextPricingProfileConfig;
     if (body.catalog_state !== undefined) {
       updatePayload.catalog_state = nextState;
       updatePayload.is_active = nextState === 'published';

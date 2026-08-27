@@ -1,4 +1,5 @@
 import type { FieldType } from './index';
+import type { PricingDimensions, PricingProfile, PricingProfileConfig } from './pricing';
 
 export interface ServiceFieldOption {
   value: string;
@@ -36,6 +37,8 @@ export interface ServiceWithFields {
   description: string | null;
   imageUrl: string | null;
   basePrice: number;
+  pricingProfile: PricingProfile;
+  pricingProfileConfig: PricingProfileConfig;
   bindingAvailable: boolean;
   fields: ServiceField[];
   fieldOptionDependencies: ServiceFieldOptionDependency[];
@@ -57,6 +60,8 @@ export interface ServiceConfiguration {
   quantity: number;
   fileIds: string[];
   bindingFileIds: string[];
+  dimensions: PricingDimensions;
+  bookletPaddingApproved: boolean;
   estimatedPrice: number | null;
   isLoadingPrice: boolean;
 }

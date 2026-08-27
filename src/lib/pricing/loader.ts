@@ -14,6 +14,7 @@ import type {
   ServerPricingField,
   ServerPricingOption,
 } from '@/types/pricing';
+import { isPricingProfile, normalizePricingProfileConfig } from './profiles';
 
 export class QuoteUnavailableError extends Error {
   readonly code = 'QUOTE_UNAVAILABLE';
@@ -95,7 +96,7 @@ export async function loadPricingData(
 ): Promise<PricingContext> {
   const { data: service, error: serviceError } = await supabase
     .from('services')
-    .select('id, name, description, base_price_cents, pricing_fallback_behavior, pricing_version')
+    .select('id, name, description, base_price_cents, pricing_fallback_behavior, pricing_version, pricing_profile, pricing_profile_config')
     .eq('id', serviceId)
     .eq('is_active', true)
     .eq('catalog_state', 'published')
@@ -104,6 +105,9 @@ export async function loadPricingData(
 
   if (serviceError || !service) {
     throw new QuoteUnavailableError('Serviço inexistente ou inativo.');
+  }
+  if (!isPricingProfile(service.pricing_profile)) {
+    throw new QuoteUnavailableError('Perfil técnico de cobrança inválido.');
   }
 
   const [fieldsResult, attributesResult, rulesResult, discountsResult, bindingTiersResult, dependenciesResult, settingsResult] = await Promise.all([
@@ -250,6 +254,8 @@ export async function loadPricingData(
       basePriceCents: service.base_price_cents,
       fallbackBehavior: service.pricing_fallback_behavior as FallbackBehavior,
       pricingVersion: service.pricing_version,
+      pricingProfile: service.pricing_profile,
+      pricingProfileConfig: normalizePricingProfileConfig(service.pricing_profile_config),
     },
     attributes: (attributesResult.data ?? []).map((attribute) => ({
       id: attribute.id,

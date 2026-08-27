@@ -1,4 +1,5 @@
 import type { DeliveryType, PaymentMethod } from './index';
+import type { PricingDimensions } from './pricing';
 
 export interface AddressInput {
   street: string;
@@ -34,6 +35,8 @@ export interface CheckoutItem {
   quantity: number;
   fileIds: string[];
   bindingFileIds?: string[];
+  dimensions?: PricingDimensions;
+  bookletPaddingApproved?: boolean;
 }
 
 export interface CheckoutPayload {

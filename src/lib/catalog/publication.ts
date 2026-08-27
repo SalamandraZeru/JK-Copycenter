@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/types/supabase';
+import type { PricingProfile } from '@/types/pricing';
 
 export type CatalogState = 'draft' | 'review' | 'published' | 'inactive';
 
@@ -8,6 +9,7 @@ export interface ServicePublicationCandidate {
   slug: string;
   basePriceCents: number;
   fallbackBehavior: string;
+  pricingProfile?: PricingProfile;
   state: CatalogState;
 }
 
@@ -75,7 +77,7 @@ export async function inspectServicePublication(
     errors.push('O preço-base do serviço é inválido.');
   }
 
-  const [fieldsResult, rulesResult] = await Promise.all([
+  const [fieldsResult, rulesResult, bindingTiersResult] = await Promise.all([
     supabase
       .from('service_fields')
       .select('id, key, label, field_type, options, is_required, is_active')
@@ -90,9 +92,14 @@ export async function inspectServicePublication(
       `)
       .eq('service_id', serviceId)
       .eq('is_active', true),
+    supabase
+      .from('service_binding_price_tiers')
+      .select('id')
+      .eq('service_id', serviceId)
+      .eq('is_active', true),
   ]);
 
-  if (fieldsResult.error || rulesResult.error) {
+  if (fieldsResult.error || rulesResult.error || bindingTiersResult.error) {
     return {
       ready: false,
       errors: ['Não foi possível validar os campos e regras do serviço.'],
@@ -187,16 +194,25 @@ export async function inspectServicePublication(
   }
 
   if (candidate.state === 'published') {
-    if (candidate.fallbackBehavior === 'block' && activeRules.length === 0) {
+    const isManualQuote = candidate.pricingProfile === 'manual_quote';
+    const isBindingByFile = candidate.pricingProfile === 'binding_by_file_pages';
+    if (isBindingByFile && (bindingTiersResult.data?.length ?? 0) === 0) {
+      errors.push('A encadernação por arquivo exige ao menos uma faixa de preço ativa.');
+    }
+    if (!isManualQuote && !isBindingByFile && candidate.fallbackBehavior === 'block' && activeRules.length === 0) {
       errors.push('A publicação exige uma regra ativa quando o fallback bloqueia a cotação.');
     }
-    if (candidate.fallbackBehavior === 'use_base' && candidate.basePriceCents === 0 && activeRules.length === 0) {
+    if (!isManualQuote && !isBindingByFile && candidate.fallbackBehavior === 'use_base' && candidate.basePriceCents === 0 && activeRules.length === 0) {
       errors.push('A publicação exige preço-base maior que zero ou uma regra de preço ativa.');
     }
     if (candidate.fallbackBehavior !== 'block' && candidate.fallbackBehavior !== 'use_base') {
       errors.push('O comportamento de fallback de preço é inválido.');
     }
-    if (activeRules.length === 0 && candidate.fallbackBehavior === 'use_base') {
+    if (isManualQuote) {
+      warnings.push('Este serviço publicado exige orçamento técnico; não haverá preço automático no carrinho.');
+    } else if (isBindingByFile) {
+      warnings.push('Este serviço cobra somente pelos arquivos escolhidos para encadernação.');
+    } else if (activeRules.length === 0 && candidate.fallbackBehavior === 'use_base') {
       warnings.push('O serviço publicado usa o preço-base para todas as configurações válidas.');
     }
   }

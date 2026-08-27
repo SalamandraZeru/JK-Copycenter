@@ -19,6 +19,12 @@ const previewSchema = z.object({
   })).max(100).default([]),
   fileIds: z.array(z.string().uuid()).max(100).default([]),
   bindingFileIds: z.array(z.string().uuid()).max(100).default([]),
+  dimensions: z.object({
+    widthCm: z.number().finite().positive().max(100_000).optional(),
+    heightCm: z.number().finite().positive().max(100_000).optional(),
+    lengthCm: z.number().finite().positive().max(100_000).optional(),
+  }).default({}),
+  bookletPaddingApproved: z.boolean().default(false),
   pageCount: z.number().int().optional(),
   isFrontAndBack: z.boolean().default(false),
   quantity: z.number().int().min(1).max(100_000_000),
@@ -119,6 +125,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
       fileIds: intent.fileIds,
       bindingFileIds: intent.bindingFileIds,
       bindingFiles,
+      dimensions: intent.dimensions,
+      bookletPaddingApproved: intent.bookletPaddingApproved,
     }, supabaseAdmin);
 
     if (!result.success) {

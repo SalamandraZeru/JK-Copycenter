@@ -27,6 +27,8 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
     updateFieldValue,
     updatePageCount,
     updateQuantity,
+    updateDimensions,
+    setBookletPaddingApproved,
     replaceFiles,
     setBindingFileIds,
     validate,
@@ -36,6 +38,12 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
     error: apiError,
     pricingResult,
   } = useServiceConfigurator(service);
+
+  const profileConfig = service.pricingProfileConfig;
+  const isManualQuote = service.pricingProfile === 'manual_quote';
+  const pageMultiple = profileConfig.pageMultiple ?? 4;
+  const bookletNeedsPadding = service.pricingProfile === 'booklet_imposition'
+    && config.pageCount % pageMultiple !== 0;
 
   const hasRequiredSelections = service.fields
     .filter((field) => field.isRequired)
@@ -59,6 +67,8 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
         quantity: config.quantity,
         fileIds: uploadedFiles.map(f => f.fileId),
         bindingFileIds: config.bindingFileIds,
+        dimensions: config.dimensions,
+        bookletPaddingApproved: config.bookletPaddingApproved,
         displaySnapshot: createCartDisplaySnapshot({
           serviceId: service.id,
           attributeIds: [],
@@ -67,6 +77,8 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
           isFrontAndBack: false,
           quantity: config.quantity,
           bindingFileIds: config.bindingFileIds,
+          dimensions: config.dimensions,
+          bookletPaddingApproved: config.bookletPaddingApproved,
           name: pricingResult.serviceSnapshot.name,
           imageUrl: service.imageUrl,
           estimatedTotal: pricingResult.totalCents / 100,
@@ -77,6 +89,9 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
             ...pricingResult.fieldsSnapshot.map((field) => `${field.fieldLabel}: ${field.valueLabel}`),
             ...(pricingResult.bindingSelections.length > 0
               ? [`Encadernação: ${pricingResult.bindingSelections.length} arquivo(s) selecionado(s)`]
+              : []),
+            ...(pricingResult.bookletPaddedPages
+              ? [`Livreto: ${pricingResult.bookletPaddedPages} páginas após complementação técnica`]
               : []),
           ],
           fileNames: uploadedFiles.map((file) => file.originalName),
@@ -195,25 +210,71 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
               <span className="text-xs text-slate-500">Mínimo de 1 cópia.</span>
             </div>
           </div>
+          {service.pricingProfile === 'per_square_meter' && (
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-slate-800">Largura (cm) *</label>
+                <input type="number" min="0.01" step="0.01" value={config.dimensions.widthCm ?? ''}
+                  onChange={(event) => updateDimensions({ ...config.dimensions, widthCm: Number(event.target.value) || undefined })}
+                  className="px-3.5 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm font-medium text-slate-900" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-slate-800">Altura (cm) *</label>
+                <input type="number" min="0.01" step="0.01" value={config.dimensions.heightCm ?? ''}
+                  onChange={(event) => updateDimensions({ ...config.dimensions, heightCm: Number(event.target.value) || undefined })}
+                  className="px-3.5 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm font-medium text-slate-900" />
+              </div>
+            </div>
+          )}
+          {service.pricingProfile === 'per_linear_meter' && (
+            <div className="mt-6 max-w-md flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-slate-800">Comprimento (cm) *</label>
+              <input type="number" min="0.01" step="0.01" value={config.dimensions.lengthCm ?? ''}
+                onChange={(event) => updateDimensions({ ...config.dimensions, lengthCm: Number(event.target.value) || undefined })}
+                className="px-3.5 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm font-medium text-slate-900" />
+            </div>
+          )}
+          {service.pricingProfile === 'booklet_imposition' && bookletNeedsPadding && (
+            <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              {profileConfig.allowBlankPagePadding ? (
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input type="checkbox" checked={config.bookletPaddingApproved}
+                    onChange={(event) => setBookletPaddingApproved(event.target.checked)} className="mt-0.5 h-4 w-4" />
+                  <span>Seu livreto será ajustado para {Math.ceil(config.pageCount / pageMultiple) * pageMultiple} páginas, com páginas técnicas em branco quando necessário.</span>
+                </label>
+              ) : (
+                <span>Este livreto deve ter um total de páginas múltiplo de {pageMultiple}.</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Right Col - Summary */}
       <div className="flex flex-col gap-6">
-        <PriceDisplay 
-          estimatedPrice={config.estimatedPrice} 
-          isLoading={config.isLoadingPrice} 
-          hasEstimate={pricingResult?.isEstimate ?? false}
-          error={hasRequiredSelections ? apiError : null}
-        />
+        {isManualQuote ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950">
+            <h2 className="font-bold text-base">Orçamento técnico</h2>
+            <p className="mt-2">Este serviço é analisado pela equipe antes da confirmação. Envie seus arquivos e detalhes para receber a cotação.</p>
+          </div>
+        ) : (
+          <PriceDisplay
+            estimatedPrice={config.estimatedPrice}
+            isLoading={config.isLoadingPrice}
+            hasEstimate={pricingResult?.isEstimate ?? false}
+            error={hasRequiredSelections ? apiError : null}
+          />
+        )}
         
         <button
           onClick={handleAddToCart}
-          disabled={!isValid || config.isLoadingPrice || !pricingResult}
+          disabled={isManualQuote || !isValid || config.isLoadingPrice || !pricingResult}
           className="w-full bg-blue-600 text-white px-6 py-3.5 rounded-xl font-bold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2"
         >
           <ShoppingCart className="w-5 h-5" />
-          {config.isLoadingPrice
+          {isManualQuote
+            ? 'Orçamento sob consulta'
+            : config.isLoadingPrice
             ? 'Calculando Preço...'
             : !pricingResult
               ? 'Aguardando cotação'

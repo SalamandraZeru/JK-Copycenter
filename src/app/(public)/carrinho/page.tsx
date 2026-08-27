@@ -133,6 +133,8 @@ export default function CarrinhoPage() {
             fieldValues: item.fieldValues.map(({ fieldKey, value }) => ({ fieldKey, value })),
             fileIds: item.fileIds,
             bindingFileIds: item.bindingFileIds ?? [],
+            dimensions: item.dimensions ?? {},
+            bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
             pageCount: item.pageCount,
             isFrontAndBack: item.isFrontAndBack,
             quantity: item.quantity,

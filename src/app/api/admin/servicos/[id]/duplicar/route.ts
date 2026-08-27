@@ -42,6 +42,8 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
         category_id: null,
         base_price_cents: source.base_price_cents,
         pricing_fallback_behavior: source.pricing_fallback_behavior,
+        pricing_profile: source.pricing_profile,
+        pricing_profile_config: source.pricing_profile_config,
         catalog_state: 'draft',
         is_active: false,
         sort_order: source.sort_order + 1,

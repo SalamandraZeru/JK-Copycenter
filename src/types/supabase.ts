@@ -173,6 +173,8 @@ export interface Database {
           base_price_cents: number;
           pricing_fallback_behavior: string;
           pricing_version: number;
+          pricing_profile: string;
+          pricing_profile_config: Json;
           catalog_state: Database['public']['Enums']['catalog_state'];
           catalog_version: number;
           catalog_updated_by: string | null;
@@ -195,6 +197,8 @@ export interface Database {
           base_price_cents: number;
           pricing_fallback_behavior?: string;
           pricing_version?: number;
+          pricing_profile?: string;
+          pricing_profile_config?: Json;
           catalog_state?: Database['public']['Enums']['catalog_state'];
           catalog_version?: number;
           catalog_updated_by?: string | null;
@@ -217,6 +221,8 @@ export interface Database {
           base_price_cents?: number;
           pricing_fallback_behavior?: string;
           pricing_version?: number;
+          pricing_profile?: string;
+          pricing_profile_config?: Json;
           catalog_state?: Database['public']['Enums']['catalog_state'];
           catalog_version?: number;
           catalog_updated_by?: string | null;

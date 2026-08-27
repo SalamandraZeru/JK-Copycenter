@@ -5,6 +5,7 @@ import { requireApiAdminPermission } from '@/lib/auth/api-admin';
 import { logAdminAction } from '@/lib/auth/admin';
 import { parseAdminJson } from '@/lib/security/admin-input';
 import type { Json } from '@/types/supabase';
+import { isPricingProfile, validatePricingProfileConfig } from '@/lib/pricing/profiles';
 
 const scalar = z.union([z.string().max(5_000), z.number().finite(), z.boolean()]).nullable();
 const fieldKey = z.string().trim().min(1).max(100).regex(/^[A-Za-z][A-Za-z0-9_]*$/);
@@ -17,6 +18,8 @@ const importSchema = z.object({
     image_url: z.string().trim().max(2_000_000).nullable().optional(),
     base_price_cents: z.number().int().min(0).max(100_000_000),
     pricing_fallback_behavior: z.enum(['use_base', 'block']),
+    pricing_profile: z.enum(['per_page', 'per_item', 'per_sheet', 'per_square_meter', 'per_linear_meter', 'binding_by_file_pages', 'booklet_imposition', 'manual_quote']).default('per_page'),
+    pricing_profile_config: z.record(z.string(), z.unknown()).default({}),
     sort_order: z.number().int().min(-100_000).max(100_000).optional(),
   }).strict(),
   fields: z.array(z.object({
@@ -73,6 +76,14 @@ export async function POST(request: Request) {
   if (bindingPriceTiers.some((tier) => tier.max_pages !== null && tier.max_pages < tier.min_pages)) {
     return NextResponse.json({ error: 'Uma faixa de encadernação possui limite máximo menor que o mínimo.' }, { status: 422 });
   }
+  const importedPricingProfile = config.service.pricing_profile ?? 'per_page';
+  if (!isPricingProfile(importedPricingProfile)) {
+    return NextResponse.json({ error: 'O arquivo contém um perfil de cobrança inválido.' }, { status: 422 });
+  }
+  const profileErrors = validatePricingProfileConfig(importedPricingProfile, config.service.pricing_profile_config as Json);
+  if (profileErrors.length > 0) {
+    return NextResponse.json({ error: profileErrors.join(' ') }, { status: 422 });
+  }
 
   const supabase = createServiceRoleClient();
   const attributeIds = pricingRules.flatMap((rule) => (rule.attributes ?? []).flatMap((link) => link.attribute_id ? [link.attribute_id] : []));
@@ -94,6 +105,8 @@ export async function POST(request: Request) {
         category_id: null,
         base_price_cents: config.service.base_price_cents,
         pricing_fallback_behavior: config.service.pricing_fallback_behavior,
+        pricing_profile: importedPricingProfile,
+        pricing_profile_config: config.service.pricing_profile_config as Json,
         sort_order: config.service.sort_order ?? 0,
         catalog_state: 'draft',
         is_active: false,

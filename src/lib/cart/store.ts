@@ -61,6 +61,8 @@ type PersistedCartItem = Pick<
   | 'pageCount'
   | 'quantity'
   | 'isFrontAndBack'
+  | 'dimensions'
+  | 'bookletPaddingApproved'
   | 'displaySnapshot'
   | 'revalidationStatus'
   | 'requiresFileReupload'
@@ -105,7 +107,7 @@ function displayValue(value: string | number | boolean): string {
 
 export function cartConfigurationFingerprint(item: Pick<
   CartItem,
-  'serviceId' | 'productId' | 'attributeIds' | 'fieldValues' | 'pageCount' | 'quantity' | 'isFrontAndBack' | 'bindingFileIds'
+  'serviceId' | 'productId' | 'attributeIds' | 'fieldValues' | 'pageCount' | 'quantity' | 'isFrontAndBack' | 'bindingFileIds' | 'dimensions' | 'bookletPaddingApproved'
 >): string {
   return JSON.stringify({
     serviceId: item.serviceId || null,
@@ -118,11 +120,13 @@ export function cartConfigurationFingerprint(item: Pick<
     quantity: item.quantity,
     isFrontAndBack: item.isFrontAndBack,
     bindingFileIds: [...(item.bindingFileIds ?? [])].sort(),
+    dimensions: item.dimensions ?? {},
+    bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
   });
 }
 
 export function createCartDisplaySnapshot(
-  item: Pick<CartItem, 'serviceId' | 'productId' | 'attributeIds' | 'fieldValues' | 'pageCount' | 'quantity' | 'isFrontAndBack' | 'bindingFileIds' | 'name' | 'imageUrl' | 'estimatedTotal'>,
+  item: Pick<CartItem, 'serviceId' | 'productId' | 'attributeIds' | 'fieldValues' | 'pageCount' | 'quantity' | 'isFrontAndBack' | 'bindingFileIds' | 'dimensions' | 'bookletPaddingApproved' | 'name' | 'imageUrl' | 'estimatedTotal'>,
   overrides: Partial<CartDisplaySnapshot> = {},
 ): CartDisplaySnapshot {
   const summary = overrides.summary
@@ -152,6 +156,8 @@ export function createCartDisplaySnapshot(
     configurationFingerprint: overrides.configurationFingerprint || cartConfigurationFingerprint({
       ...item,
       bindingFileIds: item.bindingFileIds ?? [],
+      dimensions: item.dimensions ?? {},
+      bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
     }),
   };
 }
@@ -231,6 +237,14 @@ function normalizePersistedItem(raw: Partial<CartItem>): CartItem {
     quantity: typeof raw.quantity === 'number' && Number.isInteger(raw.quantity) && raw.quantity > 0 ? raw.quantity : 1,
     fileIds: [],
     bindingFileIds: [],
+    dimensions: raw.dimensions && typeof raw.dimensions === 'object' && !Array.isArray(raw.dimensions)
+      ? {
+        ...(typeof raw.dimensions.widthCm === 'number' && Number.isFinite(raw.dimensions.widthCm) && raw.dimensions.widthCm > 0 ? { widthCm: raw.dimensions.widthCm } : {}),
+        ...(typeof raw.dimensions.heightCm === 'number' && Number.isFinite(raw.dimensions.heightCm) && raw.dimensions.heightCm > 0 ? { heightCm: raw.dimensions.heightCm } : {}),
+        ...(typeof raw.dimensions.lengthCm === 'number' && Number.isFinite(raw.dimensions.lengthCm) && raw.dimensions.lengthCm > 0 ? { lengthCm: raw.dimensions.lengthCm } : {}),
+      }
+      : {},
+    bookletPaddingApproved: Boolean(raw.bookletPaddingApproved),
     ...(raw.type ? { type: raw.type } : {}),
     ...(typeof raw.name === 'string' ? { name: raw.name } : {}),
     ...(typeof raw.imageUrl === 'string' || raw.imageUrl === null ? { imageUrl: raw.imageUrl } : {}),
@@ -348,7 +362,7 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'jk-cart-storage',
-      version: 3,
+      version: 4,
       migrate: (persistedState) => {
         const state = persistedState as { items?: Partial<CartItem>[] };
         return {
@@ -373,6 +387,8 @@ export const useCartStore = create<CartState>()(
           pageCount: item.pageCount,
           quantity: item.quantity,
           isFrontAndBack: item.isFrontAndBack,
+          dimensions: item.dimensions ?? {},
+          bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
           displaySnapshot: item.displaySnapshot,
           revalidationStatus: item.displaySnapshot.fileNames.length > 0 ? 'requires_file_reupload' : 'pending',
           requiresFileReupload: item.fileIds.length > 0 || item.displaySnapshot.fileNames.length > 0,

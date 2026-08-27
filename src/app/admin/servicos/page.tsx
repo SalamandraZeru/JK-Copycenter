@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { Loader2, Plus, Edit2, Trash2, Check, Printer, Settings, Image as ImageIcon, Copy, Download, Upload } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/format';
 import { ImageUploader } from '@/components/admin/ImageUploader';
+import { pricingProfileTemplates } from '@/lib/pricing/profiles';
+import type { PricingProfile } from '@/types/pricing';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -20,6 +22,8 @@ interface Service {
   catalog_state: 'draft' | 'review' | 'published' | 'inactive';
   catalog_version: number;
   pricing_fallback_behavior: 'use_base' | 'block';
+  pricing_profile: PricingProfile;
+  pricing_profile_config: Record<string, unknown>;
   sort_order: number;
 }
 
@@ -39,6 +43,8 @@ export default function ServicosPage() {
     base_price: number;
     catalog_state: Service['catalog_state'];
     pricing_fallback_behavior: Service['pricing_fallback_behavior'];
+    pricing_profile: PricingProfile;
+    pricing_profile_config: string;
     sort_order: number;
   }>({
     name: '',
@@ -48,6 +54,8 @@ export default function ServicosPage() {
     base_price: 0,
     catalog_state: 'draft',
     pricing_fallback_behavior: 'block',
+    pricing_profile: 'per_page',
+    pricing_profile_config: '{}',
     sort_order: 0,
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -62,6 +70,8 @@ export default function ServicosPage() {
       base_price: 0.50,
       catalog_state: 'draft',
       pricing_fallback_behavior: 'block',
+      pricing_profile: 'per_page',
+      pricing_profile_config: JSON.stringify(pricingProfileTemplates.per_page, null, 2),
       sort_order: servicos.length + 1,
     });
   };
@@ -77,6 +87,8 @@ export default function ServicosPage() {
       base_price: serv.base_price || 0,
       catalog_state: serv.catalog_state,
       pricing_fallback_behavior: serv.pricing_fallback_behavior,
+      pricing_profile: serv.pricing_profile ?? 'per_page',
+      pricing_profile_config: JSON.stringify(serv.pricing_profile_config ?? {}, null, 2),
       sort_order: serv.sort_order ?? 0,
     });
   };
@@ -91,13 +103,23 @@ export default function ServicosPage() {
       return;
     }
 
+    let pricingProfileConfig: Record<string, unknown>;
+    try {
+      const parsed = JSON.parse(formData.pricing_profile_config);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error();
+      pricingProfileConfig = parsed as Record<string, unknown>;
+    } catch {
+      alert('A configuração técnica precisa ser um objeto JSON válido.');
+      return;
+    }
+
     setIsSaving(true);
     const method = editingId === 'new' ? 'POST' : 'PUT';
     try {
       const res = await fetch('/api/admin/servicos', {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, pricing_profile_config: pricingProfileConfig }),
       });
 
       const resData = (await res.json()) as { error?: string };
@@ -279,6 +301,47 @@ export default function ServicosPage() {
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
+                    Perfil de cobrança técnica
+                  </label>
+                  <select
+                    value={formData.pricing_profile}
+                    onChange={(event) => {
+                      const pricingProfile = event.target.value as PricingProfile;
+                      setFormData({
+                        ...formData,
+                        pricing_profile: pricingProfile,
+                        pricing_profile_config: JSON.stringify(pricingProfileTemplates[pricingProfile], null, 2),
+                      });
+                    }}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  >
+                    <option value="per_page">Por página</option>
+                    <option value="per_item">Por unidade</option>
+                    <option value="per_sheet">Por folha física</option>
+                    <option value="per_square_meter">Por metro quadrado</option>
+                    <option value="per_linear_meter">Por metro linear</option>
+                    <option value="binding_by_file_pages">Encadernação por páginas do arquivo</option>
+                    <option value="booklet_imposition">Livreto por imposição</option>
+                    <option value="manual_quote">Orçamento técnico manual</option>
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">O preço permanece no serviço e nas regras; este perfil define a unidade e os limites técnicos.</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
+                  Configuração técnica (JSON)
+                </label>
+                <textarea
+                  rows={5}
+                  value={formData.pricing_profile_config}
+                  onChange={(event) => setFormData({ ...formData, pricing_profile_config: event.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-xs shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  aria-describedby="pricing-profile-help"
+                />
+                <p id="pricing-profile-help" className="mt-1 text-xs text-slate-500">Ex.: livreto usa <code>page_multiple</code>, <code>min_pages</code>, <code>allow_blank_page_padding</code> e <code>requires_customer_approval_for_padding</code>.</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

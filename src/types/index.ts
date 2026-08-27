@@ -21,6 +21,9 @@ export type { Database, Json } from './supabase';
 export type {
   FallbackBehavior,
   PricingRoundingMode,
+  PricingProfile,
+  PricingProfileConfig,
+  PricingDimensions,
   PricingRuleAttribute,
   PricingRuleFieldCondition,
   PricingRule,

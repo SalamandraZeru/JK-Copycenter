@@ -3,6 +3,8 @@ import type {
   PricingCalculationInput,
   PricingContext,
   PricingFieldSnapshot,
+  PricingDimensions,
+  PricingProfile,
   PricingResult,
   PricingRoundingMode,
   PricingRule,
@@ -208,6 +210,167 @@ function resolveBinding(
   return { unitCents, totalCents, selections };
 }
 
+function profileError(message: string): PricingResult {
+  return error('QUOTE_UNAVAILABLE', message);
+}
+
+function checkedAdd(left: number, right: number): number | null {
+  const total = left + right;
+  return Number.isSafeInteger(total) ? total : null;
+}
+
+function checkedMultiply(left: number, right: number): number | null {
+  const total = left * right;
+  return Number.isSafeInteger(total) ? total : null;
+}
+
+function centimeterHundredths(value: number | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0 || value > 100_000) return null;
+  const normalized = Math.round(value * 100);
+  return Number.isSafeInteger(normalized) && normalized > 0 && Math.abs(normalized / 100 - value) < 0.000_001
+    ? normalized
+    : null;
+}
+
+function normalizeDimensions(profile: PricingProfile, dimensions: PricingDimensions | undefined): PricingDimensions | null {
+  if (profile !== 'per_square_meter' && profile !== 'per_linear_meter') return null;
+  const width = centimeterHundredths(dimensions?.widthCm);
+  const height = centimeterHundredths(dimensions?.heightCm);
+  const length = centimeterHundredths(dimensions?.lengthCm);
+  if (profile === 'per_square_meter') {
+    return width !== null && height !== null ? { widthCm: width / 100, heightCm: height / 100 } : null;
+  }
+  return length !== null ? { lengthCm: length / 100 } : null;
+}
+
+function resolveRateWithEffects(
+  baseCents: number,
+  effects: ServerFieldPriceEffect[],
+  pageCount: number,
+  profile: PricingProfile,
+  roundingMode: PricingRoundingMode,
+): { rateCents: number; extraPerUnitCents: number } | null {
+  let rateCents = baseCents;
+  let extraPerUnitCents = 0;
+  try {
+    for (const effect of effects) {
+      if (effect.type === 'multiply') {
+        rateCents = applyBps(rateCents, effect.multiplierBps, roundingMode);
+      } else if (profile === 'per_page' && (effect.type === 'fixed' || effect.type === 'per_page')) {
+        rateCents += effect.valueCents;
+      } else if (effect.type === 'fixed') {
+        extraPerUnitCents += effect.valueCents;
+      } else if (effect.type === 'per_page') {
+        const pageExtra = checkedMultiply(effect.valueCents, pageCount);
+        if (pageExtra === null) return null;
+        extraPerUnitCents += pageExtra;
+      }
+      if (!Number.isSafeInteger(rateCents) || !Number.isSafeInteger(extraPerUnitCents) || rateCents < 0 || extraPerUnitCents < 0) {
+        return null;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return { rateCents, extraPerUnitCents };
+}
+
+interface ProfilePrice {
+  unitCents: number;
+  subtotalCents: number;
+  pricingUnit: string;
+  dimensions: PricingDimensions | null;
+  bookletPaddedPages: number | null;
+}
+
+function resolveProfilePrice(
+  input: PricingCalculationInput,
+  context: PricingContext,
+  priceCents: number,
+  effects: ServerFieldPriceEffect[],
+): ProfilePrice | PricingResult {
+  const profile = context.service.pricingProfile;
+  const config = context.service.pricingProfileConfig;
+  if (profile === 'manual_quote') return profileError('Este serviço exige orçamento técnico antes da confirmação.');
+
+  let pagesForPricing = input.pageCount;
+  let bookletPaddedPages: number | null = null;
+  if (profile === 'booklet_imposition') {
+    const minimum = config.minPages ?? 1;
+    const maximum = config.maxPages ?? 1_000_000;
+    const multiple = config.pageMultiple ?? 4;
+    if (input.pageCount < minimum || input.pageCount > maximum) {
+      return profileError(`O livreto deve ter entre ${minimum} e ${maximum} páginas.`);
+    }
+    const remainder = input.pageCount % multiple;
+    if (remainder !== 0) {
+      if (!config.allowBlankPagePadding) {
+        return profileError(`O livreto precisa ter um número de páginas múltiplo de ${multiple}.`);
+      }
+      if (config.requiresCustomerApprovalForPadding && !input.bookletPaddingApproved) {
+        return profileError(`Confirme a inclusão de páginas em branco para fechar a imposição em múltiplos de ${multiple}.`);
+      }
+      pagesForPricing = input.pageCount + multiple - remainder;
+      bookletPaddedPages = pagesForPricing;
+    }
+  }
+
+  const rates = resolveRateWithEffects(priceCents, effects, pagesForPricing, profile, context.roundingMode);
+  if (!rates) return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
+
+  const create = (unitCents: number, pricingUnit: string, dimensions: PricingDimensions | null = null): ProfilePrice | PricingResult => {
+    const subtotalCents = checkedMultiply(unitCents, input.quantity);
+    if (unitCents < 0 || subtotalCents === null) return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
+    return { unitCents, subtotalCents, pricingUnit, dimensions, bookletPaddedPages };
+  };
+
+  if (profile === 'per_page') {
+    const unitCents = checkedMultiply(rates.rateCents, pagesForPricing);
+    return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'página');
+  }
+  if (profile === 'per_item') {
+    const unitCents = checkedAdd(rates.rateCents, rates.extraPerUnitCents);
+    return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'unidade');
+  }
+  if (profile === 'per_sheet') {
+    const pagesPerSheet = config.pagesPerSheet ?? 1;
+    const sheets = Math.ceil(pagesForPricing / pagesPerSheet);
+    const bySheets = checkedMultiply(rates.rateCents, sheets);
+    const unitCents = bySheets === null ? null : checkedAdd(bySheets, rates.extraPerUnitCents);
+    return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'folha física');
+  }
+  if (profile === 'per_square_meter') {
+    const dimensions = normalizeDimensions(profile, input.dimensions);
+    if (!dimensions) return profileError('Informe largura e altura válidas em centímetros.');
+    const width = centimeterHundredths(dimensions.widthCm)!;
+    const height = centimeterHundredths(dimensions.heightCm)!;
+    const rateByWidth = checkedMultiply(rates.rateCents, width);
+    const numerator = rateByWidth === null ? null : checkedMultiply(rateByWidth, height);
+    if (numerator === null) return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
+    const byArea = divideRounded(numerator, 100_000_000, context.roundingMode);
+    const unitCents = checkedAdd(byArea, rates.extraPerUnitCents);
+    return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'metro quadrado', dimensions);
+  }
+  if (profile === 'per_linear_meter') {
+    const dimensions = normalizeDimensions(profile, input.dimensions);
+    if (!dimensions) return profileError('Informe o comprimento válido em centímetros.');
+    const length = centimeterHundredths(dimensions.lengthCm)!;
+    const numerator = checkedMultiply(rates.rateCents, length);
+    if (numerator === null) return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
+    const byLength = divideRounded(numerator, 10_000, context.roundingMode);
+    const unitCents = checkedAdd(byLength, rates.extraPerUnitCents);
+    return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'metro linear', dimensions);
+  }
+  if (profile === 'booklet_imposition') {
+    const unitCents = checkedAdd(rates.rateCents, rates.extraPerUnitCents);
+    return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'livreto finalizado');
+  }
+  if (profile === 'binding_by_file_pages') {
+    return create(0, 'arquivo encadernado');
+  }
+  return profileError('Perfil técnico de cobrança indisponível.');
+}
+
 export function calculatePrice(input: PricingCalculationInput, context: PricingContext): PricingResult {
   if (input.serviceId !== context.service.id) return error('QUOTE_UNAVAILABLE', 'Serviço indisponível.');
   if (!Number.isSafeInteger(input.pageCount) || input.pageCount < 1 || input.pageCount > 1_000_000) {
@@ -236,7 +399,13 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
 
   const resolvedFields = resolveFields(input, context);
   if (!resolvedFields) return error('QUOTE_UNAVAILABLE', 'Configuração de serviço inválida ou inativa.');
-  const resolvedRule = resolveRule(context, selectedByGroup, resolvedFields.selectedByFieldId);
+  const profile = context.service.pricingProfile;
+  if (profile === 'manual_quote') {
+    return error('QUOTE_UNAVAILABLE', 'Este serviço exige orçamento técnico antes da confirmação.');
+  }
+  const resolvedRule = profile === 'binding_by_file_pages'
+    ? { rule: null, usedFallback: true }
+    : resolveRule(context, selectedByGroup, resolvedFields.selectedByFieldId);
   if (!resolvedRule) return error('QUOTE_UNAVAILABLE', 'Regra de preço ausente ou ambígua.');
 
   const rule = resolvedRule.rule;
@@ -245,33 +414,27 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
     return error('QUOTE_UNAVAILABLE', 'Preço do serviço inválido.');
   }
 
-  let perPageCents = pricePerPageCents;
-  try {
-    for (const effect of resolvedFields.effects) {
-      if (effect.type === 'fixed' || effect.type === 'per_page') {
-        perPageCents += effect.valueCents;
-      } else if (effect.type === 'multiply') {
-        perPageCents = applyBps(perPageCents, effect.multiplierBps, context.roundingMode);
-      }
-    }
-    if (input.isFrontAndBack) {
-      perPageCents = applyBps(perPageCents, context.doubleSidedMultiplierBps, context.roundingMode);
-    }
-  } catch {
-    return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
-  }
+  let profilePrice = resolveProfilePrice(input, context, pricePerPageCents, resolvedFields.effects);
+  if ('success' in profilePrice) return profilePrice;
 
-  const printUnitPriceCents = perPageCents * input.pageCount;
-  const printSubtotalCents = printUnitPriceCents * input.quantity;
-  if (!Number.isSafeInteger(printSubtotalCents)) {
-    return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
+  if (input.isFrontAndBack && profile === 'per_page') {
+    const doubledUnit = applyBps(profilePrice.unitCents, context.doubleSidedMultiplierBps, context.roundingMode);
+    const doubledSubtotal = checkedMultiply(doubledUnit, input.quantity);
+    if (doubledSubtotal === null) return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
+    profilePrice = { ...profilePrice, unitCents: doubledUnit, subtotalCents: doubledSubtotal };
   }
 
   const binding = resolveBinding(input, context);
   if (!binding) return error('QUOTE_UNAVAILABLE', 'Encadernação indisponível para um ou mais arquivos selecionados.');
-  const unitPriceCents = printUnitPriceCents + binding.unitCents;
-  const subtotalBeforeDiscountCents = printSubtotalCents + binding.totalCents;
-  if (!Number.isSafeInteger(unitPriceCents) || !Number.isSafeInteger(subtotalBeforeDiscountCents)) {
+  if (profile === 'binding_by_file_pages' && binding.selections.length === 0) {
+    return error('QUOTE_UNAVAILABLE', 'Selecione ao menos um arquivo para encadernação.');
+  }
+
+  const primaryUnitCents = profile === 'binding_by_file_pages' ? 0 : profilePrice.unitCents;
+  const primarySubtotalCents = profile === 'binding_by_file_pages' ? 0 : profilePrice.subtotalCents;
+  const unitPriceCents = checkedAdd(primaryUnitCents, binding.unitCents);
+  const subtotalBeforeDiscountCents = checkedAdd(primarySubtotalCents, binding.totalCents);
+  if (unitPriceCents === null || subtotalBeforeDiscountCents === null) {
     return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
   }
 
@@ -284,9 +447,10 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
   }
 
   const discountBps = applicableDiscounts[0]?.discountBps ?? 0;
-  // Descontos de volume continuam incidindo somente na impressão. A
-  // encadernação é um acabamento físico cobrado por cópia e arquivo.
-  const discountCents = applyBps(printSubtotalCents, discountBps, context.roundingMode);
+  // O acabamento por arquivo não recebe desconto automático; todos os outros
+  // perfis usam a unidade técnica configurada pelo administrador.
+  const discountBaseCents = profile === 'binding_by_file_pages' ? 0 : primarySubtotalCents;
+  const discountCents = applyBps(discountBaseCents, discountBps, context.roundingMode);
   const totalCents = subtotalBeforeDiscountCents - discountCents;
 
   return {
@@ -297,11 +461,16 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
         name: context.service.name,
         description: context.service.description,
         pricingVersion: context.service.pricingVersion,
+        pricingProfile: context.service.pricingProfile,
+        pricingProfileConfig: context.service.pricingProfileConfig,
       },
       ruleId: rule?.id ?? null,
       ruleName: rule?.name ?? 'Preço-base autorizado',
       ruleVersion: rule?.version ?? null,
       pricePerPageCents,
+      pricingUnit: profile === 'binding_by_file_pages' ? 'arquivo encadernado' : profilePrice.pricingUnit,
+      dimensions: profilePrice.dimensions,
+      bookletPaddedPages: profilePrice.bookletPaddedPages,
       unitPriceCents,
       subtotalBeforeDiscountCents,
       discountBps,

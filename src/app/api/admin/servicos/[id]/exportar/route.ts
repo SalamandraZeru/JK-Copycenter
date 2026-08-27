@@ -13,7 +13,7 @@ export async function GET(_request: Request, props: { params: Promise<{ id: stri
 
   const supabase = createServiceRoleClient();
   const [serviceResult, fieldsResult, rulesResult, tiersResult, dependenciesResult] = await Promise.all([
-    supabase.from('services').select('name, slug, description, image_url, base_price_cents, pricing_fallback_behavior, sort_order').eq('id', id).is('deleted_at', null).maybeSingle(),
+    supabase.from('services').select('name, slug, description, image_url, base_price_cents, pricing_fallback_behavior, pricing_profile, pricing_profile_config, sort_order').eq('id', id).is('deleted_at', null).maybeSingle(),
     supabase.from('service_fields').select('id, key, label, field_type, options, is_required, is_active, sort_order').eq('service_id', id).order('sort_order'),
     supabase.from('pricing_rules').select('id, name, price_per_page_cents, fallback_behavior, is_active').eq('service_id', id).order('created_at'),
     supabase.from('service_binding_price_tiers').select('min_pages, max_pages, price_cents, is_active').eq('service_id', id).order('min_pages'),

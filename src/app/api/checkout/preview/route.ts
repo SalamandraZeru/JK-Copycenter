@@ -71,6 +71,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         quantity: item.quantity,
         fileIds: item.fileIds,
         bindingFileIds: item.bindingFileIds,
+        dimensions: item.dimensions,
+        bookletPaddingApproved: item.bookletPaddingApproved,
       })),
       deliveryType: valid.deliveryType,
       ...(valid.deliveryAddressId ? { deliveryAddressId: valid.deliveryAddressId } : {}),

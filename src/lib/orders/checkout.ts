@@ -303,6 +303,8 @@ export async function processCheckout(
         if (!file) throw new Error('FILE_ACCESS_DENIED');
         return { fileId, pageCount: Math.max(1, file.page_count) };
       }),
+      dimensions: item.dimensions ?? {},
+      bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
     };
     const pricingResult = await validateAndRecalculate(pricingInput, supabase);
     if (!pricingResult.success) throw new Error(`${pricingResult.error.code}: ${pricingResult.error.message}`);
@@ -574,6 +576,8 @@ export async function previewCheckout(
         if (!file) throw new Error('FILE_ACCESS_DENIED');
         return { fileId, pageCount: Math.max(1, file.page_count) };
       }),
+      dimensions: item.dimensions ?? {},
+      bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
     }, supabase);
     if (!pricingResult.success) throw new Error(`${pricingResult.error.code}: ${pricingResult.error.message}`);
 

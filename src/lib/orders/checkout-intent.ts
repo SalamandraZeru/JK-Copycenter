@@ -50,6 +50,12 @@ export const checkoutIntentSchema = z.object({
     quantity: z.number().int().min(1, 'Quantidade mínima é 1').max(100_000_000),
     fileIds: z.array(z.string().uuid()).max(100).default([]),
     bindingFileIds: z.array(z.string().uuid()).max(100).default([]),
+    dimensions: z.object({
+      widthCm: z.number().finite().positive().max(100_000).optional(),
+      heightCm: z.number().finite().positive().max(100_000).optional(),
+      lengthCm: z.number().finite().positive().max(100_000).optional(),
+    }).default({}),
+    bookletPaddingApproved: z.boolean().default(false),
   }).refine((item) => Boolean(item.serviceId || item.productId), {
     message: 'Item deve indicar serviço ou produto.',
   })).min(1, 'Carrinho não pode estar vazio').max(1_000),

@@ -1,5 +1,29 @@
 export type FallbackBehavior = 'use_base' | 'block';
 export type PricingRoundingMode = 'half_up' | 'floor' | 'ceil';
+export type PricingProfile =
+  | 'per_page'
+  | 'per_item'
+  | 'per_sheet'
+  | 'per_square_meter'
+  | 'per_linear_meter'
+  | 'binding_by_file_pages'
+  | 'booklet_imposition'
+  | 'manual_quote';
+
+export interface PricingProfileConfig {
+  pagesPerSheet?: number;
+  minPages?: number;
+  maxPages?: number;
+  pageMultiple?: number;
+  allowBlankPagePadding?: boolean;
+  requiresCustomerApprovalForPadding?: boolean;
+}
+
+export interface PricingDimensions {
+  widthCm?: number | undefined;
+  heightCm?: number | undefined;
+  lengthCm?: number | undefined;
+}
 
 export interface PricingRuleAttribute {
   attributeId: string | null;
@@ -99,6 +123,8 @@ export interface PricingContext {
     basePriceCents: number;
     fallbackBehavior: FallbackBehavior;
     pricingVersion: number;
+    pricingProfile: PricingProfile;
+    pricingProfileConfig: PricingProfileConfig;
   };
   attributes: PricingAttribute[];
   fields: ServerPricingField[];
@@ -127,6 +153,8 @@ export interface PricingCalculationInput {
   // Esta lista só é preenchida pelo servidor, após conferir a titularidade e
   // os metadados dos arquivos. Nunca é montada diretamente pelo navegador.
   bindingFiles?: BindingFileSelection[];
+  dimensions?: PricingDimensions;
+  bookletPaddingApproved?: boolean;
 }
 
 export interface PricingFieldSnapshot {
@@ -141,13 +169,18 @@ export interface PricingCalculationResult {
   serviceSnapshot: {
     id: string;
     name: string;
-    description: string | null;
-    pricingVersion: number;
+      description: string | null;
+      pricingVersion: number;
+      pricingProfile: PricingProfile;
+      pricingProfileConfig: PricingProfileConfig;
   };
   ruleId: string | null;
   ruleName: string;
   ruleVersion: number | null;
   pricePerPageCents: number;
+  pricingUnit: string;
+  dimensions: PricingDimensions | null;
+  bookletPaddedPages: number | null;
   unitPriceCents: number;
   subtotalBeforeDiscountCents: number;
   discountBps: number;

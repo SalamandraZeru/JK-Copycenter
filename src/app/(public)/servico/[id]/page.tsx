@@ -5,6 +5,7 @@ import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { ServiceConfigurator } from '@/components/servico/ServiceConfigurator';
 import type { ServiceFieldOption, ServiceWithFields } from '@/types/service';
 import type { Json } from '@/types/supabase';
+import { isPricingProfile, normalizePricingProfileConfig } from '@/lib/pricing/profiles';
 
 const SERVICE_ALIASES: Record<string, string> = { 'impressao-pb': 'impressao' };
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -26,12 +27,14 @@ async function loadService(idOrSlug: string): Promise<ServiceWithFields | null> 
   const supabase = createServiceRoleClient();
   let query = supabase
     .from('services')
-    .select('id, name, slug, description, image_url, base_price, service_fields(id, service_id, key, label, field_type, options, is_required, sort_order, is_active)')
+    .select('id, name, slug, description, image_url, base_price, pricing_profile, pricing_profile_config, service_fields(id, service_id, key, label, field_type, options, is_required, sort_order, is_active)')
     .eq('is_active', true)
+    .eq('catalog_state', 'published')
     .is('deleted_at', null);
   query = UUID_PATTERN.test(idOrSlug) ? query.eq('id', idOrSlug) : query.eq('slug', idOrSlug);
   const { data: service, error } = await query.maybeSingle();
   if (error || !service) return null;
+  if (!isPricingProfile(service.pricing_profile)) return null;
 
   const [bindingResult, dependenciesResult] = await Promise.all([
     supabase
@@ -55,6 +58,8 @@ async function loadService(idOrSlug: string): Promise<ServiceWithFields | null> 
     description: service.description,
     imageUrl: service.image_url,
     basePrice: service.base_price,
+    pricingProfile: service.pricing_profile,
+    pricingProfileConfig: normalizePricingProfileConfig(service.pricing_profile_config),
     bindingAvailable: Boolean(bindingResult.data),
     fields: (service.service_fields ?? [])
       .filter((field) => field.is_active)

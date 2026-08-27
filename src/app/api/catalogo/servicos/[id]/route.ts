@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import type { Json } from '@/types/supabase';
 import type { ServiceFieldOption, ServiceWithFields } from '@/types/service';
+import { isPricingProfile, normalizePricingProfileConfig } from '@/lib/pricing/profiles';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -24,7 +25,7 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
   const supabase = createServiceRoleClient();
   const { data: service, error } = await supabase
     .from('services')
-    .select('id, name, slug, description, image_url, base_price, service_fields(id, service_id, key, label, field_type, options, is_required, sort_order, is_active)')
+    .select('id, name, slug, description, image_url, base_price, pricing_profile, pricing_profile_config, service_fields(id, service_id, key, label, field_type, options, is_required, sort_order, is_active)')
     .eq('id', params.id)
     .eq('is_active', true)
     .eq('catalog_state', 'published')
@@ -32,6 +33,9 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
     .maybeSingle();
   if (error || !service) {
     return NextResponse.json({ success: false, error: 'Serviço não encontrado.' }, { status: 404 });
+  }
+  if (!isPricingProfile(service.pricing_profile)) {
+    return NextResponse.json({ success: false, error: 'Perfil de cobrança do serviço inválido.' }, { status: 503 });
   }
 
   const [bindingResult, dependenciesResult] = await Promise.all([
@@ -58,6 +62,8 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
     description: service.description,
     imageUrl: service.image_url,
     basePrice: service.base_price,
+    pricingProfile: service.pricing_profile,
+    pricingProfileConfig: normalizePricingProfileConfig(service.pricing_profile_config),
     bindingAvailable: Boolean(bindingResult.data),
     fields: (service.service_fields ?? [])
       .filter((field) => field.is_active)

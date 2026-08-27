@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { ServiceWithFields, ServiceConfiguration, FieldValue } from '@/types/service';
 import { usePricingPreview } from './usePricingPreview';
 import { isFieldOptionSelectionAllowed, resolveFieldOptionAvailability } from '@/lib/services/field-option-dependencies';
+import type { PricingDimensions } from '@/types/pricing';
 
 function selectedValuesByFieldId(service: ServiceWithFields, values: FieldValue[]) {
   const fieldsByKey = new Map(service.fields.map((field) => [field.key, field]));
@@ -42,6 +43,8 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     quantity: 1,
     fileIds: [],
     bindingFileIds: [],
+    dimensions: {},
+    bookletPaddingApproved: false,
     estimatedPrice: service.basePrice,
     isLoadingPrice: false,
   });
@@ -60,6 +63,19 @@ export function useServiceConfigurator(service: ServiceWithFields) {
 
   const isConfigurationComplete = useMemo(() => {
     if (config.quantity < 1 || config.pageCount < 1) return false;
+    if (service.pricingProfile === 'manual_quote') return false;
+    if (service.pricingProfile === 'per_square_meter'
+        && (!(config.dimensions.widthCm && config.dimensions.widthCm > 0)
+          || !(config.dimensions.heightCm && config.dimensions.heightCm > 0))) return false;
+    if (service.pricingProfile === 'per_linear_meter'
+        && (!(config.dimensions.lengthCm && config.dimensions.lengthCm > 0))) return false;
+    if (service.pricingProfile === 'booklet_imposition') {
+      const profileConfig = service.pricingProfileConfig;
+      const pageMultiple = profileConfig.pageMultiple ?? 4;
+      const mustPad = config.pageCount % pageMultiple !== 0;
+      if (mustPad && !profileConfig.allowBlankPagePadding) return false;
+      if (mustPad && profileConfig.requiresCustomerApprovalForPadding && !config.bookletPaddingApproved) return false;
+    }
     return service.fields
       .filter((field) => field.isRequired)
       .every((field) => {
@@ -71,7 +87,19 @@ export function useServiceConfigurator(service: ServiceWithFields) {
         const value = config.fieldValues.find((fieldValue) => fieldValue.fieldKey === field.key);
         return Boolean(value && value.value !== '' && value.value !== false);
       });
-  }, [config.fieldValues, config.pageCount, config.quantity, fieldOptionAvailability, service.fields]);
+  }, [
+    config.bookletPaddingApproved,
+    config.dimensions.heightCm,
+    config.dimensions.lengthCm,
+    config.dimensions.widthCm,
+    config.fieldValues,
+    config.pageCount,
+    config.quantity,
+    fieldOptionAvailability,
+    service.fields,
+    service.pricingProfile,
+    service.pricingProfileConfig,
+  ]);
 
   useEffect(() => {
     if (!isConfigurationComplete) return;
@@ -88,6 +116,8 @@ export function useServiceConfigurator(service: ServiceWithFields) {
         pageCount: config.pageCount,
         isFrontAndBack: config.isFrontAndBack,
         quantity: config.quantity,
+        dimensions: config.dimensions,
+        bookletPaddingApproved: config.bookletPaddingApproved,
       }).catch(console.error);
     }, 500);
 
@@ -101,6 +131,8 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     config.bindingFileIds,
     config.isFrontAndBack,
     config.quantity,
+    config.dimensions,
+    config.bookletPaddingApproved,
     fetchPreview,
     isConfigurationComplete,
   ]);
@@ -146,6 +178,14 @@ export function useServiceConfigurator(service: ServiceWithFields) {
 
   const updateQuantity = useCallback((qty: number) => {
     setConfig(prev => ({ ...prev, quantity: qty }));
+  }, []);
+
+  const updateDimensions = useCallback((dimensions: PricingDimensions) => {
+    setConfig(prev => ({ ...prev, dimensions }));
+  }, []);
+
+  const setBookletPaddingApproved = useCallback((bookletPaddingApproved: boolean) => {
+    setConfig(prev => ({ ...prev, bookletPaddingApproved }));
   }, []);
 
   const addFile = useCallback((fileId: string) => {
@@ -205,6 +245,8 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     updateFieldValue,
     updatePageCount,
     updateQuantity,
+    updateDimensions,
+    setBookletPaddingApproved,
     addFile,
     removeFile,
     replaceFiles,
