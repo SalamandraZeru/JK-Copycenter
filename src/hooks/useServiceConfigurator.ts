@@ -73,6 +73,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     if (service.pricingProfile === 'per_linear_meter'
         && (!(config.dimensions.lengthCm && config.dimensions.lengthCm > 0))) return false;
     if (service.pricingProfile === 'booklet_imposition') {
+      if (config.fileIds.length === 0) return false;
       const profileConfig = service.pricingProfileConfig;
       const pageMultiple = profileConfig.pageMultiple ?? 4;
       const mustPad = config.pageCount % pageMultiple !== 0;
@@ -96,6 +97,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     config.dimensions.lengthCm,
     config.dimensions.widthCm,
     config.fieldValues,
+    config.fileIds.length,
     config.pageCount,
     config.quantity,
     fieldOptionAvailability,

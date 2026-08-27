@@ -89,6 +89,14 @@ export interface BindingSelectionSnapshot {
   priceCents: number;
 }
 
+export interface BookletImpositionSnapshot {
+  originalPageCount: number;
+  imposedPageCount: number;
+  blankPagesAdded: number;
+  pageMultiple: number;
+  customerApprovalRecorded: boolean;
+}
+
 export type ServerFieldPriceEffect =
   | { type: 'none' }
   | { type: 'fixed' | 'per_page'; valueCents: number }
@@ -183,6 +191,7 @@ export interface PricingCalculationResult {
   pricingUnit: string;
   dimensions: PricingDimensions | null;
   bookletPaddedPages: number | null;
+  bookletImposition: BookletImpositionSnapshot | null;
   unitPriceCents: number;
   subtotalBeforeDiscountCents: number;
   discountBps: number;

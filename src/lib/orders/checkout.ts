@@ -16,6 +16,7 @@ import type { WhatsAppOrderInput } from './whatsapp';
 import { buildWhatsAppMessage, buildWhatsAppUrl } from './whatsapp';
 import { loadAuthorizedReadyFiles } from '@/lib/upload/access';
 import type { AuthorizedCheckoutFile } from '@/lib/upload/access';
+import type { PricingCalculationResult } from '@/types/pricing';
 
 interface ProcessedOrderItem {
   id: string;
@@ -50,6 +51,15 @@ function requireConfigInteger(config: Record<string, string>, key: string): numb
 
 function major(cents: number): number {
   return cents / 100;
+}
+
+function bookletDescription(quote: PricingCalculationResult): string {
+  const imposition = quote.bookletImposition;
+  if (!imposition) return '';
+  const blanks = imposition.blankPagesAdded > 0
+    ? `, ${imposition.blankPagesAdded} página(s) técnica(s) em branco${imposition.customerApprovalRecorded ? ' aprovadas pelo cliente' : ''}`
+    : '';
+  return `Livreto: ${imposition.originalPageCount} páginas originais → ${imposition.imposedPageCount} para produção${blanks}`;
 }
 
 function checkoutActorHash(userId: string | undefined, guestEmail: string | null): string {
@@ -321,7 +331,7 @@ export async function processCheckout(
     const bindingDescription = quote.bindingSelections.length > 0
       ? `Encadernação: ${quote.bindingSelections.length} ${quote.bindingSelections.length === 1 ? 'arquivo' : 'arquivos'}`
       : '';
-    const description = [fieldsDescription, bindingDescription].filter(Boolean).join(' · ');
+    const description = [fieldsDescription, bindingDescription, bookletDescription(quote)].filter(Boolean).join(' · ');
 
     processedItems.push({
       id: crypto.randomUUID(),
@@ -590,7 +600,7 @@ export async function previewCheckout(
       : '';
     items.push({
       name: quote.serviceSnapshot.name,
-      description: [fieldDescription, bindingDescription].filter(Boolean).join(' · ') || quote.serviceSnapshot.description,
+      description: [fieldDescription, bindingDescription, bookletDescription(quote)].filter(Boolean).join(' · ') || quote.serviceSnapshot.description,
       quantity: item.quantity,
       pageCount,
       pageCountMethod,

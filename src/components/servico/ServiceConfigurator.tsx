@@ -91,7 +91,7 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
               ? [`Encadernação: ${pricingResult.bindingSelections.length} arquivo(s) selecionado(s)`]
               : []),
             ...(pricingResult.bookletPaddedPages
-              ? [`Livreto: ${pricingResult.bookletPaddedPages} páginas após complementação técnica`]
+              ? [`Livreto: ${pricingResult.bookletImposition?.originalPageCount} páginas originais → ${pricingResult.bookletPaddedPages} páginas de produção (+${pricingResult.bookletImposition?.blankPagesAdded} em branco)`]
               : []),
           ],
           fileNames: uploadedFiles.map((file) => file.originalName),
@@ -181,6 +181,9 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
             bindingFileIds={config.bindingFileIds}
             onBindingFileIdsChange={setBindingFileIds}
           />
+          {service.pricingProfile === 'booklet_imposition' && (
+            <p className="mt-3 text-xs font-medium text-slate-600">Envie o arquivo do livreto: a quantidade de páginas é conferida no servidor antes de liberar a cotação.</p>
+          )}
         </div>
 
         {/* Quantity & Pages */}
@@ -240,7 +243,7 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input type="checkbox" checked={config.bookletPaddingApproved}
                     onChange={(event) => setBookletPaddingApproved(event.target.checked)} className="mt-0.5 h-4 w-4" />
-                  <span>Seu livreto será ajustado para {Math.ceil(config.pageCount / pageMultiple) * pageMultiple} páginas, com páginas técnicas em branco quando necessário.</span>
+                  <span>Seu arquivo tem {config.pageCount} páginas e será produzido com {Math.ceil(config.pageCount / pageMultiple) * pageMultiple} páginas ({Math.ceil(config.pageCount / pageMultiple) * pageMultiple - config.pageCount} técnica(s) em branco). A cotação exibida será recalculada sobre a quantidade de produção.</span>
                 </label>
               ) : (
                 <span>Este livreto deve ter um total de páginas múltiplo de {pageMultiple}.</span>
@@ -258,12 +261,20 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
             <p className="mt-2">Este serviço é analisado pela equipe antes da confirmação. Envie seus arquivos e detalhes para receber a cotação.</p>
           </div>
         ) : (
-          <PriceDisplay
-            estimatedPrice={config.estimatedPrice}
-            isLoading={config.isLoadingPrice}
-            hasEstimate={pricingResult?.isEstimate ?? false}
-            error={hasRequiredSelections ? apiError : null}
-          />
+          <>
+            <PriceDisplay
+              estimatedPrice={config.estimatedPrice}
+              isLoading={config.isLoadingPrice}
+              hasEstimate={pricingResult?.isEstimate ?? false}
+              error={hasRequiredSelections ? apiError : null}
+            />
+            {pricingResult?.bookletImposition && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
+                <p className="font-bold">Imposição confirmada</p>
+                <p className="mt-1">{pricingResult.bookletImposition.originalPageCount} páginas no arquivo → {pricingResult.bookletImposition.imposedPageCount} páginas para produção{pricingResult.bookletImposition.blankPagesAdded > 0 ? `, com ${pricingResult.bookletImposition.blankPagesAdded} página(s) técnica(s) em branco` : ''}. O preço exibido já considera esta imposição.</p>
+              </div>
+            )}
+          </>
         )}
         
         <button

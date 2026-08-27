@@ -62,6 +62,16 @@ function formatItemTechnicalDetails(item: { fields_snapshot?: unknown; pricing_r
       .filter((value): value is string => value !== null);
     fields.push(`Encadernação: ${bindingSelections.length} ${bindingSelections.length === 1 ? 'arquivo' : 'arquivos'}${pages.length > 0 ? ` (${pages.join(', ')})` : ''}`);
   }
+  const booklet = pricing?.bookletImposition;
+  if (booklet && typeof booklet === 'object' && !Array.isArray(booklet)) {
+    const data = booklet as Record<string, unknown>;
+    if (typeof data.originalPageCount === 'number' && typeof data.imposedPageCount === 'number') {
+      const blanks = typeof data.blankPagesAdded === 'number' && data.blankPagesAdded > 0
+        ? ` (+${data.blankPagesAdded} técnica(s) em branco${data.customerApprovalRecorded === true ? ', aprovação registrada' : ''})`
+        : '';
+      fields.push(`Livreto: ${data.originalPageCount} páginas originais → ${data.imposedPageCount} produção${blanks}`);
+    }
+  }
   return fields.length > 0 ? fields.join(' | ') : 'Padrão';
 }
 

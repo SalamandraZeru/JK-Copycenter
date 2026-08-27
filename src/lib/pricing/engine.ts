@@ -1,4 +1,5 @@
 import type {
+  BookletImpositionSnapshot,
   BindingSelectionSnapshot,
   PricingCalculationInput,
   PricingContext,
@@ -283,6 +284,7 @@ interface ProfilePrice {
   pricingUnit: string;
   dimensions: PricingDimensions | null;
   bookletPaddedPages: number | null;
+  bookletImposition: BookletImpositionSnapshot | null;
 }
 
 function resolveProfilePrice(
@@ -297,7 +299,11 @@ function resolveProfilePrice(
 
   let pagesForPricing = input.pageCount;
   let bookletPaddedPages: number | null = null;
+  let bookletImposition: BookletImpositionSnapshot | null = null;
   if (profile === 'booklet_imposition') {
+    if ((input.fileIds?.length ?? 0) === 0) {
+      return profileError('Envie ao menos um arquivo para conferir a quantidade de páginas do livreto.');
+    }
     const minimum = config.minPages ?? 1;
     const maximum = config.maxPages ?? 1_000_000;
     const multiple = config.pageMultiple ?? 4;
@@ -305,6 +311,7 @@ function resolveProfilePrice(
       return profileError(`O livreto deve ter entre ${minimum} e ${maximum} páginas.`);
     }
     const remainder = input.pageCount % multiple;
+    let customerApprovalRecorded = false;
     if (remainder !== 0) {
       if (!config.allowBlankPagePadding) {
         return profileError(`O livreto precisa ter um número de páginas múltiplo de ${multiple}.`);
@@ -314,7 +321,15 @@ function resolveProfilePrice(
       }
       pagesForPricing = input.pageCount + multiple - remainder;
       bookletPaddedPages = pagesForPricing;
+      customerApprovalRecorded = config.requiresCustomerApprovalForPadding === true;
     }
+    bookletImposition = {
+      originalPageCount: input.pageCount,
+      imposedPageCount: pagesForPricing,
+      blankPagesAdded: pagesForPricing - input.pageCount,
+      pageMultiple: multiple,
+      customerApprovalRecorded,
+    };
   }
 
   const rates = resolveRateWithEffects(priceCents, effects, pagesForPricing, profile, context.roundingMode);
@@ -323,7 +338,7 @@ function resolveProfilePrice(
   const create = (unitCents: number, pricingUnit: string, dimensions: PricingDimensions | null = null): ProfilePrice | PricingResult => {
     const subtotalCents = checkedMultiply(unitCents, input.quantity);
     if (unitCents < 0 || subtotalCents === null) return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
-    return { unitCents, subtotalCents, pricingUnit, dimensions, bookletPaddedPages };
+    return { unitCents, subtotalCents, pricingUnit, dimensions, bookletPaddedPages, bookletImposition };
   };
 
   if (profile === 'per_page') {
@@ -473,6 +488,7 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
       pricingUnit: profile === 'binding_by_file_pages' ? 'arquivo encadernado' : profilePrice.pricingUnit,
       dimensions: profilePrice.dimensions,
       bookletPaddedPages: profilePrice.bookletPaddedPages,
+      bookletImposition: profilePrice.bookletImposition,
       unitPriceCents,
       subtotalBeforeDiscountCents,
       discountBps,
