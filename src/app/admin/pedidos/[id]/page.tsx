@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils/format';
+import { PreflightReviewPanel } from '@/components/admin/PreflightReviewPanel';
 import { 
   ArrowLeft, Package, User, MapPin, Download, CheckCircle, 
   MessageCircle, Loader2, Save, FileText, Printer, PencilLine
@@ -467,6 +468,8 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
               </div>
             )}
           </div>
+
+          <PreflightReviewPanel orderId={params.id} onUpdated={() => mutate()} />
         </div>
 
         {/* Sidebar */}

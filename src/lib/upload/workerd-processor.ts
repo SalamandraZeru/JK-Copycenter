@@ -97,7 +97,29 @@ function validateEntryBudget(entry: ZipEntry, totals: ArchiveTotals, limits: Wor
   if (totals.uncompressed > limits.maxUncompressedBytes) fail('ARCHIVE_TOO_LARGE');
 }
 
-async function inspectPdf(buffer: Buffer): Promise<{ pageCount: number; pageCountMethod: PageCountMethod; metadata: Record<string, number> }> {
+function samePdfBox(
+  left: { x: number; y: number; width: number; height: number },
+  right: { x: number; y: number; width: number; height: number },
+): boolean {
+  const tolerance = 0.01;
+  return Math.abs(left.x - right.x) <= tolerance
+    && Math.abs(left.y - right.y) <= tolerance
+    && Math.abs(left.width - right.width) <= tolerance
+    && Math.abs(left.height - right.height) <= tolerance;
+}
+
+function boxContains(
+  outer: { x: number; y: number; width: number; height: number },
+  inner: { x: number; y: number; width: number; height: number },
+): boolean {
+  const tolerance = 0.01;
+  return inner.x >= outer.x - tolerance
+    && inner.y >= outer.y - tolerance
+    && inner.x + inner.width <= outer.x + outer.width + tolerance
+    && inner.y + inner.height <= outer.y + outer.height + tolerance;
+}
+
+async function inspectPdf(buffer: Buffer): Promise<{ pageCount: number; pageCountMethod: PageCountMethod; metadata: Record<string, number | boolean> }> {
   try {
     const document = await PDFDocument.load(buffer, { ignoreEncryption: false, updateMetadata: false });
     const pageCount = document.getPageCount();
@@ -107,7 +129,48 @@ async function inspectPdf(buffer: Buffer): Promise<{ pageCount: number; pageCoun
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0 || width > 10_000_000 || height > 10_000_000) {
       fail('PDF_DIMENSIONS_INVALID');
     }
-    return { pageCount, pageCountMethod: 'exact', metadata: { pageCount, pdfPageWidthPoints: width, pdfPageHeightPoints: height } };
+    // Fonts, resolution, colour spaces and transparency require a dedicated
+    // graphics engine. The structural checks below are deterministic and the
+    // remaining graphic review is explicitly marked as manual.
+    const analysedPages = Math.min(pageCount, 1_000);
+    let mediaBoxesConsistent = true;
+    let orientationsConsistent = true;
+    let boxesInsideMedia = true;
+    let hasDistinctTrimBox = false;
+    let hasDistinctBleedBox = false;
+    let referenceOrientation: 'portrait' | 'landscape' | null = null;
+    for (let index = 0; index < analysedPages; index += 1) {
+      const page = document.getPage(index);
+      const media = page.getMediaBox();
+      const trim = page.getTrimBox();
+      const bleed = page.getBleedBox();
+      const orientation = media.width >= media.height ? 'landscape' : 'portrait';
+      if (index > 0 && (Math.abs(media.width - width) > 0.01 || Math.abs(media.height - height) > 0.01)) {
+        mediaBoxesConsistent = false;
+      }
+      if (referenceOrientation && referenceOrientation !== orientation) orientationsConsistent = false;
+      referenceOrientation ||= orientation;
+      if (!boxContains(media, trim) || !boxContains(media, bleed)) boxesInsideMedia = false;
+      if (!samePdfBox(trim, media)) hasDistinctTrimBox = true;
+      if (!samePdfBox(bleed, trim)) hasDistinctBleedBox = true;
+    }
+    return {
+      pageCount,
+      pageCountMethod: 'exact',
+      metadata: {
+        pageCount,
+        pdfPageWidthPoints: width,
+        pdfPageHeightPoints: height,
+        pdfPagesAnalysed: analysedPages,
+        pdfStructureComplete: analysedPages === pageCount,
+        pdfMediaBoxesConsistent: mediaBoxesConsistent,
+        pdfOrientationsConsistent: orientationsConsistent,
+        pdfBoxesInsideMedia: boxesInsideMedia,
+        pdfHasDistinctTrimBox: hasDistinctTrimBox,
+        pdfHasDistinctBleedBox: hasDistinctBleedBox,
+        pdfGraphicChecksRequireManualReview: true,
+      },
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message.toLowerCase() : '';
     return fail(message.includes('encrypt') ? 'PDF_ENCRYPTED' : 'PDF_CORRUPTED');

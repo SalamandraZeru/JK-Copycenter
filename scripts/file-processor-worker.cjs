@@ -67,6 +67,22 @@ function matches(buffer, bytes) {
   return buffer.length >= bytes.length && bytes.every((byte, index) => buffer[index] === byte);
 }
 
+function samePdfBox(left, right) {
+  const tolerance = 0.01;
+  return Math.abs(left.x - right.x) <= tolerance
+    && Math.abs(left.y - right.y) <= tolerance
+    && Math.abs(left.width - right.width) <= tolerance
+    && Math.abs(left.height - right.height) <= tolerance;
+}
+
+function boxContains(outer, inner) {
+  const tolerance = 0.01;
+  return inner.x >= outer.x - tolerance
+    && inner.y >= outer.y - tolerance
+    && inner.x + inner.width <= outer.x + outer.width + tolerance
+    && inner.y + inner.height <= outer.y + outer.height + tolerance;
+}
+
 async function inspectPdf(buffer) {
   try {
     const document = await PDFDocument.load(buffer, { ignoreEncryption: false, updateMetadata: false });
@@ -77,7 +93,45 @@ async function inspectPdf(buffer) {
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0 || width > 10000000 || height > 10000000) {
       throw new Error('PDF_DIMENSIONS_INVALID');
     }
-    return { pageCount, pageCountMethod: 'exact', metadata: { pageCount, pdfPageWidthPoints: width, pdfPageHeightPoints: height } };
+    const analysedPages = Math.min(pageCount, 1000);
+    let mediaBoxesConsistent = true;
+    let orientationsConsistent = true;
+    let boxesInsideMedia = true;
+    let hasDistinctTrimBox = false;
+    let hasDistinctBleedBox = false;
+    let referenceOrientation = null;
+    for (let index = 0; index < analysedPages; index += 1) {
+      const page = document.getPage(index);
+      const media = page.getMediaBox();
+      const trim = page.getTrimBox();
+      const bleed = page.getBleedBox();
+      const orientation = media.width >= media.height ? 'landscape' : 'portrait';
+      if (index > 0 && (Math.abs(media.width - width) > 0.01 || Math.abs(media.height - height) > 0.01)) {
+        mediaBoxesConsistent = false;
+      }
+      if (referenceOrientation && referenceOrientation !== orientation) orientationsConsistent = false;
+      referenceOrientation = referenceOrientation || orientation;
+      if (!boxContains(media, trim) || !boxContains(media, bleed)) boxesInsideMedia = false;
+      if (!samePdfBox(trim, media)) hasDistinctTrimBox = true;
+      if (!samePdfBox(bleed, trim)) hasDistinctBleedBox = true;
+    }
+    return {
+      pageCount,
+      pageCountMethod: 'exact',
+      metadata: {
+        pageCount,
+        pdfPageWidthPoints: width,
+        pdfPageHeightPoints: height,
+        pdfPagesAnalysed: analysedPages,
+        pdfStructureComplete: analysedPages === pageCount,
+        pdfMediaBoxesConsistent: mediaBoxesConsistent,
+        pdfOrientationsConsistent: orientationsConsistent,
+        pdfBoxesInsideMedia: boxesInsideMedia,
+        pdfHasDistinctTrimBox: hasDistinctTrimBox,
+        pdfHasDistinctBleedBox: hasDistinctBleedBox,
+        pdfGraphicChecksRequireManualReview: true,
+      },
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message.toLowerCase() : '';
     throw new Error(message.includes('encrypt') ? 'PDF_ENCRYPTED' : 'PDF_CORRUPTED');

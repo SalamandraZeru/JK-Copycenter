@@ -121,6 +121,9 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
       if (error.message.includes('INVALID_ORDER_STATE_TRANSITION') || error.message.includes('ORDER_CONFIRMATION_REQUIRES_PAYMENT')) {
         return NextResponse.json({ error: 'Transição de status não permitida.' }, { status: 409 });
       }
+      if (error.message.includes('PREPRESS_APPROVAL_REQUIRED')) {
+        return NextResponse.json({ error: 'A arte deste pedido ainda precisa ser aprovada antes de entrar em produção.' }, { status: 409 });
+      }
       throw error;
     }
     const result = data?.[0];

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, MessageCircle, MapPin, CreditCard, RefreshCw } from 'lucide-react';
 import { OrderStatusBadge } from '@/components/dashboard/OrderStatusBadge';
 import { OrderTimeline } from '@/components/dashboard/OrderTimeline';
+import { ArtworkApprovalPanel } from '@/components/dashboard/ArtworkApprovalPanel';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -180,6 +181,8 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
             <h3 className="font-semibold text-slate-900 mb-6">Linha do Tempo</h3>
             <OrderTimeline events={orderEvents} />
           </div>
+
+          <ArtworkApprovalPanel orderId={order.id} />
         </div>
 
         {/* Sidebar Info */}

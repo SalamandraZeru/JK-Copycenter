@@ -839,6 +839,8 @@ export interface Database {
           whatsapp_sent_at: string | null;
           notes: string | null;
           anonymized_at: string | null;
+          artwork_status: 'not_required' | 'received' | 'in_review' | 'correction_requested' | 'awaiting_customer_approval' | 'approved_for_production';
+          artwork_updated_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -870,6 +872,8 @@ export interface Database {
           whatsapp_sent_at?: string | null;
           notes?: string | null;
           anonymized_at?: string | null;
+          artwork_status?: 'not_required' | 'received' | 'in_review' | 'correction_requested' | 'awaiting_customer_approval' | 'approved_for_production';
+          artwork_updated_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -901,6 +905,8 @@ export interface Database {
           whatsapp_sent_at?: string | null;
           notes?: string | null;
           anonymized_at?: string | null;
+          artwork_status?: 'not_required' | 'received' | 'in_review' | 'correction_requested' | 'awaiting_customer_approval' | 'approved_for_production';
+          artwork_updated_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1076,6 +1082,111 @@ export interface Database {
             referencedRelation: 'admin_users';
             referencedColumns: ['id'];
           }
+        ];
+      };
+      order_file_preflight_reports: {
+        Row: {
+          id: string;
+          order_id: string;
+          order_file_id: string;
+          order_item_id: string | null;
+          file_content_sha256: string;
+          status: 'pending_review' | 'correction_requested' | 'awaiting_customer_approval' | 'approved_for_production' | 'superseded';
+          automation_summary: Json;
+          structure_summary: Json;
+          graphics_summary: Json;
+          findings: Json;
+          customer_approval_required: boolean;
+          staff_note: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          order_file_id: string;
+          order_item_id?: string | null;
+          file_content_sha256: string;
+          status?: 'pending_review' | 'correction_requested' | 'awaiting_customer_approval' | 'approved_for_production' | 'superseded';
+          automation_summary?: Json;
+          structure_summary?: Json;
+          graphics_summary?: Json;
+          findings?: Json;
+          customer_approval_required?: boolean;
+          staff_note?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          order_file_id?: string;
+          order_item_id?: string | null;
+          file_content_sha256?: string;
+          status?: 'pending_review' | 'correction_requested' | 'awaiting_customer_approval' | 'approved_for_production' | 'superseded';
+          automation_summary?: Json;
+          structure_summary?: Json;
+          graphics_summary?: Json;
+          findings?: Json;
+          customer_approval_required?: boolean;
+          staff_note?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: 'order_file_preflight_reports_order_id_fkey'; columns: ['order_id']; isOneToOne: false; referencedRelation: 'orders'; referencedColumns: ['id']; },
+          { foreignKeyName: 'order_file_preflight_reports_order_file_id_fkey'; columns: ['order_file_id']; isOneToOne: false; referencedRelation: 'order_files'; referencedColumns: ['id']; },
+          { foreignKeyName: 'order_file_preflight_reports_order_item_id_fkey'; columns: ['order_item_id']; isOneToOne: false; referencedRelation: 'order_items'; referencedColumns: ['id']; },
+          { foreignKeyName: 'order_file_preflight_reports_reviewed_by_fkey'; columns: ['reviewed_by']; isOneToOne: false; referencedRelation: 'admin_users'; referencedColumns: ['id']; }
+        ];
+      };
+      order_artwork_approvals: {
+        Row: {
+          id: string;
+          order_id: string;
+          report_id: string;
+          order_file_id: string;
+          approved_file_sha256: string;
+          decision: 'approved' | 'correction_requested';
+          approved_by_user_id: string | null;
+          guest_email: string | null;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          report_id: string;
+          order_file_id: string;
+          approved_file_sha256: string;
+          decision: 'approved' | 'correction_requested';
+          approved_by_user_id?: string | null;
+          guest_email?: string | null;
+          note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          report_id?: string;
+          order_file_id?: string;
+          approved_file_sha256?: string;
+          decision?: 'approved' | 'correction_requested';
+          approved_by_user_id?: string | null;
+          guest_email?: string | null;
+          note?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: 'order_artwork_approvals_order_id_fkey'; columns: ['order_id']; isOneToOne: false; referencedRelation: 'orders'; referencedColumns: ['id']; },
+          { foreignKeyName: 'order_artwork_approvals_report_id_fkey'; columns: ['report_id']; isOneToOne: false; referencedRelation: 'order_file_preflight_reports'; referencedColumns: ['id']; },
+          { foreignKeyName: 'order_artwork_approvals_order_file_id_fkey'; columns: ['order_file_id']; isOneToOne: false; referencedRelation: 'order_files'; referencedColumns: ['id']; }
         ];
       };
       order_files: {
