@@ -30,6 +30,7 @@ export interface Database {
           description: string | null;
           image_url: string | null;
           parent_id: string | null;
+          catalog_scope: string;
           is_active: boolean;
           sort_order: number;
           created_at: string;
@@ -42,6 +43,7 @@ export interface Database {
           description?: string | null;
           image_url?: string | null;
           parent_id?: string | null;
+          catalog_scope?: string;
           is_active?: boolean;
           sort_order?: number;
           created_at?: string;
@@ -54,6 +56,7 @@ export interface Database {
           description?: string | null;
           image_url?: string | null;
           parent_id?: string | null;
+          catalog_scope?: string;
           is_active?: boolean;
           sort_order?: number;
           created_at?: string;
@@ -77,9 +80,14 @@ export interface Database {
           slug: string;
           description: string | null;
           image_url: string | null;
+          sku: string | null;
+          unit_label: string | null;
+          package_quantity: number;
           price: number;
           price_cents: number;
           stock_quantity: number | null;
+          stock_control_enabled: boolean;
+          reserved_quantity: number;
           is_active: boolean;
           sort_order: number;
           deleted_at: string | null;
@@ -93,9 +101,14 @@ export interface Database {
           slug: string;
           description?: string | null;
           image_url?: string | null;
+          sku?: string | null;
+          unit_label?: string | null;
+          package_quantity?: number;
           price?: number;
           price_cents: number;
           stock_quantity?: number | null;
+          stock_control_enabled?: boolean;
+          reserved_quantity?: number;
           is_active?: boolean;
           sort_order?: number;
           deleted_at?: string | null;
@@ -109,9 +122,14 @@ export interface Database {
           slug?: string;
           description?: string | null;
           image_url?: string | null;
+          sku?: string | null;
+          unit_label?: string | null;
+          package_quantity?: number;
           price?: number;
           price_cents?: number;
           stock_quantity?: number | null;
+          stock_control_enabled?: boolean;
+          reserved_quantity?: number;
           is_active?: boolean;
           sort_order?: number;
           deleted_at?: string | null;
@@ -157,6 +175,54 @@ export interface Database {
             columns: ['category_id'];
             isOneToOne: false;
             referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+      product_inventory_reservations: {
+        Row: {
+          id: string;
+          order_id: string;
+          product_id: string;
+          quantity: number;
+          status: string;
+          reason: string | null;
+          created_at: string;
+          finalized_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          product_id: string;
+          quantity: number;
+          status?: string;
+          reason?: string | null;
+          created_at?: string;
+          finalized_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          product_id?: string;
+          quantity?: number;
+          status?: string;
+          reason?: string | null;
+          created_at?: string;
+          finalized_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'product_inventory_reservations_order_id_fkey';
+            columns: ['order_id'];
+            isOneToOne: false;
+            referencedRelation: 'orders';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'product_inventory_reservations_product_id_fkey';
+            columns: ['product_id'];
+            isOneToOne: false;
+            referencedRelation: 'products';
             referencedColumns: ['id'];
           }
         ];

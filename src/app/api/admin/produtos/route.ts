@@ -15,8 +15,12 @@ const productFields = {
   description: z.string().trim().max(5000).nullable().optional(),
   category_ids: z.array(z.string().uuid()).max(50).optional(),
   image_url: z.string().trim().max(2_000_000).nullable().optional(),
+  sku: z.string().trim().min(1).max(80).regex(/^[A-Za-z0-9][A-Za-z0-9._/-]*$/).optional(),
+  unit_label: z.string().trim().min(1).max(40).optional(),
+  package_quantity: z.coerce.number().int().min(1).max(100_000_000).optional(),
   price: z.coerce.number().min(0).max(1_000_000).optional(),
   stock_quantity: z.union([z.coerce.number().int().min(0).max(100_000_000), z.literal(''), z.null()]).optional(),
+  stock_control_enabled: z.boolean().optional(),
   is_active: z.boolean().optional(),
   sort_order: z.coerce.number().int().min(-100_000).max(100_000).optional(),
 };
@@ -35,6 +39,10 @@ async function replaceProductCategories(
     p_category_ids: uniqueCategoryIds,
   });
   if (error) throw error;
+}
+
+function normalizedStock(value: number | '' | null | undefined): number | null {
+  return value === null || value === '' || value === undefined ? null : Number(value);
 }
 
 export async function GET() {
@@ -69,6 +77,13 @@ export async function POST(request: Request) {
     const parsed = await parseAdminJson(request, createProductSchema);
     if (!parsed.success) return parsed.errorResponse;
     const body = parsed.data;
+    const stockQuantity = normalizedStock(body.stock_quantity);
+    if (!body.sku || !body.unit_label || body.package_quantity === undefined) {
+      return NextResponse.json({ error: 'SKU, unidade de venda e quantidade por embalagem são obrigatórios.' }, { status: 400 });
+    }
+    if (body.stock_control_enabled && stockQuantity === null) {
+      return NextResponse.json({ error: 'Informe o saldo inicial ao ativar o controle de estoque.' }, { status: 400 });
+    }
 
     const { data, error } = await supabase
       .from('products')
@@ -78,8 +93,12 @@ export async function POST(request: Request) {
         description: body.description || null,
         category_id: null,
         image_url: body.image_url || null,
+        sku: body.sku,
+        unit_label: body.unit_label,
+        package_quantity: body.package_quantity,
         price_cents: reaisToCents(body.price ?? 0),
-        stock_quantity: body.stock_quantity !== null && body.stock_quantity !== '' && body.stock_quantity !== undefined ? Number(body.stock_quantity) : null,
+        stock_quantity: stockQuantity,
+        stock_control_enabled: body.stock_control_enabled ?? false,
         is_active: body.is_active ?? true,
         sort_order: Number(body.sort_order) || 0,
       })
@@ -101,6 +120,7 @@ export async function POST(request: Request) {
 
     await logAdminAction(supabase, auth.session.id, 'create_product', 'products', data.id, {
       name: data.name,
+      sku: data.sku,
       category_count: (body.category_ids ?? []).length,
     });
 
@@ -121,6 +141,24 @@ export async function PUT(request: Request) {
     if (!parsed.success) return parsed.errorResponse;
     const body = parsed.data;
 
+    if (body.stock_control_enabled === true) {
+      const requestedStock = normalizedStock(body.stock_quantity);
+      if (body.stock_quantity !== undefined && requestedStock === null) {
+        return NextResponse.json({ error: 'Informe o saldo ao manter o controle de estoque ativo.' }, { status: 400 });
+      }
+      if (body.stock_quantity === undefined) {
+        const { data: currentProduct, error: currentProductError } = await supabase
+          .from('products')
+          .select('stock_quantity')
+          .eq('id', body.id)
+          .is('deleted_at', null)
+          .maybeSingle();
+        if (currentProductError || !currentProduct || currentProduct.stock_quantity === null) {
+          return NextResponse.json({ error: 'Informe o saldo ao ativar o controle de estoque.' }, { status: 400 });
+        }
+      }
+    }
+
     const updatePayload: TablesUpdate<'products'> = {
       updated_at: new Date().toISOString(),
     };
@@ -128,12 +166,14 @@ export async function PUT(request: Request) {
     if (body.slug !== undefined) updatePayload.slug = body.slug;
     if (body.description !== undefined) updatePayload.description = body.description;
     if (body.image_url !== undefined) updatePayload.image_url = body.image_url;
+    if (body.sku !== undefined) updatePayload.sku = body.sku;
+    if (body.unit_label !== undefined) updatePayload.unit_label = body.unit_label;
+    if (body.package_quantity !== undefined) updatePayload.package_quantity = Number(body.package_quantity);
     if (body.price !== undefined) updatePayload.price_cents = reaisToCents(body.price);
     if (body.stock_quantity !== undefined) {
-      updatePayload.stock_quantity = body.stock_quantity !== null && body.stock_quantity !== ''
-        ? Number(body.stock_quantity)
-        : null;
+      updatePayload.stock_quantity = normalizedStock(body.stock_quantity);
     }
+    if (body.stock_control_enabled !== undefined) updatePayload.stock_control_enabled = body.stock_control_enabled;
     if (body.is_active !== undefined) updatePayload.is_active = body.is_active;
     if (body.sort_order !== undefined) updatePayload.sort_order = Number(body.sort_order);
 
@@ -152,6 +192,7 @@ export async function PUT(request: Request) {
 
     await logAdminAction(supabase, auth.session.id, 'update_product', 'products', data.id, {
       name: data.name,
+      sku: data.sku,
       category_count: body.category_ids?.length,
     });
 

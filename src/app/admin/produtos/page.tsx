@@ -26,8 +26,13 @@ interface Product {
   slug: string;
   description: string | null;
   image_url: string | null;
+  sku: string | null;
+  unit_label: string | null;
+  package_quantity: number;
   price: number;
   stock_quantity: number | null;
+  stock_control_enabled: boolean;
+  reserved_quantity: number;
   is_active: boolean;
   sort_order: number;
   product_categories?: ProductCategoryLink[] | null;
@@ -53,8 +58,12 @@ export default function ProdutosPage() {
     description: string;
     category_ids: string[];
     image_url: string | null;
+    sku: string;
+    unit_label: string;
+    package_quantity: number;
     price: number;
     stock_quantity: number | '';
+    stock_control_enabled: boolean;
     is_active: boolean;
     sort_order: number;
   }>({
@@ -63,8 +72,12 @@ export default function ProdutosPage() {
     description: '',
     category_ids: [],
     image_url: null,
+    sku: '',
+    unit_label: 'unidade',
+    package_quantity: 1,
     price: 0,
     stock_quantity: '',
+    stock_control_enabled: false,
     is_active: true,
     sort_order: 0,
   });
@@ -78,8 +91,12 @@ export default function ProdutosPage() {
       description: '',
       category_ids: [],
       image_url: null,
+      sku: '',
+      unit_label: 'unidade',
+      package_quantity: 1,
       price: 0,
       stock_quantity: '',
+      stock_control_enabled: false,
       is_active: true,
       sort_order: produtos.length + 1,
     });
@@ -94,8 +111,12 @@ export default function ProdutosPage() {
       description: prod.description || '',
       category_ids: productCategories(prod).map((category) => category.id),
       image_url: prod.image_url || null,
+      sku: prod.sku || '',
+      unit_label: prod.unit_label || 'unidade',
+      package_quantity: prod.package_quantity || 1,
       price: prod.price || 0,
       stock_quantity: prod.stock_quantity !== null && prod.stock_quantity !== undefined ? prod.stock_quantity : '',
+      stock_control_enabled: Boolean(prod.stock_control_enabled),
       is_active: prod.is_active ?? true,
       sort_order: prod.sort_order ?? 0,
     });
@@ -106,8 +127,12 @@ export default function ProdutosPage() {
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.slug.trim()) {
-      alert('Por favor informe o Nome e o Slug do produto.');
+    if (!formData.name.trim() || !formData.slug.trim() || !formData.sku.trim() || !formData.unit_label.trim()) {
+      alert('Por favor informe Nome, Slug, SKU e unidade de venda.');
+      return;
+    }
+    if (formData.stock_control_enabled && formData.stock_quantity === '') {
+      alert('Informe o saldo inicial para ativar o controle de estoque.');
       return;
     }
 
@@ -247,9 +272,22 @@ export default function ProdutosPage() {
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
+                    SKU *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: PAP-RESMA-A4-500"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase().replace(/[^A-Z0-9._/-]/g, '') })}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
@@ -267,11 +305,37 @@ export default function ProdutosPage() {
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
-                    Estoque (opcional)
+                    Unidade de venda *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="unidade, pacote, caixa..."
+                    value={formData.unit_label}
+                    onChange={(e) => setFormData({ ...formData, unit_label: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
+                    Itens por embalagem *
                   </label>
                   <input
                     type="number"
-                    placeholder="Ilimitado"
+                    min="1"
+                    value={formData.package_quantity}
+                    onChange={(e) => setFormData({ ...formData, package_quantity: Math.max(1, Number(e.target.value)) })}
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
+                    Saldo físico
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Sem saldo informado"
                     value={formData.stock_quantity}
                     onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value === '' ? '' : Number(e.target.value) })}
                     className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
@@ -334,6 +398,18 @@ export default function ProdutosPage() {
                   />
                   <span className="text-sm font-semibold text-slate-800">Produto Ativo na Loja</span>
                 </label>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.stock_control_enabled}
+                    onChange={(e) => setFormData({ ...formData, stock_control_enabled: e.target.checked })}
+                    className="mt-0.5 w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                  />
+                  <span className="text-sm font-semibold text-slate-800">
+                    Controlar estoque e reservar no checkout
+                    <span className="mt-0.5 block text-xs font-medium text-slate-500">Quando ativo, o saldo fica reservado até o pagamento ser confirmado ou recusado.</span>
+                  </span>
+                </label>
               </div>
             </div>
           </div>
@@ -354,11 +430,12 @@ export default function ProdutosPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-          <table className="min-w-[920px] w-full text-left">
+          <table className="min-w-[1120px] w-full text-left">
             <thead className="bg-slate-50 text-slate-800 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4 w-20">Foto</th>
                 <th className="px-6 py-4">Nome & Slug</th>
+                <th className="px-6 py-4">SKU / Unidade</th>
                 <th className="px-6 py-4">Categorias</th>
                 <th className="px-6 py-4">Preço</th>
                 <th className="px-6 py-4">Estoque</th>
@@ -382,6 +459,10 @@ export default function ProdutosPage() {
                     <p className="font-extrabold text-slate-900">{prod.name}</p>
                     <p className="text-xs text-slate-600 font-mono font-medium">{prod.slug}</p>
                   </td>
+                  <td className="px-6 py-4 text-sm font-medium text-slate-800">
+                    <p className="font-mono font-bold">{prod.sku || 'Não informado'}</p>
+                    <p className="text-xs text-slate-600">{prod.package_quantity} × {prod.unit_label || 'unidade'}</p>
+                  </td>
                   <td className="px-6 py-4 text-sm font-bold text-slate-800">
                     {productCategories(prod).length > 0 ? (
                       <div className="flex min-w-[170px] flex-wrap gap-1.5">
@@ -397,7 +478,9 @@ export default function ProdutosPage() {
                     {formatCurrency(prod.price)}
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-slate-800">
-                    {prod.stock_quantity !== null ? prod.stock_quantity : '∞ Ilimitado'}
+                    {prod.stock_control_enabled
+                      ? `${Math.max(0, (prod.stock_quantity ?? 0) - (prod.reserved_quantity ?? 0))} disponível${(prod.reserved_quantity ?? 0) > 0 ? ` · ${prod.reserved_quantity} reservado` : ''}`
+                      : 'Sem controle'}
                   </td>
                   <td className="px-6 py-4">
                     {prod.is_active ? (

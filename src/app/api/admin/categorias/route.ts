@@ -30,6 +30,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from('categories')
       .select('*')
+      .eq('catalog_scope', 'stationery')
       .order('sort_order', { ascending: true });
 
     if (error) {
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
         slug: body.slug,
         description: body.description || null,
         image_url: body.image_url || null,
+        catalog_scope: 'stationery',
         is_active: body.is_active ?? true,
         sort_order: Number(body.sort_order) || 0,
       })
@@ -100,6 +102,7 @@ export async function PUT(request: Request) {
       .from('categories')
       .update(updatePayload)
       .eq('id', body.id)
+      .eq('catalog_scope', 'stationery')
       .select()
       .single();
 
@@ -131,6 +134,7 @@ export async function DELETE(request: Request) {
       .from('categories')
       .update({ is_active: false })
       .eq('id', id)
+      .eq('catalog_scope', 'stationery')
       .select('id')
       .maybeSingle();
     if (error) throw error;

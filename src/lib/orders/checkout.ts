@@ -54,6 +54,27 @@ function major(cents: number): number {
   return cents / 100;
 }
 
+interface ProductStockSnapshot {
+  stock_quantity: number | null;
+  stock_control_enabled: boolean;
+  reserved_quantity: number;
+}
+
+/**
+ * The database RPC repeats this check while holding product-row locks. This
+ * early validation only gives the customer a useful quote error; it is never
+ * the concurrency boundary.
+ */
+function assertProductAvailable(product: ProductStockSnapshot, quantity: number): void {
+  if (!product.stock_control_enabled) return;
+  const available = product.stock_quantity === null
+    ? -1
+    : product.stock_quantity - product.reserved_quantity;
+  if (available < quantity) {
+    throw new Error('QUOTE_UNAVAILABLE: Estoque insuficiente.');
+  }
+}
+
 function bookletDescription(quote: PricingCalculationResult): string {
   const imposition = quote.bookletImposition;
   if (!imposition) return '';
@@ -255,15 +276,13 @@ export async function processCheckout(
     if (item.productId) {
       const { data: product, error: productError } = await supabase
         .from('products')
-        .select('name, description, price_cents, stock_quantity')
+        .select('name, description, price_cents, stock_quantity, stock_control_enabled, reserved_quantity')
         .eq('id', item.productId)
         .eq('is_active', true)
         .is('deleted_at', null)
         .maybeSingle();
       if (productError || !product) throw new Error('QUOTE_UNAVAILABLE: Produto inexistente ou inativo.');
-      if (product.stock_quantity !== null && product.stock_quantity < item.quantity) {
-        throw new Error('QUOTE_UNAVAILABLE: Estoque insuficiente.');
-      }
+      assertProductAvailable(product, item.quantity);
 
       const totalPriceCents = product.price_cents * item.quantity;
       processedItems.push({
@@ -539,15 +558,13 @@ export async function previewCheckout(
     if (item.productId) {
       const { data: product, error: productError } = await supabase
         .from('products')
-        .select('name, description, price_cents, stock_quantity')
+        .select('name, description, price_cents, stock_quantity, stock_control_enabled, reserved_quantity')
         .eq('id', item.productId)
         .eq('is_active', true)
         .is('deleted_at', null)
         .maybeSingle();
       if (productError || !product) throw new Error('QUOTE_UNAVAILABLE: Produto inexistente ou inativo.');
-      if (product.stock_quantity !== null && product.stock_quantity < item.quantity) {
-        throw new Error('QUOTE_UNAVAILABLE: Estoque insuficiente.');
-      }
+      assertProductAvailable(product, item.quantity);
       const totalPriceCents = product.price_cents * item.quantity;
       items.push({
         name: product.name,

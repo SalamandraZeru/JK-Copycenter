@@ -7,12 +7,16 @@ export const revalidate = 60;
 
 export default async function PapelariaPage(
   props: {
-    searchParams: Promise<{ categoria?: string; page?: string }>
+    searchParams: Promise<{ categoria?: string; page?: string; q?: string; ordem?: string }>
   }
 ) {
   const searchParams = await props.searchParams;
   const supabase = await createClient();
   const categoriaSlug = searchParams.categoria;
+  const search = (searchParams.q || '').trim().slice(0, 120);
+  const sort = ['nome', 'menor_preco', 'maior_preco'].includes(searchParams.ordem || '')
+    ? searchParams.ordem!
+    : 'nome';
   const page = parseInt(searchParams.page || '1', 10);
   const limit = 24;
   const offset = (page - 1) * limit;
@@ -32,7 +36,8 @@ export default async function PapelariaPage(
   try {
     const { data: dbCategories } = await supabase
       .from('categories')
-      .select('id, name, slug, image_url')
+        .select('id, name, slug, image_url')
+        .eq('catalog_scope', 'stationery')
       .eq('is_active', true)
       .order('sort_order');
 
@@ -47,6 +52,7 @@ export default async function PapelariaPage(
         .from('categories')
         .select('id')
         .eq('slug', categoriaSlug)
+        .eq('catalog_scope', 'stationery')
         .eq('is_active', true)
         .maybeSingle();
 
@@ -54,31 +60,47 @@ export default async function PapelariaPage(
         products = [];
         count = 0;
       } else {
-      const { data: dbProducts, count: dbCount } = await supabase
+      let productsQuery = supabase
         .from('products')
-        .select('id, name, slug, description, image_url, price, stock_quantity, product_categories!inner(category_id)', { count: 'exact' })
+        .select('id, name, slug, description, image_url, price, stock_quantity, stock_control_enabled, reserved_quantity, product_categories!inner(category_id)', { count: 'exact' })
         .eq('is_active', true)
         .is('deleted_at', null)
-        .eq('product_categories.category_id', selectedCategory.id)
-        .order('sort_order')
-        .range(offset, offset + limit - 1);
+        .eq('product_categories.category_id', selectedCategory.id);
+      if (search) productsQuery = productsQuery.ilike('name', `%${search}%`);
+      if (sort === 'menor_preco') productsQuery = productsQuery.order('price_cents', { ascending: true }).order('name');
+      else if (sort === 'maior_preco') productsQuery = productsQuery.order('price_cents', { ascending: false }).order('name');
+      else productsQuery = productsQuery.order('sort_order').order('name');
+      const { data: dbProducts, count: dbCount } = await productsQuery.range(offset, offset + limit - 1);
 
       if (dbProducts && dbProducts.length > 0) {
-        products = dbProducts;
+        products = dbProducts.map((product) => ({
+          ...product,
+          stock_quantity: product.stock_control_enabled && product.stock_quantity !== null
+            ? Math.max(0, product.stock_quantity - product.reserved_quantity)
+            : null,
+        }));
         count = dbCount || dbProducts.length;
       }
       }
     } else {
-      const { data: dbProducts, count: dbCount } = await supabase
+      let productsQuery = supabase
         .from('products')
-        .select('id, name, slug, description, image_url, price, stock_quantity', { count: 'exact' })
+        .select('id, name, slug, description, image_url, price, stock_quantity, stock_control_enabled, reserved_quantity', { count: 'exact' })
         .eq('is_active', true)
-        .is('deleted_at', null)
-        .order('sort_order')
-        .range(offset, offset + limit - 1);
+        .is('deleted_at', null);
+      if (search) productsQuery = productsQuery.ilike('name', `%${search}%`);
+      if (sort === 'menor_preco') productsQuery = productsQuery.order('price_cents', { ascending: true }).order('name');
+      else if (sort === 'maior_preco') productsQuery = productsQuery.order('price_cents', { ascending: false }).order('name');
+      else productsQuery = productsQuery.order('sort_order').order('name');
+      const { data: dbProducts, count: dbCount } = await productsQuery.range(offset, offset + limit - 1);
 
       if (dbProducts && dbProducts.length > 0) {
-        products = dbProducts;
+        products = dbProducts.map((product) => ({
+          ...product,
+          stock_quantity: product.stock_control_enabled && product.stock_quantity !== null
+            ? Math.max(0, product.stock_quantity - product.reserved_quantity)
+            : null,
+        }));
         count = dbCount || dbProducts.length;
       }
     }
@@ -93,6 +115,25 @@ export default async function PapelariaPage(
         <p className="text-lg text-slate-600 max-w-3xl">
           Produtos de escritório, materiais escolares e suprimentos essenciais com pronta entrega.
         </p>
+        <form action="/papelaria" className="mt-6 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_190px_auto]">
+          {categoriaSlug && categoriaSlug !== 'todas' && <input type="hidden" name="categoria" value={categoriaSlug} />}
+          <label className="sr-only" htmlFor="catalog-search">Buscar produto</label>
+          <input
+            id="catalog-search"
+            name="q"
+            defaultValue={search}
+            maxLength={120}
+            placeholder="Buscar produto de papelaria"
+            className="min-w-0 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
+          />
+          <label className="sr-only" htmlFor="catalog-sort">Ordenar produtos</label>
+          <select id="catalog-sort" name="ordem" defaultValue={sort} className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20">
+            <option value="nome">Ordenar: catálogo</option>
+            <option value="menor_preco">Menor preço</option>
+            <option value="maior_preco">Maior preço</option>
+          </select>
+          <button type="submit" className="rounded-xl bg-[#0F2040] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700">Buscar</button>
+        </form>
       </div>
 
       <div className="flex flex-col md:flex-row gap-8">
@@ -116,7 +157,7 @@ export default async function PapelariaPage(
               {categories.map(cat => (
                 <li key={cat.id}>
                   <Link 
-                    href={`/papelaria?categoria=${cat.slug}`}
+                    href={`/papelaria?categoria=${cat.slug}${search ? `&q=${encodeURIComponent(search)}` : ''}${sort !== 'nome' ? `&ordem=${sort}` : ''}`}
                     className={`block px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                       categoriaSlug === cat.slug
                         ? 'bg-blue-600 text-white shadow-sm' 
@@ -150,7 +191,7 @@ export default async function PapelariaPage(
                     return (
                       <Link
                         key={pageNum}
-                        href={`/papelaria?${categoriaSlug ? `categoria=${categoriaSlug}&` : ''}page=${pageNum}`}
+                        href={`/papelaria?${categoriaSlug ? `categoria=${categoriaSlug}&` : ''}${search ? `q=${encodeURIComponent(search)}&` : ''}${sort !== 'nome' ? `ordem=${sort}&` : ''}page=${pageNum}`}
                         className={`w-10 h-10 flex items-center justify-center rounded-xl font-medium transition-colors ${
                           isActive 
                             ? 'bg-blue-600 text-white shadow-sm' 

@@ -11,6 +11,7 @@ export async function GET() {
     const { data: categories, error: catError } = await supabase
       .from('categories')
       .select('id, name, slug, description, image_url, parent_id, sort_order')
+      .eq('catalog_scope', 'stationery')
       .eq('is_active', true)
       .order('sort_order', { ascending: true });
 
