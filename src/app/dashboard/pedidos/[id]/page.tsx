@@ -7,6 +7,7 @@ import { ArrowLeft, MessageCircle, MapPin, CreditCard, RefreshCw } from 'lucide-
 import { OrderStatusBadge } from '@/components/dashboard/OrderStatusBadge';
 import { OrderTimeline } from '@/components/dashboard/OrderTimeline';
 import { ArtworkApprovalPanel } from '@/components/dashboard/ArtworkApprovalPanel';
+import { formatCurrency } from '@/lib/utils/format';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -73,7 +74,8 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
     .select(`
       *,
       order_items (*),
-      order_events (*)
+      order_events (*),
+      order_price_adjustments (id, previous_order_total_cents, new_order_total_cents, reason, created_at, order_version_before, order_version_after)
     `)
     .eq('id', params.id)
     .eq('user_id', session.user.id)
@@ -112,6 +114,7 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
 
   const orderItems = order.order_items || [];
   const orderEvents = order.order_events || [];
+  const priceAdjustments = order.order_price_adjustments || [];
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -181,6 +184,22 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
             <h3 className="font-semibold text-slate-900 mb-6">Linha do Tempo</h3>
             <OrderTimeline events={orderEvents} />
           </div>
+
+          {priceAdjustments.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+              <h3 className="font-semibold text-slate-900">Ajustes de valor</h3>
+              <p className="mt-1 text-sm text-slate-600">Base calculada: <strong>{formatCurrency(Number(order.original_total_cents ?? order.total_cents) / 100)}</strong> · Total vigente: <strong>{formatCurrency(Number(order.total_cents ?? 0) / 100)}</strong></p>
+              <div className="mt-4 space-y-3">
+                {priceAdjustments.map((adjustment) => (
+                  <div key={adjustment.id} className="rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-sm text-slate-800">
+                    <p className="font-semibold">{formatCurrency(Number(adjustment.previous_order_total_cents) / 100)} → {formatCurrency(Number(adjustment.new_order_total_cents) / 100)}</p>
+                    <p className="mt-1">{adjustment.reason}</p>
+                    <p className="mt-1 text-xs text-slate-600">{format(new Date(adjustment.created_at), "d 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })} · atualização comercial v{adjustment.order_version_before} → v{adjustment.order_version_after}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <ArtworkApprovalPanel orderId={order.id} />
         </div>

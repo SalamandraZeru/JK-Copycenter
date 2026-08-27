@@ -3,12 +3,12 @@
 import React, { useState, use } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils/format';
 import { PreflightReviewPanel } from '@/components/admin/PreflightReviewPanel';
+import { OrderStatusWhatsAppButton } from '@/components/admin/OrderStatusWhatsAppButton';
 import { 
   ArrowLeft, Package, User, MapPin, Download, CheckCircle, 
-  MessageCircle, Loader2, Save, FileText, Printer, PencilLine
+  Loader2, Save, FileText, Printer, PencilLine
 } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
@@ -46,39 +46,8 @@ function formatOrderFieldValue(value: unknown): string {
   return '-';
 }
 
-function formatItemTechnicalDetails(item: { fields_snapshot?: unknown; pricing_rule_snapshot?: unknown }): string {
-  const fields = item.fields_snapshot && typeof item.fields_snapshot === 'object' && !Array.isArray(item.fields_snapshot)
-    ? Object.entries(item.fields_snapshot as Record<string, unknown>)
-      .map(([key, value]) => `${key}: ${formatOrderFieldValue(value)}`)
-    : [];
-  const pricing = item.pricing_rule_snapshot && typeof item.pricing_rule_snapshot === 'object' && !Array.isArray(item.pricing_rule_snapshot)
-    ? item.pricing_rule_snapshot as Record<string, unknown>
-    : null;
-  const bindingSelections = Array.isArray(pricing?.bindingSelections) ? pricing.bindingSelections : [];
-  if (bindingSelections.length > 0) {
-    const pages = bindingSelections
-      .map((selection) => selection && typeof selection === 'object' && typeof (selection as Record<string, unknown>).pageCount === 'number'
-        ? `${(selection as Record<string, unknown>).pageCount} pág.`
-        : null)
-      .filter((value): value is string => value !== null);
-    fields.push(`Encadernação: ${bindingSelections.length} ${bindingSelections.length === 1 ? 'arquivo' : 'arquivos'}${pages.length > 0 ? ` (${pages.join(', ')})` : ''}`);
-  }
-  const booklet = pricing?.bookletImposition;
-  if (booklet && typeof booklet === 'object' && !Array.isArray(booklet)) {
-    const data = booklet as Record<string, unknown>;
-    if (typeof data.originalPageCount === 'number' && typeof data.imposedPageCount === 'number') {
-      const blanks = typeof data.blankPagesAdded === 'number' && data.blankPagesAdded > 0
-        ? ` (+${data.blankPagesAdded} técnica(s) em branco${data.customerApprovalRecorded === true ? ', aprovação registrada' : ''})`
-        : '';
-      fields.push(`Livreto: ${data.originalPageCount} páginas originais → ${data.imposedPageCount} produção${blanks}`);
-    }
-  }
-  return fields.length > 0 ? fields.join(' | ') : 'Padrão';
-}
-
 export default function PedidoDetalhePage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
-  const router = useRouter();
   const { data: order, error, isLoading, mutate } = useSWR(`/api/admin/pedidos/${params.id}`, fetcher);
 
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -180,6 +149,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
           newTotalCents: Math.round(parsedTotal * 100),
           reason: adjustmentReason.trim(),
           idempotencyKey: crypto.randomUUID(),
+          expectedOrderVersion: order.price_version,
         }),
       });
       const result = await response.json().catch(() => null) as { error?: string } | null;
@@ -193,10 +163,6 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
     } finally {
       setUpdatingPrice(false);
     }
-  };
-
-  const handlePrintOS = () => {
-    window.print();
   };
 
   const handleOpenFile = async (fileId: string) => {
@@ -218,9 +184,6 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
 
   const customerName = order.customer_name || order.guest_name || order.profiles?.full_name || 'Cliente';
   const customerEmail = order.guest_email || order.profiles?.email || 'Não informado';
-  const phone = (order.customer_phone || order.guest_phone || '').replace(/\D/g, '');
-  const waMsg = encodeURIComponent(`Olá ${customerName}, referente ao seu pedido #${order.order_number} na JK Copycenter...`);
-  const waUrl = phone ? `https://wa.me/55${phone}?text=${waMsg}` : null;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -242,102 +205,18 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
         </div>
 
         {!isProductionView && <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={handlePrintOS}
+          <Link
+            href={`/os/${order.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg font-medium hover:bg-slate-900 transition-colors shadow-xs"
           >
             <Printer className="w-4 h-4" />
             Imprimir O.S.
-          </button>
-
-          {waUrl && (
-            <a 
-              href={waUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-xs"
-            >
-              <MessageCircle className="w-4 h-4" />
-              WhatsApp
-            </a>
-          )}
+          </Link>
+          <OrderStatusWhatsAppButton orderId={order.id} status={order.status} />
         </div>}
       </div>
-
-      {/* PRINTABLE ORDEM DE SERVIÇO (Visible only in print mode) */}
-      {!isProductionView && <div className="os-document hidden print:block font-sans text-slate-900 p-4 border border-black rounded-sm mb-6">
-        <div className="border-b-2 border-black pb-4 mb-4 flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-black uppercase tracking-wider">JK COPYCENTER</h1>
-            <p className="text-xs font-semibold text-slate-700">Gráfica Rápida • Cópias • Impressões • Papelaria</p>
-            <p className="text-xs text-slate-600 mt-1">Av. Jk, 270 - Jardim Colégio de Passos, Passos - MG, 37901-000</p>
-            <p className="text-xs text-slate-600">WhatsApp/Tel: (35) 99106-6260</p>
-          </div>
-          <div className="text-right">
-            <div className="border-2 border-black px-3 py-1 font-bold text-lg inline-block">
-              O.S. #{order.order_number}
-            </div>
-            <p className="text-xs mt-1">Data: {new Date(order.created_at).toLocaleDateString('pt-BR')}</p>
-            <p className="text-xs font-bold uppercase text-slate-800">Status: {STATUS_LABELS[order.status] || order.status}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-4 border-b border-black pb-4 text-xs">
-          <div>
-            <h3 className="font-bold uppercase text-slate-900 border-b border-slate-300 pb-0.5 mb-1">Dados do Cliente</h3>
-            <p><strong>Nome:</strong> {customerName}</p>
-            <p><strong>Telefone:</strong> {order.customer_phone || order.guest_phone || '-'}</p>
-            <p><strong>Email:</strong> {customerEmail}</p>
-          </div>
-          <div>
-            <h3 className="font-bold uppercase text-slate-900 border-b border-slate-300 pb-0.5 mb-1">Entrega & Pagamento</h3>
-            <p><strong>Tipo:</strong> {order.delivery_type === 'delivery' ? 'Entrega em Domicílio' : 'Retirada no Balcão'}</p>
-            <p><strong>Forma Pag.:</strong> {order.payment_method?.toUpperCase() || 'PIX'}</p>
-            <p><strong>Status Pag.:</strong> {PAYMENT_LABELS[order.payment_status] || order.payment_status}</p>
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <h3 className="font-bold uppercase text-xs border-b border-black pb-1 mb-2">Itens e Especificações para Produção</h3>
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-black text-left">
-                <th className="py-1">Serviço / Produto</th>
-                <th className="py-1">Especificações Técnicas</th>
-                <th className="py-1 text-center">Páginas</th>
-                <th className="py-1 text-center">Qtd</th>
-                <th className="py-1 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(order.order_items || []).map((item: any) => (
-                <tr key={item.id} className="border-b border-slate-200">
-                  <td className="py-2 font-bold">{item.service_name_snapshot || item.product_name_snapshot}</td>
-                  <td className="py-2 text-slate-700">
-                    {formatItemTechnicalDetails(item)}
-                  </td>
-                  <td className="py-2 text-center">{item.pages_count || item.page_count || 1}</td>
-                  <td className="py-2 text-center font-bold">{item.quantity}</td>
-                  <td className="py-2 text-right font-bold">{formatCurrency(item.total_price || item.unit_price * item.quantity)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex justify-between items-end border-t-2 border-black pt-3 text-xs">
-          <div className="w-1/2">
-            <p className="font-bold mb-8">Assinatura do Responsável / Cliente:</p>
-            <div className="border-b border-black w-3/4"></div>
-          </div>
-          <div className="w-1/3 text-right space-y-1">
-            <div className="flex justify-between"><span>Subtotal:</span> <span>{formatCurrency(order.subtotal)}</span></div>
-            <div className="flex justify-between"><span>Taxa Entrega:</span> <span>{formatCurrency(order.delivery_fee)}</span></div>
-            <div className="flex justify-between font-bold text-sm border-t border-black pt-1"><span>Total:</span> <span>{formatCurrency(order.total)}</span></div>
-          </div>
-        </div>
-      </div>}
 
       {/* Screen Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
@@ -400,6 +279,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
               <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <PencilLine className="w-5 h-5 text-blue-600" /> Histórico de ajustes de valor
               </h2>
+              <p className="mb-4 text-sm text-slate-600">Base calculada: <strong>{formatCurrency(Number(order.original_total_cents ?? order.total_cents) / 100)}</strong> · Total comercial vigente: <strong>{formatCurrency(Number(order.total_cents ?? 0) / 100)}</strong> · Versão {order.price_version ?? 1}</p>
               <div className="space-y-3">
                 {order.order_price_adjustments.map((adjustment: any) => (
                   <div key={adjustment.id} className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3">
@@ -408,7 +288,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
                         Item: {formatCurrency(Number(adjustment.previous_item_total_cents) / 100)} → {formatCurrency(Number(adjustment.new_item_total_cents) / 100)}
                       </span>
                       <span className="text-xs font-medium text-slate-600">
-                        {new Date(adjustment.created_at).toLocaleString('pt-BR')}{adjustment.admin_users?.full_name ? ` · ${adjustment.admin_users.full_name}` : ''}
+                        {new Date(adjustment.created_at).toLocaleString('pt-BR')}{adjustment.admin_users?.full_name ? ` · ${adjustment.admin_users.full_name}` : ''} · v{adjustment.order_version_before} → v{adjustment.order_version_after}
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-slate-700"><strong>Motivo:</strong> {adjustment.reason}</p>
@@ -522,7 +402,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
 
           {!isProductionView && <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2"><PencilLine className="w-5 h-5 text-blue-600" /> Ajuste final do valor</h2>
-            <p className="text-sm text-slate-600 mb-4">Use após revisar os arquivos ou conceder desconto. O motivo e os valores anterior/novo ficam registrados no pedido.</p>
+            <p className="text-sm text-slate-600 mb-4">Use após revisar os arquivos ou conceder desconto. A base calculada é preservada; motivo, versão e valores anterior/novo ficam registrados no pedido.</p>
             {order.payment_status !== 'pending_contact' ? (
               <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600">O valor fica bloqueado após a confirmação ou cancelamento do pagamento.</p>
             ) : (

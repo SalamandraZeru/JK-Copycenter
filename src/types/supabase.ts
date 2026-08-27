@@ -832,6 +832,9 @@ export interface Database {
           delivery_fee_cents: number;
           subtotal_cents: number;
           total_cents: number;
+          original_subtotal_cents: number;
+          original_total_cents: number;
+          price_version: number;
           payment_method: Database['public']['Enums']['payment_method'];
           payment_status: Database['public']['Enums']['payment_status'];
           pix_key_used: string | null;
@@ -865,6 +868,9 @@ export interface Database {
           delivery_fee_cents: number;
           subtotal_cents: number;
           total_cents: number;
+          original_subtotal_cents?: number;
+          original_total_cents?: number;
+          price_version?: number;
           payment_method: Database['public']['Enums']['payment_method'];
           payment_status?: Database['public']['Enums']['payment_status'];
           pix_key_used?: string | null;
@@ -898,6 +904,9 @@ export interface Database {
           delivery_fee_cents?: number;
           subtotal_cents?: number;
           total_cents?: number;
+          original_subtotal_cents?: number;
+          original_total_cents?: number;
+          price_version?: number;
           payment_method?: Database['public']['Enums']['payment_method'];
           payment_status?: Database['public']['Enums']['payment_status'];
           pix_key_used?: string | null;
@@ -938,6 +947,7 @@ export interface Database {
           total_price: number;
           unit_price_cents: number;
           total_price_cents: number;
+          original_total_price_cents: number;
           discount_cents: number;
           pricing_rule_id: string | null;
           pricing_rule_snapshot: Json | null;
@@ -961,6 +971,7 @@ export interface Database {
           total_price?: number;
           unit_price_cents: number;
           total_price_cents: number;
+          original_total_price_cents?: number;
           discount_cents: number;
           pricing_rule_id?: string | null;
           pricing_rule_snapshot?: Json | null;
@@ -984,6 +995,7 @@ export interface Database {
           total_price?: number;
           unit_price_cents?: number;
           total_price_cents?: number;
+          original_total_price_cents?: number;
           discount_cents?: number;
           pricing_rule_id?: string | null;
           pricing_rule_snapshot?: Json | null;
@@ -1028,6 +1040,8 @@ export interface Database {
           previous_order_total_cents: number;
           new_order_total_cents: number;
           reason: string;
+          order_version_before: number;
+          order_version_after: number;
           created_at: string;
         };
         Insert: {
@@ -1043,6 +1057,8 @@ export interface Database {
           previous_order_total_cents: number;
           new_order_total_cents: number;
           reason: string;
+          order_version_before: number;
+          order_version_after: number;
           created_at?: string;
         };
         Update: {
@@ -1058,6 +1074,8 @@ export interface Database {
           previous_order_total_cents?: number;
           new_order_total_cents?: number;
           reason?: string;
+          order_version_before?: number;
+          order_version_after?: number;
           created_at?: string;
         };
         Relationships: [
@@ -1390,6 +1408,45 @@ export interface Database {
           completed_at?: string;
         };
         Relationships: [];
+      };
+      order_status_communications: {
+        Row: {
+          id: string;
+          order_id: string;
+          admin_user_id: string | null;
+          idempotency_key: string;
+          channel: 'whatsapp';
+          status_to: Database['public']['Enums']['order_status'];
+          template_key: string;
+          opened_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          admin_user_id?: string | null;
+          idempotency_key: string;
+          channel: 'whatsapp';
+          status_to: Database['public']['Enums']['order_status'];
+          template_key: string;
+          opened_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          admin_user_id?: string | null;
+          idempotency_key?: string;
+          channel?: 'whatsapp';
+          status_to?: Database['public']['Enums']['order_status'];
+          template_key?: string;
+          opened_at?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          { foreignKeyName: 'order_status_communications_order_id_fkey'; columns: ['order_id']; isOneToOne: false; referencedRelation: 'orders'; referencedColumns: ['id']; },
+          { foreignKeyName: 'order_status_communications_admin_user_id_fkey'; columns: ['admin_user_id']; isOneToOne: false; referencedRelation: 'admin_users'; referencedColumns: ['id']; }
+        ];
       };
       order_contact_outbox: {
         Row: {
@@ -1744,6 +1801,7 @@ export interface Database {
           p_new_total_cents: number;
           p_reason: string;
           p_idempotency_key: string;
+          p_expected_order_version: number;
         };
         Returns: {
           order_id: string;

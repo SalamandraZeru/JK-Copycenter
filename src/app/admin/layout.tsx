@@ -42,7 +42,7 @@ export default async function AdminLayout({
         </div>
         <AdminPwaRegistration />
         
-        <main className="admin-main flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="admin-main flex-1 overflow-y-auto p-4 sm:p-6 print:hidden">
           {children}
         </main>
       </div>
