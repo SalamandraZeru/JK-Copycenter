@@ -71,6 +71,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
+  const restoreSessionFiles = useCartStore((state) => state.restoreSessionFiles);
   const [mounted, setMounted] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [checkoutSettings, setCheckoutSettings] = useState<CheckoutSettings | null>(null);
@@ -97,6 +98,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    restoreSessionFiles();
     setMounted(true);
     const supabase = createClient();
     supabase.auth.getSession().then(async ({ data }) => {
@@ -116,7 +118,7 @@ export default function CheckoutPage() {
         // The form remains available if a profile has not been created yet.
       }
     });
-  }, []);
+  }, [restoreSessionFiles]);
 
   useEffect(() => {
     fetch('/api/store/checkout-settings')

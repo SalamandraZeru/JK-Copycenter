@@ -370,6 +370,18 @@ export const useCartStore = create<CartState>()(
           items: (state.items || []).map(normalizePersistedItem),
         };
       },
+      // `partialize` deliberately removes upload identifiers from localStorage.
+      // Normalize on every hydration (not only version migrations) so a direct
+      // navigation to checkout still receives safe empty arrays before the
+      // current browser session restores its file intents.
+      merge: (persistedState, currentState) => {
+        const state = persistedState as { items?: Partial<CartItem>[] } | undefined;
+        return {
+          ...currentState,
+          ...state,
+          items: (state?.items || []).map(normalizePersistedItem),
+        };
+      },
       partialize: (state) => ({
         // Persist only a non-authoritative intent plus its visual snapshot.
         // Upload IDs remain in sessionStorage, and totals never reach checkout.
