@@ -173,6 +173,11 @@ export interface Database {
           base_price_cents: number;
           pricing_fallback_behavior: string;
           pricing_version: number;
+          catalog_state: Database['public']['Enums']['catalog_state'];
+          catalog_version: number;
+          catalog_updated_by: string | null;
+          reviewed_at: string | null;
+          published_at: string | null;
           is_active: boolean;
           sort_order: number;
           deleted_at: string | null;
@@ -190,6 +195,11 @@ export interface Database {
           base_price_cents: number;
           pricing_fallback_behavior?: string;
           pricing_version?: number;
+          catalog_state?: Database['public']['Enums']['catalog_state'];
+          catalog_version?: number;
+          catalog_updated_by?: string | null;
+          reviewed_at?: string | null;
+          published_at?: string | null;
           is_active?: boolean;
           sort_order?: number;
           deleted_at?: string | null;
@@ -207,6 +217,11 @@ export interface Database {
           base_price_cents?: number;
           pricing_fallback_behavior?: string;
           pricing_version?: number;
+          catalog_state?: Database['public']['Enums']['catalog_state'];
+          catalog_version?: number;
+          catalog_updated_by?: string | null;
+          reviewed_at?: string | null;
+          published_at?: string | null;
           is_active?: boolean;
           sort_order?: number;
           deleted_at?: string | null;
@@ -1597,6 +1612,7 @@ export interface Database {
       payment_status: 'pending_contact' | 'paid' | 'rejected' | 'cancelled';
       field_type: 'select' | 'radio' | 'number' | 'text' | 'textarea' | 'checkbox';
       cart_item_type: 'service' | 'product';
+      catalog_state: 'draft' | 'review' | 'published' | 'inactive';
     };
     CompositeTypes: Record<string, never>;
   };

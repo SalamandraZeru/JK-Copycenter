@@ -21,6 +21,7 @@ export async function GET() {
       .from('services')
       .select('id, category_id, name, slug, description, image_url, base_price, sort_order')
       .eq('is_active', true)
+      .eq('catalog_state', 'published')
       .is('deleted_at', null)
       .order('sort_order', { ascending: true });
 

@@ -98,6 +98,7 @@ export async function loadPricingData(
     .select('id, name, description, base_price_cents, pricing_fallback_behavior, pricing_version')
     .eq('id', serviceId)
     .eq('is_active', true)
+    .eq('catalog_state', 'published')
     .is('deleted_at', null)
     .maybeSingle();
 

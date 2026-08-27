@@ -1,10 +1,10 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
-import { Loader2, Plus, Edit2, Trash2, Check, Printer, Settings, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Plus, Edit2, Trash2, Check, Printer, Settings, Image as ImageIcon, Copy, Download, Upload } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/format';
 import { ImageUploader } from '@/components/admin/ImageUploader';
 
@@ -17,7 +17,9 @@ interface Service {
   description: string | null;
   image_url: string | null;
   base_price: number;
-  is_active: boolean;
+  catalog_state: 'draft' | 'review' | 'published' | 'inactive';
+  catalog_version: number;
+  pricing_fallback_behavior: 'use_base' | 'block';
   sort_order: number;
 }
 
@@ -27,6 +29,7 @@ export default function ServicosPage() {
   const servicos: Service[] = Array.isArray(rawServices) ? rawServices : [];
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<{
     id?: string;
     name: string;
@@ -34,7 +37,8 @@ export default function ServicosPage() {
     description: string;
     image_url: string | null;
     base_price: number;
-    is_active: boolean;
+    catalog_state: Service['catalog_state'];
+    pricing_fallback_behavior: Service['pricing_fallback_behavior'];
     sort_order: number;
   }>({
     name: '',
@@ -42,7 +46,8 @@ export default function ServicosPage() {
     description: '',
     image_url: null,
     base_price: 0,
-    is_active: true,
+    catalog_state: 'draft',
+    pricing_fallback_behavior: 'block',
     sort_order: 0,
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -55,7 +60,8 @@ export default function ServicosPage() {
       description: '',
       image_url: null,
       base_price: 0.50,
-      is_active: true,
+      catalog_state: 'draft',
+      pricing_fallback_behavior: 'block',
       sort_order: servicos.length + 1,
     });
   };
@@ -69,7 +75,8 @@ export default function ServicosPage() {
       description: serv.description || '',
       image_url: serv.image_url || null,
       base_price: serv.base_price || 0,
-      is_active: serv.is_active ?? true,
+      catalog_state: serv.catalog_state,
+      pricing_fallback_behavior: serv.pricing_fallback_behavior,
       sort_order: serv.sort_order ?? 0,
     });
   };
@@ -119,20 +126,77 @@ export default function ServicosPage() {
     }
   };
 
+  const handleDuplicate = async (id: string) => {
+    try {
+      const response = await fetch(`/api/admin/servicos/${id}/duplicar`, { method: 'POST' });
+      const data = await response.json() as { error?: string; id?: string };
+      if (!response.ok || data.error) throw new Error(data.error || 'Erro ao duplicar serviço');
+      await mutateServices();
+      if (data.id) window.location.href = `/admin/servicos/${data.id}`;
+    } catch (error) {
+      alert(`Erro ao duplicar serviço: ${error instanceof Error ? error.message : 'Falha de rede'}`);
+    }
+  };
+
+  const handleExport = async (id: string, slug: string) => {
+    try {
+      const response = await fetch(`/api/admin/servicos/${id}/exportar`);
+      if (!response.ok) {
+        const data = await response.json() as { error?: string };
+        throw new Error(data.error || 'Erro ao exportar configuração');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${slug}-config.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(`Erro ao exportar serviço: ${error instanceof Error ? error.message : 'Falha de rede'}`);
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const raw = await file.text();
+      const response = await fetch('/api/admin/servicos/importar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: raw,
+      });
+      const data = await response.json() as { error?: string; id?: string };
+      if (!response.ok || data.error) throw new Error(data.error || 'Arquivo de configuração inválido');
+      await mutateServices();
+      if (data.id) window.location.href = `/admin/servicos/${data.id}`;
+    } catch (error) {
+      alert(`Erro ao importar serviço: ${error instanceof Error ? error.message : 'Arquivo inválido'}`);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 font-serif">Serviços Gráficos</h1>
           <p className="text-sm font-medium text-slate-600">Cadastre serviços de impressão e configure campos dinâmicos de personalização.</p>
         </div>
-        <button 
-          onClick={startNew}
-          disabled={editingId !== null}
-          className="inline-flex items-center gap-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition disabled:opacity-50"
-        >
-          <Plus className="w-4 h-4" /> Novo Serviço
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <input ref={importInputRef} type="file" accept="application/json,.json" className="hidden" onChange={handleImport} />
+          <button type="button" onClick={() => importInputRef.current?.click()} disabled={editingId !== null} className="inline-flex items-center gap-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition disabled:opacity-50">
+            <Upload className="w-4 h-4" /> Importar
+          </button>
+          <button
+            onClick={startNew}
+            disabled={editingId !== null}
+            className="inline-flex items-center gap-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition disabled:opacity-50"
+          >
+            <Plus className="w-4 h-4" /> Novo Serviço
+          </button>
+        </div>
       </div>
 
       {/* Editor Box */}
@@ -198,6 +262,10 @@ export default function ServicosPage() {
                     className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">Ordem no Catálogo</label>
+                  <input type="number" value={formData.sort_order} onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition" />
+                </div>
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
@@ -242,16 +310,24 @@ export default function ServicosPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-6 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_active}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
-                  />
-                  <span className="text-sm font-semibold text-slate-800">Serviço Ativo no Catálogo</span>
-                </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">Estado editorial</label>
+                  <select value={formData.catalog_state} onChange={(e) => setFormData({ ...formData, catalog_state: e.target.value as Service['catalog_state'] })} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition">
+                    <option value="draft">Rascunho</option>
+                    <option value="review">Em revisão</option>
+                    <option value="published">Publicado</option>
+                    <option value="inactive">Inativo</option>
+                  </select>
+                  <p className="mt-1 text-xs text-slate-500">Só serviços publicados aparecem ao cliente.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">Sem regra correspondente</label>
+                  <select value={formData.pricing_fallback_behavior} onChange={(e) => setFormData({ ...formData, pricing_fallback_behavior: e.target.value as Service['pricing_fallback_behavior'] })} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition">
+                    <option value="block">Bloquear cotação</option>
+                    <option value="use_base">Usar preço-base</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -277,13 +353,13 @@ export default function ServicosPage() {
                 <th className="px-6 py-4 w-20">Foto</th>
                 <th className="px-6 py-4">Nome & Slug</th>
                 <th className="px-6 py-4">Preço Base</th>
-                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Estado</th>
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {servicos.map((serv) => (
-                <tr key={serv.id} className={`hover:bg-slate-50 transition ${!serv.is_active ? 'opacity-60 bg-slate-50/50' : ''}`}>
+                <tr key={serv.id} className={`hover:bg-slate-50 transition ${serv.catalog_state !== 'published' ? 'bg-slate-50/50' : ''}`}>
                   <td className="px-6 py-4">
                     {serv.image_url ? (
                       <img src={serv.image_url} alt={serv.name} className="w-11 h-11 object-cover rounded-xl border border-slate-200" />
@@ -301,11 +377,8 @@ export default function ServicosPage() {
                     A partir de {formatCurrency(serv.base_price)}
                   </td>
                   <td className="px-6 py-4">
-                    {serv.is_active ? (
-                      <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-extrabold rounded-full uppercase">Ativo</span>
-                    ) : (
-                      <span className="px-2.5 py-1 bg-slate-200 text-slate-800 text-xs font-extrabold rounded-full uppercase">Inativo</span>
-                    )}
+                    <span className={`px-2.5 py-1 text-xs font-extrabold rounded-full uppercase ${serv.catalog_state === 'published' ? 'bg-emerald-100 text-emerald-800' : serv.catalog_state === 'review' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-800'}`}>{serv.catalog_state === 'draft' ? 'Rascunho' : serv.catalog_state === 'review' ? 'Em revisão' : serv.catalog_state === 'published' ? 'Publicado' : 'Inativo'}</span>
+                    <p className="mt-1 text-[11px] text-slate-500">v{serv.catalog_version}</p>
                   </td>
                   <td className="px-6 py-4 text-right space-x-1">
                     <Link
@@ -322,6 +395,12 @@ export default function ServicosPage() {
                       title="Editar serviço"
                     >
                       <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDuplicate(serv.id)} disabled={editingId !== null} className="p-2 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition disabled:opacity-50" title="Duplicar como rascunho">
+                      <Copy className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleExport(serv.id, serv.slug)} disabled={editingId !== null} className="p-2 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition disabled:opacity-50" title="Exportar configuração sem dados pessoais">
+                      <Download className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => handleDelete(serv.id)}

@@ -3,7 +3,7 @@
 import React, { useState, use } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
-import { Loader2, ArrowLeft, Plus, Edit2, Trash2, Check, Settings2, HelpCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Edit2, Trash2, Check, Settings2, HelpCircle, ShieldCheck, TriangleAlert } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
@@ -50,9 +50,22 @@ interface ServiceDetailResponse {
   error?: string;
 }
 
+interface CatalogReadiness {
+  ready: boolean;
+  errors: string[];
+  warnings: string[];
+  coverage: {
+    inspectedCombinations: number;
+    uncoveredCombinations: number;
+    ambiguousCombinations: number;
+    limited: boolean;
+  };
+}
+
 export default function ServicoCamposPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const { data, error, isLoading, mutate } = useSWR<ServiceDetailResponse>(`/api/admin/servicos/${params.id}/campos`, fetcher);
+  const { data: readiness } = useSWR<CatalogReadiness>(`/api/admin/servicos/${params.id}/validacao`, fetcher);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<{
@@ -235,6 +248,27 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
           <Plus className="w-4 h-4" /> Novo Campo
         </button>
       </div>
+
+      {readiness && (
+        <section className={`rounded-2xl border p-5 ${readiness.ready ? 'border-emerald-200 bg-emerald-50/60' : 'border-red-200 bg-red-50/60'}`}>
+          <div className="flex items-start gap-3">
+            {readiness.ready ? <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" /> : <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-700" />}
+            <div className="min-w-0">
+              <h2 className="font-bold text-slate-900">Validação para publicação</h2>
+              <p className="mt-1 text-sm text-slate-700">
+                {readiness.ready ? 'A estrutura está apta para ser publicada.' : 'Corrija os itens abaixo antes de publicar o serviço.'}
+              </p>
+              {readiness.coverage.inspectedCombinations > 0 && (
+                <p className="mt-2 text-xs font-medium text-slate-700">{readiness.coverage.inspectedCombinations} combinações verificadas · {readiness.coverage.uncoveredCombinations} sem regra específica · {readiness.coverage.ambiguousCombinations} ambíguas.</p>
+              )}
+              <ul className="mt-3 space-y-1 text-sm text-slate-700">
+                {readiness.errors.map((message) => <li key={`error-${message}`} className="text-red-800">• {message}</li>)}
+                {readiness.warnings.map((message) => <li key={`warning-${message}`}>• {message}</li>)}
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Editor Box */}
       {editingId && (

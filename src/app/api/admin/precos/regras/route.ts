@@ -107,10 +107,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       .from('services')
       .select('id')
       .eq('id', body.service_id)
-      .eq('is_active', true)
+      .neq('catalog_state', 'inactive')
       .is('deleted_at', null)
       .maybeSingle();
-    if (!service) return NextResponse.json({ error: 'Serviço inexistente ou inativo.' }, { status: 409 });
+    if (!service) return NextResponse.json({ error: 'Serviço inexistente, excluído ou inativo.' }, { status: 409 });
 
     const attributeIds = body.attribute_ids ?? [];
     const wildcardGroupIds = body.wildcard_group_ids ?? [];

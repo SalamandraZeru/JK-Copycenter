@@ -27,6 +27,7 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
     .select('id, name, slug, description, image_url, base_price, service_fields(id, service_id, key, label, field_type, options, is_required, sort_order, is_active)')
     .eq('id', params.id)
     .eq('is_active', true)
+    .eq('catalog_state', 'published')
     .is('deleted_at', null)
     .maybeSingle();
   if (error || !service) {

@@ -5,15 +5,15 @@ import { createClient } from '@/lib/supabase/server';
 import { ServiceCard } from '@/components/loja/ServiceCard';
 import { CategoryCard } from '@/components/loja/CategoryCard';
 import { Printer, Clock, ShieldCheck, ArrowRight, FileText, PhoneCall, CheckCircle2 } from 'lucide-react';
-import { DEFAULT_SERVICES, DEFAULT_CATEGORIES } from '@/lib/catalog/default-services';
 
 export const revalidate = 60; // 1 minute cache
 
 export default async function HomePage() {
   const supabase = await createClient();
 
-  // Fetch active categories with safe fallback
-  let activeCategories: Array<{ id: string; name: string; slug: string; image_url: string | null }> = DEFAULT_CATEGORIES;
+  // O Supabase é a única fonte comercial publicada. Em caso de indisponibilidade
+  // não substituímos o catálogo real por uma fixture embutida no bundle.
+  let activeCategories: Array<{ id: string; name: string; slug: string; image_url: string | null }> = [];
   try {
     const { data: dbCategories } = await supabase
       .from('categories')
@@ -24,10 +24,10 @@ export default async function HomePage() {
       activeCategories = dbCategories;
     }
   } catch {
-    // fallback
+    activeCategories = [];
   }
 
-  // Fetch active services with safe fallback
+  // Serviços só aparecem após publicação explícita no painel administrativo.
   let activeServices: Array<{
     id: string;
     name: string;
@@ -35,12 +35,13 @@ export default async function HomePage() {
     description: string | null;
     image_url: string | null;
     base_price: number;
-  }> = DEFAULT_SERVICES;
+  }> = [];
   try {
     const { data: dbServices } = await supabase
       .from('services')
       .select('*')
       .eq('is_active', true)
+      .eq('catalog_state', 'published')
       .is('deleted_at', null)
       .order('sort_order')
       .limit(6);
@@ -48,7 +49,7 @@ export default async function HomePage() {
       activeServices = dbServices;
     }
   } catch {
-    // fallback
+    activeServices = [];
   }
 
   const whatsappNumber = '5535991066260';
