@@ -75,12 +75,12 @@ export async function GET(request: Request) {
         stock_control_enabled: boolean;
         reserved_quantity: number;
         sort_order: number;
-      }>).map((product) => ({
+      }>).map(({ stock_control_enabled, reserved_quantity, stock_quantity, ...product }) => ({
         ...product,
         // The catalog sees only sellable quantity. Physical and reserved
         // balances remain available only to the administrative area.
-        stock_quantity: product.stock_control_enabled && product.stock_quantity !== null
-          ? Math.max(0, product.stock_quantity - product.reserved_quantity)
+        stock_quantity: stock_control_enabled && stock_quantity !== null
+          ? Math.max(0, stock_quantity - reserved_quantity)
           : null,
       })),
       count: count || 0,
