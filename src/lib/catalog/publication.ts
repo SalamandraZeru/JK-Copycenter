@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/types/supabase';
 import type { PricingProfile } from '@/types/pricing';
+import { normalizePricingProfileConfig } from '@/lib/pricing/profiles';
 
 export type CatalogState = 'draft' | 'review' | 'published' | 'inactive';
 
@@ -10,6 +11,7 @@ export interface ServicePublicationCandidate {
   basePriceCents: number;
   fallbackBehavior: string;
   pricingProfile?: PricingProfile;
+  pricingProfileConfig?: Json;
   state: CatalogState;
 }
 
@@ -196,6 +198,8 @@ export async function inspectServicePublication(
   if (candidate.state === 'published') {
     const isManualQuote = candidate.pricingProfile === 'manual_quote';
     const isBindingByFile = candidate.pricingProfile === 'binding_by_file_pages';
+    const isPrintRun = candidate.pricingProfile === 'per_print_run';
+    const technicalConfig = normalizePricingProfileConfig(candidate.pricingProfileConfig ?? {});
     if (isBindingByFile && (bindingTiersResult.data?.length ?? 0) === 0) {
       errors.push('A encadernação por arquivo exige ao menos uma faixa de preço ativa.');
     }
@@ -204,6 +208,19 @@ export async function inspectServicePublication(
     }
     if (!isManualQuote && !isBindingByFile && candidate.fallbackBehavior === 'use_base' && candidate.basePriceCents === 0 && activeRules.length === 0) {
       errors.push('A publicação exige preço-base maior que zero ou uma regra de preço ativa.');
+    }
+    if (isPrintRun) {
+      if (candidate.fallbackBehavior !== 'block') errors.push('Produtos por tiragem devem bloquear a cotação quando não houver regra específica.');
+      if (!technicalConfig.runFieldKey || !technicalConfig.productionLeadTimeBusinessDays) {
+        errors.push('Produtos por tiragem exigem campo de tiragem e prazo de produção configurados.');
+      }
+      const runField = (fieldsResult.data ?? []).find((field) => field.is_active && field.key === technicalConfig.runFieldKey);
+      if (!runField || (runField.field_type !== 'select' && runField.field_type !== 'radio')) {
+        errors.push('O campo de tiragem precisa existir, estar ativo e ser de seleção única.');
+      }
+      if (coverage.uncoveredCombinations > 0 || coverage.limited) {
+        errors.push('Produtos por tiragem exigem cobertura inequívoca de todas as combinações antes da publicação.');
+      }
     }
     if (candidate.fallbackBehavior !== 'block' && candidate.fallbackBehavior !== 'use_base') {
       errors.push('O comportamento de fallback de preço é inválido.');

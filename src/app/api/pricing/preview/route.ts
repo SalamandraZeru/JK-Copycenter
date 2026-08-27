@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server';
 import { readGuestUploadSession } from '@/lib/upload/guest-session';
 import { loadAuthorizedReadyFiles } from '@/lib/upload/access';
 import { enforceCloudflareRateLimit } from '@/lib/security/cloudflare-rate-limit';
+import { extractTrustedPdfDimensions } from '@/lib/upload/pdf-dimensions';
 
 const previewSchema = z.object({
   serviceId: z.string().uuid(),
@@ -81,6 +82,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
     let pageCount = 1;
     let isEstimate = false;
     let bindingFiles: Array<{ fileId: string; pageCount: number }> = [];
+    let trustedPdfDimensions: Array<{ fileId: string; widthCm: number; heightCm: number }> = [];
     if (intent.fileIds.length > 0) {
       let files;
       try {
@@ -108,6 +110,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
         fileId,
         pageCount: Math.max(1, filesById.get(fileId)!.page_count),
       }));
+      trustedPdfDimensions = extractTrustedPdfDimensions(files);
     } else if (intent.bindingFileIds.length > 0) {
       return NextResponse.json({
         success: false,
@@ -125,6 +128,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
       fileIds: intent.fileIds,
       bindingFileIds: intent.bindingFileIds,
       bindingFiles,
+      uploadedPdfDimensions: trustedPdfDimensions,
       dimensions: intent.dimensions,
       bookletPaddingApproved: intent.bookletPaddingApproved,
     }, supabaseAdmin);

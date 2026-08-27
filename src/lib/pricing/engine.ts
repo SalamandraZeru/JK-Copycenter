@@ -9,6 +9,7 @@ import type {
   PricingResult,
   PricingRoundingMode,
   PricingRule,
+  SquareMeterPricingSnapshot,
   ServerFieldPriceEffect,
 } from '@/types/pricing';
 import { isFieldOptionSelectionAllowed, resolveFieldOptionAvailability } from '@/lib/services/field-option-dependencies';
@@ -227,6 +228,11 @@ function checkedMultiply(left: number, right: number): number | null {
   return Number.isSafeInteger(total) ? total : null;
 }
 
+function applyBpsSafely(value: number, multiplierBps: number, mode: PricingRoundingMode): number | null {
+  const numerator = checkedMultiply(value, multiplierBps);
+  return numerator === null ? null : divideRounded(numerator, BPS_SCALE, mode);
+}
+
 function centimeterHundredths(value: number | undefined): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0 || value > 100_000) return null;
   const normalized = Math.round(value * 100);
@@ -285,6 +291,22 @@ interface ProfilePrice {
   dimensions: PricingDimensions | null;
   bookletPaddedPages: number | null;
   bookletImposition: BookletImpositionSnapshot | null;
+  squareMeterPricing: SquareMeterPricingSnapshot | null;
+}
+
+function areasMatchWithinTolerance(
+  enteredWidth: number,
+  enteredHeight: number,
+  pdfWidth: number,
+  pdfHeight: number,
+  toleranceBps: number,
+): boolean {
+  const matchesDimension = (entered: number, measured: number) => {
+    const denominator = Math.max(entered, measured);
+    return denominator > 0 && Math.abs(entered - measured) * BPS_SCALE <= denominator * toleranceBps;
+  };
+  return (matchesDimension(enteredWidth, pdfWidth) && matchesDimension(enteredHeight, pdfHeight))
+    || (matchesDimension(enteredWidth, pdfHeight) && matchesDimension(enteredHeight, pdfWidth));
 }
 
 function resolveProfilePrice(
@@ -335,10 +357,15 @@ function resolveProfilePrice(
   const rates = resolveRateWithEffects(priceCents, effects, pagesForPricing, profile, context.roundingMode);
   if (!rates) return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
 
-  const create = (unitCents: number, pricingUnit: string, dimensions: PricingDimensions | null = null): ProfilePrice | PricingResult => {
+  const create = (
+    unitCents: number,
+    pricingUnit: string,
+    dimensions: PricingDimensions | null = null,
+    squareMeterPricing: SquareMeterPricingSnapshot | null = null,
+  ): ProfilePrice | PricingResult => {
     const subtotalCents = checkedMultiply(unitCents, input.quantity);
     if (unitCents < 0 || subtotalCents === null) return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
-    return { unitCents, subtotalCents, pricingUnit, dimensions, bookletPaddedPages, bookletImposition };
+    return { unitCents, subtotalCents, pricingUnit, dimensions, bookletPaddedPages, bookletImposition, squareMeterPricing };
   };
 
   if (profile === 'per_page') {
@@ -348,6 +375,10 @@ function resolveProfilePrice(
   if (profile === 'per_item') {
     const unitCents = checkedAdd(rates.rateCents, rates.extraPerUnitCents);
     return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'unidade');
+  }
+  if (profile === 'per_print_run') {
+    const unitCents = checkedAdd(rates.rateCents, rates.extraPerUnitCents);
+    return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'tiragem');
   }
   if (profile === 'per_sheet') {
     const pagesPerSheet = config.pagesPerSheet ?? 1;
@@ -361,12 +392,48 @@ function resolveProfilePrice(
     if (!dimensions) return profileError('Informe largura e altura válidas em centímetros.');
     const width = centimeterHundredths(dimensions.widthCm)!;
     const height = centimeterHundredths(dimensions.heightCm)!;
-    const rateByWidth = checkedMultiply(rates.rateCents, width);
-    const numerator = rateByWidth === null ? null : checkedMultiply(rateByWidth, height);
+    const minWidth = centimeterHundredths(config.minWidthCm);
+    const maxWidth = centimeterHundredths(config.maxWidthCm);
+    const minHeight = centimeterHundredths(config.minHeightCm);
+    const maxHeight = centimeterHundredths(config.maxHeightCm);
+    if ((minWidth !== null && width < minWidth) || (maxWidth !== null && width > maxWidth)
+        || (minHeight !== null && height < minHeight) || (maxHeight !== null && height > maxHeight)) {
+      return profileError('As dimensões estão fora da faixa configurada para este material/equipamento. Solicite orçamento técnico.');
+    }
+    const trustedPdfDimensions = input.uploadedPdfDimensions ?? [];
+    if (config.validateUploadedPdfDimensions && trustedPdfDimensions.length === 1) {
+      const uploaded = trustedPdfDimensions[0]!;
+      if (!areasMatchWithinTolerance(
+        dimensions.widthCm!,
+        dimensions.heightCm!,
+        uploaded.widthCm,
+        uploaded.heightCm,
+        config.pdfDimensionToleranceBps ?? 0,
+      )) {
+        return profileError('As dimensões informadas divergem do PDF enviado. Solicite revisão técnica antes de continuar.');
+      }
+    }
+    const submittedAreaRaw = checkedMultiply(width, height);
+    const minimumAreaRaw = checkedMultiply(config.minimumBillableAreaCm2 ?? 0, 10_000);
+    if (submittedAreaRaw === null || minimumAreaRaw === null) return error('INVALID_INPUT', 'Cotação excede o limite técnico seguro.');
+    const areaBeforeWasteRaw = Math.max(submittedAreaRaw, minimumAreaRaw);
+    const billedAreaRaw = applyBpsSafely(areaBeforeWasteRaw, BPS_SCALE + (config.wasteMarginBps ?? 0), context.roundingMode);
+    if (billedAreaRaw === null) return error('INVALID_INPUT', 'Cotação excede o limite técnico seguro.');
+    const numerator = checkedMultiply(rates.rateCents, billedAreaRaw);
     if (numerator === null) return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
     const byArea = divideRounded(numerator, 100_000_000, context.roundingMode);
     const unitCents = checkedAdd(byArea, rates.extraPerUnitCents);
-    return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'metro quadrado', dimensions);
+    const squareMeterPricing: SquareMeterPricingSnapshot = {
+      submittedAreaCm2: submittedAreaRaw / 10_000,
+      minimumBillableAreaCm2: config.minimumBillableAreaCm2 ?? 0,
+      areaBeforeWasteCm2: areaBeforeWasteRaw / 10_000,
+      wasteMarginBps: config.wasteMarginBps ?? 0,
+      billableAreaCm2: billedAreaRaw / 10_000,
+      uploadedPdfDimensionChecked: config.validateUploadedPdfDimensions === true && trustedPdfDimensions.length === 1,
+    };
+    return unitCents === null
+      ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.')
+      : create(unitCents, 'metro quadrado', dimensions, squareMeterPricing);
   }
   if (profile === 'per_linear_meter') {
     const dimensions = normalizeDimensions(profile, input.dimensions);
@@ -487,6 +554,7 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
       pricePerPageCents,
       pricingUnit: profile === 'binding_by_file_pages' ? 'arquivo encadernado' : profilePrice.pricingUnit,
       dimensions: profilePrice.dimensions,
+      squareMeterPricing: profilePrice.squareMeterPricing,
       bookletPaddedPages: profilePrice.bookletPaddedPages,
       bookletImposition: profilePrice.bookletImposition,
       unitPriceCents,

@@ -20,7 +20,7 @@ const serviceFields = {
   base_price: z.coerce.number().min(0).max(1_000_000).optional(),
   catalog_state: z.enum(['draft', 'review', 'published', 'inactive']).optional(),
   pricing_fallback_behavior: z.enum(['use_base', 'block']).optional(),
-  pricing_profile: z.enum(['per_page', 'per_item', 'per_sheet', 'per_square_meter', 'per_linear_meter', 'binding_by_file_pages', 'booklet_imposition', 'manual_quote']).optional(),
+  pricing_profile: z.enum(['per_page', 'per_item', 'per_print_run', 'per_sheet', 'per_square_meter', 'per_linear_meter', 'binding_by_file_pages', 'booklet_imposition', 'manual_quote']).optional(),
   pricing_profile_config: z.record(z.string(), z.unknown()).refine((value) => JSON.stringify(value).length <= 10_000, 'Configuração técnica muito extensa.').optional(),
   sort_order: z.coerce.number().int().min(-100_000).max(100_000).optional(),
 };
@@ -137,6 +137,7 @@ export async function PUT(request: Request) {
       basePriceCents: nextBasePriceCents,
       fallbackBehavior: nextFallbackBehavior,
       pricingProfile: nextPricingProfile,
+      pricingProfileConfig: nextPricingProfileConfig,
       state: nextState,
     });
     if (!readiness.ready) {

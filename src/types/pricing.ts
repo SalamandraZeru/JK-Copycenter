@@ -3,6 +3,7 @@ export type PricingRoundingMode = 'half_up' | 'floor' | 'ceil';
 export type PricingProfile =
   | 'per_page'
   | 'per_item'
+  | 'per_print_run'
   | 'per_sheet'
   | 'per_square_meter'
   | 'per_linear_meter'
@@ -19,12 +20,45 @@ export interface PricingProfileConfig {
   requiresCustomerApprovalForPadding?: boolean;
   /** Uses configured option paths as an allow-list once their antecedents are selected. */
   requireCompleteCompatibility?: boolean;
+  /** Technical production limits for square-metre services, in centimetres. */
+  minWidthCm?: number;
+  maxWidthCm?: number;
+  minHeightCm?: number;
+  maxHeightCm?: number;
+  /** Smallest billable area before the configurable production-loss margin. */
+  minimumBillableAreaCm2?: number;
+  /** Production-loss margin, expressed in basis points (10,000 = 100%). */
+  wasteMarginBps?: number;
+  /** Uses safe PDF page-box metadata only when the administrator explicitly enables it. */
+  validateUploadedPdfDimensions?: boolean;
+  /** Allowed difference between typed and measured PDF dimensions, in basis points. */
+  pdfDimensionToleranceBps?: number;
+  /** Required service-field key that represents the allowed print run. */
+  runFieldKey?: string;
+  /** Lead time shown/validated for a published print-run product. */
+  productionLeadTimeBusinessDays?: number;
 }
 
 export interface PricingDimensions {
   widthCm?: number | undefined;
   heightCm?: number | undefined;
   lengthCm?: number | undefined;
+}
+
+/** Trusted only when populated server-side after the upload ownership check. */
+export interface UploadedPdfDimension {
+  fileId: string;
+  widthCm: number;
+  heightCm: number;
+}
+
+export interface SquareMeterPricingSnapshot {
+  submittedAreaCm2: number;
+  minimumBillableAreaCm2: number;
+  areaBeforeWasteCm2: number;
+  wasteMarginBps: number;
+  billableAreaCm2: number;
+  uploadedPdfDimensionChecked: boolean;
 }
 
 export interface PricingRuleAttribute {
@@ -163,6 +197,8 @@ export interface PricingCalculationInput {
   // Esta lista só é preenchida pelo servidor, após conferir a titularidade e
   // os metadados dos arquivos. Nunca é montada diretamente pelo navegador.
   bindingFiles?: BindingFileSelection[];
+  // Populado exclusivamente no servidor a partir de processing_metadata.
+  uploadedPdfDimensions?: UploadedPdfDimension[];
   dimensions?: PricingDimensions;
   bookletPaddingApproved?: boolean;
 }
@@ -190,6 +226,7 @@ export interface PricingCalculationResult {
   pricePerPageCents: number;
   pricingUnit: string;
   dimensions: PricingDimensions | null;
+  squareMeterPricing: SquareMeterPricingSnapshot | null;
   bookletPaddedPages: number | null;
   bookletImposition: BookletImpositionSnapshot | null;
   unitPriceCents: number;

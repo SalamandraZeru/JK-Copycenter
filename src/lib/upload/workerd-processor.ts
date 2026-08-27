@@ -102,7 +102,12 @@ async function inspectPdf(buffer: Buffer): Promise<{ pageCount: number; pageCoun
     const document = await PDFDocument.load(buffer, { ignoreEncryption: false, updateMetadata: false });
     const pageCount = document.getPageCount();
     if (pageCount < 1 || pageCount > 100_000) fail('PDF_PAGE_COUNT_INVALID');
-    return { pageCount, pageCountMethod: 'exact', metadata: { pageCount } };
+    const firstPage = document.getPage(0);
+    const { width, height } = firstPage.getSize();
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0 || width > 10_000_000 || height > 10_000_000) {
+      fail('PDF_DIMENSIONS_INVALID');
+    }
+    return { pageCount, pageCountMethod: 'exact', metadata: { pageCount, pdfPageWidthPoints: width, pdfPageHeightPoints: height } };
   } catch (error) {
     const message = error instanceof Error ? error.message.toLowerCase() : '';
     return fail(message.includes('encrypt') ? 'PDF_ENCRYPTED' : 'PDF_CORRUPTED');

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 import type { PageCountMethod } from '@/types';
+import type { Json } from '@/types/supabase';
 
 export interface FileOwnerContext {
   userId?: string;
@@ -18,6 +19,7 @@ export interface AuthorizedCheckoutFile {
   status: string;
   expires_at: string | null;
   deleted_at: string | null;
+  processing_metadata: Json;
 }
 
 export async function loadAuthorizedReadyFiles(
@@ -32,7 +34,7 @@ export async function loadAuthorizedReadyFiles(
 
   const { data, error } = await supabase
     .from('order_files')
-    .select('id, user_id, guest_owner_hash, order_id, original_name, page_count, page_count_method, status, expires_at, deleted_at')
+    .select('id, user_id, guest_owner_hash, order_id, original_name, page_count, page_count_method, status, expires_at, deleted_at, processing_metadata')
     .in('id', uniqueIds);
   if (error || !data || data.length !== uniqueIds.length) throw new Error('FILE_ACCESS_DENIED');
 

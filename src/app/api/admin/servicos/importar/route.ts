@@ -18,7 +18,7 @@ const importSchema = z.object({
     image_url: z.string().trim().max(2_000_000).nullable().optional(),
     base_price_cents: z.number().int().min(0).max(100_000_000),
     pricing_fallback_behavior: z.enum(['use_base', 'block']),
-    pricing_profile: z.enum(['per_page', 'per_item', 'per_sheet', 'per_square_meter', 'per_linear_meter', 'binding_by_file_pages', 'booklet_imposition', 'manual_quote']).default('per_page'),
+    pricing_profile: z.enum(['per_page', 'per_item', 'per_print_run', 'per_sheet', 'per_square_meter', 'per_linear_meter', 'binding_by_file_pages', 'booklet_imposition', 'manual_quote']).default('per_page'),
     pricing_profile_config: z.record(z.string(), z.unknown()).default({}),
     sort_order: z.number().int().min(-100_000).max(100_000).optional(),
   }).strict(),

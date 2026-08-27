@@ -319,6 +319,7 @@ export default function ServicosPage() {
                   >
                     <option value="per_page">Por página</option>
                     <option value="per_item">Por unidade</option>
+                    <option value="per_print_run">Por tiragem</option>
                     <option value="per_sheet">Por folha física</option>
                     <option value="per_square_meter">Por metro quadrado</option>
                     <option value="per_linear_meter">Por metro linear</option>
@@ -341,7 +342,13 @@ export default function ServicosPage() {
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-xs shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
                   aria-describedby="pricing-profile-help"
                 />
-                <p id="pricing-profile-help" className="mt-1 text-xs text-slate-500">Ex.: livreto usa <code>page_multiple</code>, <code>min_pages</code>, <code>allow_blank_page_padding</code> e <code>requires_customer_approval_for_padding</code>.</p>
+                <p id="pricing-profile-help" className="mt-1 text-xs text-slate-500">
+                  {formData.pricing_profile === 'per_square_meter'
+                    ? <>Grandes formatos exigem <code>min_width_cm</code>, <code>max_width_cm</code>, <code>min_height_cm</code>, <code>max_height_cm</code>, <code>minimum_billable_area_cm2</code>, <code>waste_margin_bps</code>, <code>validate_uploaded_pdf_dimensions</code> e, quando aplicável, <code>pdf_dimension_tolerance_bps</code>. Cadastre os limites reais do equipamento antes de publicar.</>
+                    : formData.pricing_profile === 'per_print_run'
+                      ? <>Tiragem exige <code>run_field_key</code> (campo de seleção criado no serviço) e <code>production_lead_time_business_days</code>. A publicação só é liberada com regras específicas e cobertura completa.</>
+                      : <>Ex.: livreto usa <code>page_multiple</code>, <code>min_pages</code>, <code>allow_blank_page_padding</code> e <code>requires_customer_approval_for_padding</code>.</>}
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

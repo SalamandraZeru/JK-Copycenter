@@ -184,13 +184,16 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
           {service.pricingProfile === 'booklet_imposition' && (
             <p className="mt-3 text-xs font-medium text-slate-600">Envie o arquivo do livreto: a quantidade de páginas é conferida no servidor antes de liberar a cotação.</p>
           )}
+          {service.pricingProfile === 'per_square_meter' && profileConfig.validateUploadedPdfDimensions && (
+            <p className="mt-3 text-xs font-medium text-slate-600">Quando houver um único PDF com dimensões legíveis, o tamanho informado será conferido antes da cotação. Divergências seguem para revisão técnica.</p>
+          )}
         </div>
 
         {/* Quantity & Pages */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-          <h2 className="text-xl font-bold text-slate-900 mb-5">Quantidade e Cópias</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-5">{service.pricingProfile === 'per_print_run' ? 'Tiragem e lotes' : 'Quantidade e Cópias'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex flex-col gap-1.5">
+            {service.pricingProfile !== 'per_print_run' && <div className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-slate-800">Páginas por Cópia *</label>
               <input
                 type="number"
@@ -200,9 +203,9 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
                 className="px-3.5 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm font-medium text-slate-900 bg-white"
               />
               <span className="text-xs text-slate-500">Atualizado automaticamente ao anexar arquivos.</span>
-            </div>
+            </div>}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-slate-800">Quantidade de Cópias *</label>
+              <label className="text-sm font-semibold text-slate-800">{service.pricingProfile === 'per_print_run' ? 'Quantidade de lotes *' : 'Quantidade de Cópias *'}</label>
               <input
                 type="number"
                 min="1"
@@ -210,7 +213,7 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
                 onChange={(e) => updateQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
                 className="px-3.5 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm font-medium text-slate-900 bg-white"
               />
-              <span className="text-xs text-slate-500">Mínimo de 1 cópia.</span>
+              <span className="text-xs text-slate-500">{service.pricingProfile === 'per_print_run' ? 'A tiragem é escolhida nos campos do serviço; informe quantos lotes iguais deseja.' : 'Mínimo de 1 cópia.'}</span>
             </div>
           </div>
           {service.pricingProfile === 'per_square_meter' && (
@@ -272,6 +275,13 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
               <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
                 <p className="font-bold">Imposição confirmada</p>
                 <p className="mt-1">{pricingResult.bookletImposition.originalPageCount} páginas no arquivo → {pricingResult.bookletImposition.imposedPageCount} páginas para produção{pricingResult.bookletImposition.blankPagesAdded > 0 ? `, com ${pricingResult.bookletImposition.blankPagesAdded} página(s) técnica(s) em branco` : ''}. O preço exibido já considera esta imposição.</p>
+              </div>
+            )}
+            {pricingResult?.squareMeterPricing && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
+                <p className="font-bold">Cálculo por área</p>
+                <p className="mt-1">Área informada: {(pricingResult.squareMeterPricing.submittedAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m². Área faturável: {(pricingResult.squareMeterPricing.billableAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m²{pricingResult.squareMeterPricing.wasteMarginBps > 0 ? `, incluindo ${pricingResult.squareMeterPricing.wasteMarginBps / 100}% de margem de perda` : ''}.</p>
+                {pricingResult.squareMeterPricing.uploadedPdfDimensionChecked && <p className="mt-1 text-xs font-medium">Dimensões conferidas contra o PDF enviado.</p>}
               </div>
             )}
           </>

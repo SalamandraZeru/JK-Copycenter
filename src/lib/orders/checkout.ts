@@ -15,6 +15,7 @@ import { loadSystemConfig } from './config';
 import type { WhatsAppOrderInput } from './whatsapp';
 import { buildWhatsAppMessage, buildWhatsAppUrl } from './whatsapp';
 import { loadAuthorizedReadyFiles } from '@/lib/upload/access';
+import { extractTrustedPdfDimensions } from '@/lib/upload/pdf-dimensions';
 import type { AuthorizedCheckoutFile } from '@/lib/upload/access';
 import type { PricingCalculationResult } from '@/types/pricing';
 
@@ -313,6 +314,7 @@ export async function processCheckout(
         if (!file) throw new Error('FILE_ACCESS_DENIED');
         return { fileId, pageCount: Math.max(1, file.page_count) };
       }),
+      uploadedPdfDimensions: extractTrustedPdfDimensions(itemFiles),
       dimensions: item.dimensions ?? {},
       bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
     };
@@ -586,6 +588,7 @@ export async function previewCheckout(
         if (!file) throw new Error('FILE_ACCESS_DENIED');
         return { fileId, pageCount: Math.max(1, file.page_count) };
       }),
+      uploadedPdfDimensions: extractTrustedPdfDimensions(itemFiles),
       dimensions: item.dimensions ?? {},
       bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
     }, supabase);
