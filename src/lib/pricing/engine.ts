@@ -150,6 +150,7 @@ function resolveFields(
       context.fieldOptionDependencies,
       selectedByFieldId,
       field.id,
+      { requireCompletePathMatch: context.service.pricingProfileConfig.requireCompleteCompatibility === true },
     );
     const checkboxUnavailable = field.fieldType === 'checkbox'
       && availability.isRestricted
@@ -164,6 +165,7 @@ function resolveFields(
       selectedByFieldId,
       field.id,
       selectedValue,
+      { requireCompletePathMatch: context.service.pricingProfileConfig.requireCompleteCompatibility === true },
     )) return null;
   }
 

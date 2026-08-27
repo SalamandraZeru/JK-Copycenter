@@ -17,6 +17,8 @@ export interface PricingProfileConfig {
   pageMultiple?: number;
   allowBlankPagePadding?: boolean;
   requiresCustomerApprovalForPadding?: boolean;
+  /** Uses configured option paths as an allow-list once their antecedents are selected. */
+  requireCompleteCompatibility?: boolean;
 }
 
 export interface PricingDimensions {

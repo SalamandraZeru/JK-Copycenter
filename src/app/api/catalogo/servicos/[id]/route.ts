@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/admin';
 import type { Json } from '@/types/supabase';
 import type { ServiceFieldOption, ServiceWithFields } from '@/types/service';
 import { isPricingProfile, normalizePricingProfileConfig } from '@/lib/pricing/profiles';
+import { evaluateBindingTierCoverage } from '@/lib/pricing/binding-tiers';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -41,11 +42,9 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
   const [bindingResult, dependenciesResult] = await Promise.all([
     supabase
       .from('service_binding_price_tiers')
-      .select('id')
+      .select('min_pages, max_pages, is_active')
       .eq('service_id', service.id)
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle(),
+      .eq('is_active', true),
     supabase
       .from('service_field_option_dependencies')
       .select('source_field_id, source_option_value, source_conditions, target_field_id, target_option_value')
@@ -64,7 +63,11 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
     basePrice: service.base_price,
     pricingProfile: service.pricing_profile,
     pricingProfileConfig: normalizePricingProfileConfig(service.pricing_profile_config),
-    bindingAvailable: Boolean(bindingResult.data),
+    bindingAvailable: evaluateBindingTierCoverage((bindingResult.data ?? []).map((tier) => ({
+      minPages: tier.min_pages,
+      maxPages: tier.max_pages,
+      isActive: tier.is_active,
+    }))).isComplete,
     fields: (service.service_fields ?? [])
       .filter((field) => field.is_active)
       .sort((left, right) => left.sort_order - right.sort_order)

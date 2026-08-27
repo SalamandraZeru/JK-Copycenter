@@ -45,6 +45,26 @@ function formatOrderFieldValue(value: unknown): string {
   return '-';
 }
 
+function formatItemTechnicalDetails(item: { fields_snapshot?: unknown; pricing_rule_snapshot?: unknown }): string {
+  const fields = item.fields_snapshot && typeof item.fields_snapshot === 'object' && !Array.isArray(item.fields_snapshot)
+    ? Object.entries(item.fields_snapshot as Record<string, unknown>)
+      .map(([key, value]) => `${key}: ${formatOrderFieldValue(value)}`)
+    : [];
+  const pricing = item.pricing_rule_snapshot && typeof item.pricing_rule_snapshot === 'object' && !Array.isArray(item.pricing_rule_snapshot)
+    ? item.pricing_rule_snapshot as Record<string, unknown>
+    : null;
+  const bindingSelections = Array.isArray(pricing?.bindingSelections) ? pricing.bindingSelections : [];
+  if (bindingSelections.length > 0) {
+    const pages = bindingSelections
+      .map((selection) => selection && typeof selection === 'object' && typeof (selection as Record<string, unknown>).pageCount === 'number'
+        ? `${(selection as Record<string, unknown>).pageCount} pág.`
+        : null)
+      .filter((value): value is string => value !== null);
+    fields.push(`Encadernação: ${bindingSelections.length} ${bindingSelections.length === 1 ? 'arquivo' : 'arquivos'}${pages.length > 0 ? ` (${pages.join(', ')})` : ''}`);
+  }
+  return fields.length > 0 ? fields.join(' | ') : 'Padrão';
+}
+
 export default function PedidoDetalhePage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const router = useRouter();
@@ -284,7 +304,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
                 <tr key={item.id} className="border-b border-slate-200">
                   <td className="py-2 font-bold">{item.service_name_snapshot || item.product_name_snapshot}</td>
                   <td className="py-2 text-slate-700">
-                    {item.fields_snapshot ? Object.entries(item.fields_snapshot).map(([key, value]) => `${key}: ${formatOrderFieldValue(value)}`).join(' | ') : 'Padrão'}
+                    {formatItemTechnicalDetails(item)}
                   </td>
                   <td className="py-2 text-center">{item.pages_count || item.page_count || 1}</td>
                   <td className="py-2 text-center font-bold">{item.quantity}</td>
@@ -328,7 +348,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                           {Object.entries(item.fields_snapshot).map(([key, val]) => (
                             <span key={key} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-white border border-slate-300 text-slate-800">
-                              {key}: {String(val)}
+                              {key}: {formatOrderFieldValue(val)}
                             </span>
                           ))}
                         </div>

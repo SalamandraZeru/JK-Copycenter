@@ -44,6 +44,7 @@ export function normalizePricingProfileConfig(value: Json): PricingProfileConfig
   const pageMultiple = integer(source.page_multiple, 2, 1_000);
   const allowBlankPagePadding = boolean(source.allow_blank_page_padding);
   const requiresCustomerApprovalForPadding = boolean(source.requires_customer_approval_for_padding);
+  const requireCompleteCompatibility = boolean(source.require_complete_compatibility);
 
   const normalized: PricingProfileConfig = {};
   if (pagesPerSheet !== undefined) normalized.pagesPerSheet = pagesPerSheet;
@@ -52,6 +53,7 @@ export function normalizePricingProfileConfig(value: Json): PricingProfileConfig
   if (pageMultiple !== undefined) normalized.pageMultiple = pageMultiple;
   if (allowBlankPagePadding !== undefined) normalized.allowBlankPagePadding = allowBlankPagePadding;
   if (requiresCustomerApprovalForPadding !== undefined) normalized.requiresCustomerApprovalForPadding = requiresCustomerApprovalForPadding;
+  if (requireCompleteCompatibility !== undefined) normalized.requireCompleteCompatibility = requireCompleteCompatibility;
   return normalized;
 }
 

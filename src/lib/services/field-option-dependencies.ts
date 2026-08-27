@@ -19,6 +19,15 @@ export interface FieldOptionAvailability {
   allowedOptionValues: ReadonlySet<string>;
 }
 
+export interface FieldOptionAvailabilityOptions {
+  /**
+   * With strict compatibility enabled, selecting an antecedent that has no
+   * configured path makes the target unavailable. This turns the saved tree
+   * into an allow-list while preserving the incremental editor by default.
+   */
+  requireCompletePathMatch?: boolean;
+}
+
 function asComparableOptionValue(value: string | number | boolean | undefined): string | null {
   if (typeof value === 'string') return value;
   if (typeof value === 'boolean') return String(value);
@@ -50,6 +59,7 @@ export function resolveFieldOptionAvailability(
   dependencies: readonly FieldOptionDependency[],
   selectedByFieldId: FieldSelectionMap,
   targetFieldId: string,
+  options: FieldOptionAvailabilityOptions = {},
 ): FieldOptionAvailability {
   const targetDependencies = dependencies.filter((dependency) => dependency.targetFieldId === targetFieldId);
   const groups = new Map<string, FieldOptionDependency[]>();
@@ -71,7 +81,12 @@ export function resolveFieldOptionAvailability(
     const matches = group.filter((dependency) => conditionsFor(dependency).every((condition) => (
       asComparableOptionValue(selectedByFieldId.get(condition.fieldId)) === condition.optionValue
     )));
-    if (matches.length === 0) continue;
+    if (matches.length === 0) {
+      if (options.requireCompletePathMatch) {
+        allowed = new Set<string>();
+      }
+      continue;
+    }
 
     const allowedForSource = new Set(matches.map((dependency) => dependency.targetOptionValue));
     if (allowed === null) {
@@ -93,8 +108,9 @@ export function isFieldOptionSelectionAllowed(
   selectedByFieldId: FieldSelectionMap,
   targetFieldId: string,
   selectedValue: string | number | boolean | undefined,
+  options: FieldOptionAvailabilityOptions = {},
 ): boolean {
   if (asComparableOptionValue(selectedValue) === null) return true;
-  const availability = resolveFieldOptionAvailability(dependencies, selectedByFieldId, targetFieldId);
+  const availability = resolveFieldOptionAvailability(dependencies, selectedByFieldId, targetFieldId, options);
   return !availability.isRestricted || availability.allowedOptionValues.has(asComparableOptionValue(selectedValue)!);
 }

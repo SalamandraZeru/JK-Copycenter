@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { BookOpen, Calculator, Check, Edit2, Loader2, Percent, Plus, Trash2, X } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/format';
+import { evaluateBindingTierCoverage } from '@/lib/pricing/binding-tiers';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 type FieldValue = string | number | boolean | null;
@@ -117,8 +118,15 @@ export default function PrecosPage() {
   const { data: rawServices } = useSWR<PricingService[]>('/api/admin/servicos', fetcher);
   const rules = Array.isArray(rawRules) ? rawRules : [];
   const discounts = Array.isArray(rawDiscounts) ? rawDiscounts : [];
-  const bindingTiers = Array.isArray(rawBindingTiers) ? rawBindingTiers : [];
-  const services = Array.isArray(rawServices) ? rawServices : [];
+  const bindingTiers = useMemo(() => Array.isArray(rawBindingTiers) ? rawBindingTiers : [], [rawBindingTiers]);
+  const services = useMemo(() => Array.isArray(rawServices) ? rawServices : [], [rawServices]);
+  const bindingCoverageByService = useMemo(() => new Map(
+    services.map((service) => [service.id, evaluateBindingTierCoverage(
+      bindingTiers
+        .filter((tier) => tier.service_id === service.id)
+        .map((tier) => ({ minPages: tier.min_pages, maxPages: tier.max_pages, isActive: tier.is_active })),
+    )]),
+  ), [bindingTiers, services]);
 
   const [ruleForm, setRuleForm] = useState<RuleForm>({ service_id: '', name: '', price_per_page: 0.25, fallback_behavior: 'base_price', selected_field_values: {} });
   const [showRuleModal, setShowRuleModal] = useState(false);
@@ -276,6 +284,18 @@ export default function PrecosPage() {
             <Plus className="w-4 h-4" /> Nova faixa
           </button>
         </div>
+
+        {Array.from(bindingCoverageByService.entries()).some(([, coverage]) => !coverage.isComplete) && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <p className="font-bold">Há faixas de encadernação incompletas.</p>
+            <p className="mt-1">A seleção só aparece ao cliente quando o serviço estiver coberto continuamente da página 1 até “sem limite”. Isso evita valores sem faixa definida.</p>
+            <ul className="mt-2 list-disc pl-5 text-xs">
+              {Array.from(bindingCoverageByService.entries()).filter(([, coverage]) => !coverage.isComplete).map(([serviceId, coverage]) => (
+                <li key={serviceId}>{services.find((service) => service.id === serviceId)?.name || 'Serviço'}: {coverage.hasOverlap ? 'há faixas sobrepostas' : coverage.gaps.map((gap) => `${gap.minPages} até ${gap.maxPages ?? 'sem limite'}`).join(', ')}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {showBindingTierModal && <div className="bg-white rounded-3xl border-2 border-blue-500 shadow-xl p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
           <div className="flex justify-between items-center border-b border-slate-200 pb-4">

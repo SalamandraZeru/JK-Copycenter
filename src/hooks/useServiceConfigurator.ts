@@ -25,6 +25,7 @@ function normalizeDependentFieldValues(service: ServiceWithFields, values: Field
         selected,
         field.id,
         value.value,
+        { requireCompletePathMatch: service.pricingProfileConfig.requireCompleteCompatibility === true },
       );
     });
     if (next.length === normalized.length) return normalized;
@@ -57,7 +58,9 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     const selected = selectedValuesByFieldId(service, config.fieldValues);
     return new Map(service.fields.map((field) => [
       field.id,
-      resolveFieldOptionAvailability(service.fieldOptionDependencies, selected, field.id),
+      resolveFieldOptionAvailability(service.fieldOptionDependencies, selected, field.id, {
+        requireCompletePathMatch: service.pricingProfileConfig.requireCompleteCompatibility === true,
+      }),
     ]));
   }, [config.fieldValues, service]);
 
