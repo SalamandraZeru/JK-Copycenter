@@ -53,6 +53,10 @@ function fieldKey(value: Json | undefined): string | undefined {
   return typeof value === 'string' && /^[A-Za-z][A-Za-z0-9_]*$/.test(value) ? value : undefined;
 }
 
+function pdfDimensionPolicy(value: Json | undefined): PricingProfileConfig['pdfDimensionPolicy'] | undefined {
+  return value === 'media_box_single_page' ? value : undefined;
+}
+
 /** Normalizes only safe, non-commercial technical limits from the catalog. */
 export function normalizePricingProfileConfig(value: Json): PricingProfileConfig {
   const source = record(value);
@@ -70,6 +74,7 @@ export function normalizePricingProfileConfig(value: Json): PricingProfileConfig
   const minimumBillableAreaCm2 = nonNegativeInteger(source.minimum_billable_area_cm2, 1_000_000_000);
   const wasteMarginBps = nonNegativeInteger(source.waste_margin_bps, 100_000);
   const validateUploadedPdfDimensions = boolean(source.validate_uploaded_pdf_dimensions);
+  const dimensionPolicy = pdfDimensionPolicy(source.pdf_dimension_policy);
   const pdfDimensionToleranceBps = nonNegativeInteger(source.pdf_dimension_tolerance_bps, 10_000);
   const runFieldKey = fieldKey(source.run_field_key);
   const productionLeadTimeBusinessDays = integer(source.production_lead_time_business_days, 1, 365);
@@ -89,6 +94,7 @@ export function normalizePricingProfileConfig(value: Json): PricingProfileConfig
   if (minimumBillableAreaCm2 !== undefined) normalized.minimumBillableAreaCm2 = minimumBillableAreaCm2;
   if (wasteMarginBps !== undefined) normalized.wasteMarginBps = wasteMarginBps;
   if (validateUploadedPdfDimensions !== undefined) normalized.validateUploadedPdfDimensions = validateUploadedPdfDimensions;
+  if (dimensionPolicy !== undefined) normalized.pdfDimensionPolicy = dimensionPolicy;
   if (pdfDimensionToleranceBps !== undefined) normalized.pdfDimensionToleranceBps = pdfDimensionToleranceBps;
   if (runFieldKey !== undefined) normalized.runFieldKey = runFieldKey;
   if (productionLeadTimeBusinessDays !== undefined) normalized.productionLeadTimeBusinessDays = productionLeadTimeBusinessDays;
@@ -126,6 +132,9 @@ export function validatePricingProfileConfig(profile: PricingProfile, value: Jso
     if (normalized.validateUploadedPdfDimensions && normalized.pdfDimensionToleranceBps === undefined) {
       errors.push('Informe a tolerância de dimensão do PDF em pontos-base.');
     }
+    if (normalized.validateUploadedPdfDimensions && normalized.pdfDimensionPolicy === undefined) {
+      errors.push('Defina a política de dimensão do PDF para cotação automática.');
+    }
   }
   if (profile === 'per_print_run') {
     if (!normalized.runFieldKey) errors.push('Informe a chave do campo que representa a tiragem.');
@@ -159,7 +168,11 @@ export const pricingProfileTemplates: Record<PricingProfile, Record<string, Json
   per_item: {},
   per_print_run: {},
   per_sheet: { pages_per_sheet: 1 },
-  per_square_meter: {},
+  per_square_meter: {
+    pdf_dimension_policy: 'media_box_single_page',
+    validate_uploaded_pdf_dimensions: true,
+    pdf_dimension_tolerance_bps: 100,
+  },
   per_linear_meter: {},
   binding_by_file_pages: {},
   booklet_imposition: {

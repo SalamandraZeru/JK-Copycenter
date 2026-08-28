@@ -13,9 +13,28 @@ import { CheckboxField } from './fields/CheckboxField';
 import { FileUploadDropzone, type UploadedFileItem } from './FileUploadDropzone';
 import { createCartDisplaySnapshot, useCartStore } from '@/lib/cart/store';
 import { ShoppingCart } from 'lucide-react';
+import type { PdfDimensionReview, PricingDimensions } from '@/types/pricing';
 
 interface ServiceConfiguratorProps {
   service: ServiceWithFields;
+}
+
+function formatDimensions(dimensions: PricingDimensions | null | undefined): string | null {
+  if (!dimensions?.widthCm || !dimensions.heightCm) return null;
+  const format = (value: number) => value.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+  return `${format(dimensions.widthCm)} × ${format(dimensions.heightCm)} cm`;
+}
+
+function technicalReviewHref(review: PdfDimensionReview): string {
+  const entered = formatDimensions(review.enteredDimensions) ?? 'não informada';
+  const measured = formatDimensions(review.measuredDimensions) ?? 'não disponível';
+  const message = [
+    'Olá! Preciso de análise técnica de uma plotagem.',
+    `Dimensão informada: ${entered}.`,
+    `Dimensão apurada no PDF: ${measured}.`,
+    `Motivo da revisão: ${review.status}.`,
+  ].join('\n');
+  return `https://wa.me/5535991066260?text=${encodeURIComponent(message)}`;
 }
 
 export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
@@ -36,6 +55,7 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
     validationErrors,
     fieldOptionAvailability,
     error: apiError,
+    dimensionReview,
     pricingResult,
   } = useServiceConfigurator(service);
 
@@ -186,7 +206,7 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
             <p className="mt-3 text-xs font-medium text-slate-600">Envie o arquivo do livreto: a quantidade de páginas é conferida no servidor antes de liberar a cotação.</p>
           )}
           {service.pricingProfile === 'per_square_meter' && profileConfig.validateUploadedPdfDimensions && (
-            <p className="mt-3 text-xs font-medium text-slate-600">Quando houver um único PDF com dimensões legíveis, o tamanho informado será conferido antes da cotação. Divergências seguem para revisão técnica.</p>
+            <p className="mt-3 text-xs font-medium text-slate-600">A cotação automática usa exclusivamente a MediaBox de um único PDF com uma página. Arquivos múltiplos, PDFs com várias páginas ou metadados ambíguos seguem para análise técnica.</p>
           )}
         </div>
 
@@ -281,8 +301,40 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
             {pricingResult?.squareMeterPricing && (
               <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
                 <p className="font-bold">Cálculo por área</p>
-                <p className="mt-1">Área informada: {(pricingResult.squareMeterPricing.submittedAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m². Área faturável: {(pricingResult.squareMeterPricing.billableAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m²{pricingResult.squareMeterPricing.wasteMarginBps > 0 ? `, incluindo ${pricingResult.squareMeterPricing.wasteMarginBps / 100}% de margem de perda` : ''}.</p>
-                {pricingResult.squareMeterPricing.uploadedPdfDimensionChecked && <p className="mt-1 text-xs font-medium">Dimensões conferidas contra o PDF enviado.</p>}
+                <p className="mt-1">Valor por m²: {(pricingResult.squareMeterPricing.rateCentsPerSquareMeter / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}. Área informada: {(pricingResult.squareMeterPricing.submittedAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m². Área faturável: {(pricingResult.squareMeterPricing.billableAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m²{pricingResult.squareMeterPricing.minimumBillableAreaCm2 > pricingResult.squareMeterPricing.submittedAreaCm2 ? ` (mínimo: ${(pricingResult.squareMeterPricing.minimumBillableAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m²)` : ''}{pricingResult.squareMeterPricing.wasteMarginBps > 0 ? `, incluindo ${pricingResult.squareMeterPricing.wasteMarginBps / 100}% de margem de perda` : ''}.</p>
+                {pricingResult.squareMeterPricing.additionsCentsPerUnit > 0 && <p className="mt-1">Adicionais da configuração: {(pricingResult.squareMeterPricing.additionsCentsPerUnit / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} por unidade.</p>}
+                {pricingResult.squareMeterPricing.dimensionReview.status === 'verified' && <p className="mt-1 text-xs font-medium">Dimensões conferidas na MediaBox do PDF enviado: {formatDimensions(pricingResult.squareMeterPricing.dimensionReview.measuredDimensions)}.</p>}
+              </div>
+            )}
+            {dimensionReview && dimensionReview.status !== 'not_required' && dimensionReview.status !== 'verified' && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                <p className="font-bold">Revisão de dimensão necessária</p>
+                {dimensionReview.status === 'declared_mismatch' && (
+                  <p className="mt-1">Informado: {formatDimensions(dimensionReview.enteredDimensions)}. MediaBox do PDF: {formatDimensions(dimensionReview.measuredDimensions)}. A cotação é liberada somente após usar a dimensão do arquivo ou após análise técnica.</p>
+                )}
+                {dimensionReview.status !== 'declared_mismatch' && <p className="mt-1">A dimensão não pode ser confirmada automaticamente para este arquivo. Envie um único PDF de uma página ou solicite análise técnica.</p>}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {dimensionReview.status === 'declared_mismatch' && dimensionReview.measuredDimensions && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const measuredDimensions = dimensionReview.measuredDimensions;
+                        if (measuredDimensions) updateDimensions(measuredDimensions);
+                      }}
+                      className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800"
+                    >
+                      Usar dimensão da MediaBox
+                    </button>
+                  )}
+                  <a
+                    href={technicalReviewHref(dimensionReview)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-lg border border-amber-700 px-3 py-2 text-xs font-bold text-amber-950 hover:bg-amber-100"
+                  >
+                    Solicitar análise técnica
+                  </a>
+                </div>
               </div>
             )}
           </>

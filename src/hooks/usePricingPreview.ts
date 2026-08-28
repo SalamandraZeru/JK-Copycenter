@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
-import type { PricingCalculationInput, PricingCalculationResult } from '@/types/pricing';
+import type { PdfDimensionReview, PricingCalculationInput, PricingCalculationResult } from '@/types/pricing';
 
 export function usePricingPreview() {
   const [result, setResult] = useState<PricingCalculationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dimensionReview, setDimensionReview] = useState<PdfDimensionReview | null>(null);
   
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -17,6 +18,7 @@ export function usePricingPreview() {
     
     setIsLoading(true);
     setError(null);
+    setDimensionReview(null);
     
     try {
       const response = await fetch('/api/pricing/preview', {
@@ -29,7 +31,11 @@ export function usePricingPreview() {
       const data = await response.json();
       
       if (!response.ok || !data.success) {
-        throw new Error(data.error?.message || data.error || 'Failed to calculate price');
+        const nextError = new Error(data.error?.message || data.error || 'Failed to calculate price') as Error & {
+          dimensionReview?: PdfDimensionReview;
+        };
+        nextError.dimensionReview = data.error?.dimensionReview ?? null;
+        throw nextError;
       }
 
       setResult(data.data);
@@ -38,11 +44,14 @@ export function usePricingPreview() {
         return;
       }
       setError(err instanceof Error ? err.message : 'Unknown error');
+      setDimensionReview(err instanceof Error && 'dimensionReview' in err
+        ? (err as Error & { dimensionReview?: PdfDimensionReview }).dimensionReview ?? null
+        : null);
       setResult(null);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  return { fetchPreview, result, isLoading, error };
+  return { fetchPreview, result, isLoading, error, dimensionReview };
 }

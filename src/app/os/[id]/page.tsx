@@ -54,6 +54,31 @@ function catalogVersion(value: unknown): string | null {
   return typeof version === 'number' && Number.isSafeInteger(version) && version >= 1 ? `Catálogo v${version}` : null;
 }
 
+function plotagemSpecification(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const squareMeterPricing = (value as Record<string, unknown>).squareMeterPricing;
+  if (!squareMeterPricing || typeof squareMeterPricing !== 'object' || Array.isArray(squareMeterPricing)) return null;
+  const record = squareMeterPricing as Record<string, unknown>;
+  const number = (key: string) => typeof record[key] === 'number' && Number.isFinite(record[key]) ? record[key] as number : null;
+  const billedAreaCm2 = number('billableAreaCm2');
+  const minimumAreaCm2 = number('minimumBillableAreaCm2');
+  const rateCents = number('rateCentsPerSquareMeter');
+  const additionsCents = number('additionsCentsPerUnit');
+  const review = record.dimensionReview;
+  const reviewRecord = review && typeof review === 'object' && !Array.isArray(review)
+    ? review as Record<string, unknown>
+    : null;
+  const reviewStatus = typeof reviewRecord?.status === 'string' ? reviewRecord.status : null;
+  const parts = [
+    billedAreaCm2 === null ? null : `Área faturável: ${(billedAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m²`,
+    minimumAreaCm2 === null ? null : `mínimo: ${(minimumAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m²`,
+    rateCents === null ? null : `taxa: ${cents(rateCents)}/m²`,
+    additionsCents && additionsCents > 0 ? `adicionais: ${cents(additionsCents)}` : null,
+    reviewStatus === 'verified' ? 'MediaBox do PDF conferida' : reviewStatus ? `revisão de dimensão: ${reviewStatus}` : null,
+  ].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 export default async function OrdemServicoPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   if (!isUuid(params.id)) notFound();
@@ -103,7 +128,7 @@ export default async function OrdemServicoPage(props: { params: Promise<{ id: st
         </section>
 
         <section className="py-4"><h2 className="mb-2 border-b-2 border-slate-950 pb-1 font-black uppercase">Itens e especificações</h2>
-          <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-xs"><thead><tr className="border-b border-slate-950"><th className="py-2 pr-2">Item</th><th className="py-2 pr-2">Configuração / acabamento</th><th className="py-2 text-center">Pág.</th><th className="py-2 text-center">Qtd.</th><th className="py-2 text-right">Valor vigente</th></tr></thead><tbody>{(order.order_items || []).map((item: any) => <tr key={item.id} className="border-b border-slate-300 align-top"><td className="py-2 pr-2 font-bold">{item.service_name_snapshot || item.product_name_snapshot || 'Item'}{catalogVersion(item.pricing_rule_snapshot) && <span className="mt-0.5 block text-[10px] font-medium text-slate-600">{catalogVersion(item.pricing_rule_snapshot)}</span>}</td><td className="py-2 pr-2">{fields(item.fields_snapshot)}</td><td className="py-2 text-center">{item.pages_count || '—'}</td><td className="py-2 text-center">{item.quantity}</td><td className="py-2 text-right font-bold">{cents(item.total_price_cents)}</td></tr>)}</tbody></table></div>
+          <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-xs"><thead><tr className="border-b border-slate-950"><th className="py-2 pr-2">Item</th><th className="py-2 pr-2">Configuração / acabamento</th><th className="py-2 text-center">Pág.</th><th className="py-2 text-center">Qtd.</th><th className="py-2 text-right">Valor vigente</th></tr></thead><tbody>{(order.order_items || []).map((item: any) => <tr key={item.id} className="border-b border-slate-300 align-top"><td className="py-2 pr-2 font-bold">{item.service_name_snapshot || item.product_name_snapshot || 'Item'}{catalogVersion(item.pricing_rule_snapshot) && <span className="mt-0.5 block text-[10px] font-medium text-slate-600">{catalogVersion(item.pricing_rule_snapshot)}</span>}</td><td className="py-2 pr-2">{fields(item.fields_snapshot)}{plotagemSpecification(item.pricing_rule_snapshot) && <span className="mt-1 block text-[10px] text-slate-700">{plotagemSpecification(item.pricing_rule_snapshot)}</span>}</td><td className="py-2 text-center">{item.pages_count || '—'}</td><td className="py-2 text-center">{item.quantity}</td><td className="py-2 text-right font-bold">{cents(item.total_price_cents)}</td></tr>)}</tbody></table></div>
         </section>
 
         <section className="border-t border-slate-950 py-4"><h2 className="mb-2 border-b border-slate-400 pb-1 font-black uppercase">Arquivos autorizados</h2>{activeFiles.length === 0 ? <p>Nenhum arquivo vinculado.</p> : <ul className="space-y-1">{activeFiles.map((file: any) => <li key={file.id}>• {file.original_name} — {file.page_count || '—'} pág. ({file.page_count_method})</li>)}</ul>}</section>

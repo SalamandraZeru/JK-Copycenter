@@ -16,6 +16,8 @@ export interface AuthorizedCheckoutFile {
   original_name: string;
   page_count: number;
   page_count_method: PageCountMethod;
+  mime_type: string | null;
+  detected_mime_type: string | null;
   status: string;
   expires_at: string | null;
   deleted_at: string | null;
@@ -34,7 +36,7 @@ export async function loadAuthorizedReadyFiles(
 
   const { data, error } = await supabase
     .from('order_files')
-    .select('id, user_id, guest_owner_hash, order_id, original_name, page_count, page_count_method, status, expires_at, deleted_at, processing_metadata')
+    .select('id, user_id, guest_owner_hash, order_id, original_name, page_count, page_count_method, mime_type, detected_mime_type, status, expires_at, deleted_at, processing_metadata')
     .in('id', uniqueIds);
   if (error || !data || data.length !== uniqueIds.length) throw new Error('FILE_ACCESS_DENIED');
 

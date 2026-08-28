@@ -344,7 +344,7 @@ export default function ServicosPage() {
                 />
                 <p id="pricing-profile-help" className="mt-1 text-xs text-slate-500">
                   {formData.pricing_profile === 'per_square_meter'
-                    ? <>Grandes formatos exigem <code>min_width_cm</code>, <code>max_width_cm</code>, <code>min_height_cm</code>, <code>max_height_cm</code>, <code>minimum_billable_area_cm2</code>, <code>waste_margin_bps</code>, <code>validate_uploaded_pdf_dimensions</code> e, quando aplicável, <code>pdf_dimension_tolerance_bps</code>. Cadastre os limites reais do equipamento antes de publicar.</>
+                    ? <>Grandes formatos exigem <code>min_width_cm</code>, <code>max_width_cm</code>, <code>min_height_cm</code>, <code>max_height_cm</code>, <code>minimum_billable_area_cm2</code>, <code>waste_margin_bps</code>, <code>validate_uploaded_pdf_dimensions</code>, <code>pdf_dimension_policy: "media_box_single_page"</code> e <code>pdf_dimension_tolerance_bps</code>. Cadastre os limites reais do equipamento antes de publicar.</>
                     : formData.pricing_profile === 'per_print_run'
                       ? <>Tiragem exige <code>run_field_key</code> (campo de seleção criado no serviço) e <code>production_lead_time_business_days</code>. A publicação só é liberada com regras específicas e cobertura completa.</>
                       : <>Ex.: livreto usa <code>page_multiple</code>, <code>min_pages</code>, <code>allow_blank_page_padding</code> e <code>requires_customer_approval_for_padding</code>.</>}

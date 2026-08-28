@@ -5,6 +5,7 @@ import type {
   PricingContext,
   PricingFieldSnapshot,
   PricingDimensions,
+  PdfDimensionReview,
   PricingProfile,
   PricingResult,
   PricingRoundingMode,
@@ -16,8 +17,12 @@ import { isFieldOptionSelectionAllowed, resolveFieldOptionAvailability } from '@
 
 const BPS_SCALE = 10_000;
 
-function error(code: 'QUOTE_UNAVAILABLE' | 'INVALID_INPUT', message: string): PricingResult {
-  return { success: false, error: { code, message } };
+function error(
+  code: 'QUOTE_UNAVAILABLE' | 'INVALID_INPUT',
+  message: string,
+  dimensionReview?: PdfDimensionReview,
+): PricingResult {
+  return { success: false, error: { code, message, ...(dimensionReview ? { dimensionReview } : {}) } };
 }
 
 function divideRounded(numerator: number, denominator: number, mode: PricingRoundingMode): number {
@@ -310,6 +315,33 @@ function areasMatchWithinTolerance(
     || (matchesDimension(enteredWidth, pdfHeight) && matchesDimension(enteredHeight, pdfWidth));
 }
 
+function dimensionReview(
+  status: PdfDimensionReview['status'],
+  dimensions: PricingDimensions | null,
+  toleranceBps: number | null,
+  measuredDimensions: PricingDimensions | null = null,
+): PdfDimensionReview {
+  return {
+    status,
+    policy: status === 'not_required' ? null : 'media_box_single_page',
+    enteredDimensions: dimensions,
+    measuredDimensions,
+    toleranceBps,
+  };
+}
+
+function pdfDimensionAssessmentMessage(status: Exclude<PdfDimensionReview['status'], 'not_required' | 'verified' | 'declared_mismatch'>): string {
+  const messages: Record<typeof status, string> = {
+    missing_file: 'Envie um único PDF de uma página para conferir a dimensão antes da cotação automática.',
+    multiple_files: 'A cotação automática de grandes formatos aceita um único PDF por item. Separe os arquivos ou solicite análise técnica.',
+    file_not_pdf: 'Para cotação automática de grandes formatos, envie um PDF. Arquivos de imagem seguem para análise técnica.',
+    multiple_pages: 'Um PDF com várias páginas precisa de análise técnica antes da cotação de grande formato.',
+    metadata_unavailable: 'Não foi possível confirmar as dimensões físicas do PDF. Envie novamente ou solicite análise técnica.',
+    inconsistent_media_box: 'O PDF possui dimensões estruturais ambíguas e precisa de análise técnica antes da cotação.',
+  };
+  return messages[status];
+}
+
 function resolveProfilePrice(
   input: PricingCalculationInput,
   context: PricingContext,
@@ -401,18 +433,35 @@ function resolveProfilePrice(
         || (minHeight !== null && height < minHeight) || (maxHeight !== null && height > maxHeight)) {
       return profileError('As dimensões estão fora da faixa configurada para este material/equipamento. Solicite orçamento técnico.');
     }
-    const trustedPdfDimensions = input.uploadedPdfDimensions ?? [];
-    if (config.validateUploadedPdfDimensions && trustedPdfDimensions.length === 1) {
-      const uploaded = trustedPdfDimensions[0]!;
+    let pdfReview = dimensionReview('not_required', dimensions, null);
+    if (config.validateUploadedPdfDimensions) {
+      const toleranceBps = config.pdfDimensionToleranceBps ?? 0;
+      const assessment = input.pdfDimensionAssessment;
+      if (config.pdfDimensionPolicy !== 'media_box_single_page') {
+        return profileError('A política de dimensão do PDF não está configurada para este serviço. Solicite orçamento técnico.');
+      }
+      if (!assessment || assessment.policy !== 'media_box_single_page' || assessment.status !== 'trusted' || !assessment.dimension) {
+        const status = assessment?.status === 'trusted' ? 'metadata_unavailable' : assessment?.status ?? 'metadata_unavailable';
+        const review = dimensionReview(status, dimensions, toleranceBps);
+        return error('QUOTE_UNAVAILABLE', pdfDimensionAssessmentMessage(status), review);
+      }
+      const uploaded = assessment.dimension;
+      if (centimeterHundredths(uploaded.widthCm) === null || centimeterHundredths(uploaded.heightCm) === null) {
+        const review = dimensionReview('metadata_unavailable', dimensions, toleranceBps);
+        return error('QUOTE_UNAVAILABLE', pdfDimensionAssessmentMessage('metadata_unavailable'), review);
+      }
+      const measuredDimensions = { widthCm: uploaded.widthCm, heightCm: uploaded.heightCm };
       if (!areasMatchWithinTolerance(
         dimensions.widthCm!,
         dimensions.heightCm!,
         uploaded.widthCm,
         uploaded.heightCm,
-        config.pdfDimensionToleranceBps ?? 0,
+        toleranceBps,
       )) {
-        return profileError('As dimensões informadas divergem do PDF enviado. Solicite revisão técnica antes de continuar.');
+        const review = dimensionReview('declared_mismatch', dimensions, toleranceBps, measuredDimensions);
+        return error('QUOTE_UNAVAILABLE', 'As dimensões informadas divergem da MediaBox do PDF enviado. Corrija a medida ou solicite análise técnica.', review);
       }
+      pdfReview = dimensionReview('verified', dimensions, toleranceBps, measuredDimensions);
     }
     const submittedAreaRaw = checkedMultiply(width, height);
     const minimumAreaRaw = checkedMultiply(config.minimumBillableAreaCm2 ?? 0, 10_000);
@@ -430,7 +479,9 @@ function resolveProfilePrice(
       areaBeforeWasteCm2: areaBeforeWasteRaw / 10_000,
       wasteMarginBps: config.wasteMarginBps ?? 0,
       billableAreaCm2: billedAreaRaw / 10_000,
-      uploadedPdfDimensionChecked: config.validateUploadedPdfDimensions === true && trustedPdfDimensions.length === 1,
+      rateCentsPerSquareMeter: rates.rateCents,
+      additionsCentsPerUnit: rates.extraPerUnitCents,
+      dimensionReview: pdfReview,
     };
     return unitCents === null
       ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.')

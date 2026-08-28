@@ -52,7 +52,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  const { fetchPreview, result, isLoading, error } = usePricingPreview();
+  const { fetchPreview, result, isLoading, error, dimensionReview } = usePricingPreview();
 
   const fieldOptionAvailability = useMemo(() => {
     const selected = selectedValuesByFieldId(service, config.fieldValues);
@@ -261,6 +261,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     validationErrors,
     fieldOptionAvailability,
     error,
+    dimensionReview,
     pricingResult: result,
   };
 }

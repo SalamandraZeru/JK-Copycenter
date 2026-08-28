@@ -31,6 +31,12 @@ export interface PricingProfileConfig {
   wasteMarginBps?: number;
   /** Uses safe PDF page-box metadata only when the administrator explicitly enables it. */
   validateUploadedPdfDimensions?: boolean;
+  /**
+   * Defines the only page box that may drive an automatic large-format quote.
+   * `media_box_single_page` deliberately sends multi-page/multi-file and
+   * structurally ambiguous documents to technical review.
+   */
+  pdfDimensionPolicy?: 'media_box_single_page';
   /** Allowed difference between typed and measured PDF dimensions, in basis points. */
   pdfDimensionToleranceBps?: number;
   /** Required service-field key that represents the allowed print run. */
@@ -50,6 +56,35 @@ export interface UploadedPdfDimension {
   fileId: string;
   widthCm: number;
   heightCm: number;
+  source: 'media_box';
+}
+
+/** Result produced only by the server after ownership and upload metadata checks. */
+export type PdfDimensionAssessmentStatus =
+  | 'trusted'
+  | 'missing_file'
+  | 'multiple_files'
+  | 'file_not_pdf'
+  | 'multiple_pages'
+  | 'metadata_unavailable'
+  | 'inconsistent_media_box';
+
+export interface PdfDimensionAssessment {
+  status: PdfDimensionAssessmentStatus;
+  policy: 'media_box_single_page';
+  fileCount: number;
+  dimension: UploadedPdfDimension | null;
+}
+
+export type PdfDimensionReviewStatus = Exclude<PdfDimensionAssessmentStatus, 'trusted'> | 'declared_mismatch';
+
+/** Safe technical information shown to the customer and persisted with the quote. */
+export interface PdfDimensionReview {
+  status: 'not_required' | 'verified' | PdfDimensionReviewStatus;
+  policy: 'media_box_single_page' | null;
+  enteredDimensions: PricingDimensions | null;
+  measuredDimensions: PricingDimensions | null;
+  toleranceBps: number | null;
 }
 
 export interface SquareMeterPricingSnapshot {
@@ -58,7 +93,9 @@ export interface SquareMeterPricingSnapshot {
   areaBeforeWasteCm2: number;
   wasteMarginBps: number;
   billableAreaCm2: number;
-  uploadedPdfDimensionChecked: boolean;
+  rateCentsPerSquareMeter: number;
+  additionsCentsPerUnit: number;
+  dimensionReview: PdfDimensionReview;
 }
 
 export interface PricingRuleAttribute {
@@ -199,7 +236,7 @@ export interface PricingCalculationInput {
   // os metadados dos arquivos. Nunca é montada diretamente pelo navegador.
   bindingFiles?: BindingFileSelection[];
   // Populado exclusivamente no servidor a partir de processing_metadata.
-  uploadedPdfDimensions?: UploadedPdfDimension[];
+  pdfDimensionAssessment?: PdfDimensionAssessment;
   dimensions?: PricingDimensions;
   bookletPaddingApproved?: boolean;
 }
@@ -255,6 +292,7 @@ export type PricingErrorCode = 'QUOTE_UNAVAILABLE' | 'INVALID_INPUT';
 export interface PricingError {
   code: PricingErrorCode;
   message: string;
+  dimensionReview?: PdfDimensionReview;
 }
 
 export type PricingResult =
