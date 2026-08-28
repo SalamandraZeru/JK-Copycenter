@@ -18,6 +18,10 @@ interface FileUploadDropzoneProps {
   bindingAvailable?: boolean;
   bindingFileIds?: string[];
   onBindingFileIdsChange?: (fileIds: string[]) => void;
+  /** Restricts only browser selection; the server still validates every file. */
+  acceptedExtensions?: readonly string[];
+  maxFiles?: number;
+  requirementsText?: string;
 }
 
 export function FileUploadDropzone({
@@ -27,6 +31,9 @@ export function FileUploadDropzone({
   bindingAvailable = false,
   bindingFileIds = [],
   onBindingFileIdsChange,
+  acceptedExtensions,
+  maxFiles,
+  requirementsText,
 }: FileUploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -34,7 +41,8 @@ export function FileUploadDropzone({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const MAX_FILE_SIZE_MB = 50;
-  const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.pptx', '.png', '.jpg', '.jpeg', '.webp', '.zip', '.rar'];
+  const DEFAULT_ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.pptx', '.png', '.jpg', '.jpeg', '.webp', '.zip', '.rar'];
+  const allowedExtensions = acceptedExtensions ?? DEFAULT_ACCEPTED_EXTENSIONS;
   const MIME_BY_EXTENSION: Record<string, string> = {
     '.pdf': 'application/pdf',
     '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -58,14 +66,18 @@ export function FileUploadDropzone({
     const newUploadedFiles: UploadedFileItem[] = [...files];
 
     for (const file of fileArray) {
+      if (maxFiles !== undefined && newUploadedFiles.length >= maxFiles) {
+        setUploadError(`Este serviço aceita no máximo ${maxFiles} ${maxFiles === 1 ? 'arquivo' : 'arquivos'} por cotação automática.`);
+        break;
+      }
       if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
         setUploadError(`O arquivo "${file.name}" excede o tamanho máximo permitido de ${MAX_FILE_SIZE_MB}MB.`);
         continue;
       }
 
       const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-      if (!ACCEPTED_EXTENSIONS.includes(ext)) {
-        setUploadError(`Formato não suportado para "${file.name}". Formatos aceitos: PDF, DOCX, Imagens (PNG/JPG/WEBP), ZIP e RAR.`);
+      if (!allowedExtensions.includes(ext)) {
+        setUploadError(`Formato não suportado para "${file.name}". Formatos aceitos: ${allowedExtensions.map((extension) => extension.replace('.', '').toUpperCase()).join(', ')}.`);
         continue;
       }
 
@@ -181,7 +193,7 @@ export function FileUploadDropzone({
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp,.zip,.rar"
+          accept={allowedExtensions.join(',')}
           onChange={(e) => e.target.files && handleFileSelection(e.target.files)}
           className="hidden"
         />
@@ -204,7 +216,7 @@ export function FileUploadDropzone({
                 Clique para selecionar ou arraste seus arquivos aqui
               </p>
               <p className="text-xs text-slate-500">
-                Aceitamos <strong>PDF, DOCX, PPTX, Imagens (PNG/JPG), ZIP e RAR</strong>
+                Aceitamos <strong>{allowedExtensions.map((extension) => extension.replace('.', '').toUpperCase()).join(', ')}</strong>
               </p>
               <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-semibold text-blue-700">
                 <Sparkles className="w-3.5 h-3.5" />
@@ -220,6 +232,12 @@ export function FileUploadDropzone({
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-600" />
           <span>{uploadError}</span>
         </div>
+      )}
+
+      {requirementsText && (
+        <p className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-900">
+          {requirementsText}
+        </p>
       )}
 
       {files.length > 0 && (

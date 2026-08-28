@@ -16,6 +16,7 @@ import type { WhatsAppOrderInput } from './whatsapp';
 import { buildWhatsAppMessage, buildWhatsAppUrl } from './whatsapp';
 import { loadAuthorizedReadyFiles } from '@/lib/upload/access';
 import { assessPdfDimensionsForAutomaticQuote } from '@/lib/upload/pdf-dimensions';
+import { assessBookletFileForAutomaticQuote } from '@/lib/upload/booklet-file';
 import type { AuthorizedCheckoutFile } from '@/lib/upload/access';
 import type { PricingCalculationResult } from '@/types/pricing';
 
@@ -81,7 +82,12 @@ function bookletDescription(quote: PricingCalculationResult): string {
   const blanks = imposition.blankPagesAdded > 0
     ? `, ${imposition.blankPagesAdded} página(s) técnica(s) em branco${imposition.customerApprovalRecorded ? ' aprovadas pelo cliente' : ''}`
     : '';
-  return `Livreto: ${imposition.originalPageCount} páginas originais → ${imposition.imposedPageCount} para produção${blanks}`;
+  const composition = quote.bookletPricing;
+  const money = (cents: number) => major(cents).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const layers = composition
+    ? ` · Composição por livreto: miolo ${money(composition.coreSubtotalCents)}, capa ${money(composition.coverSubtotalCents)}, acabamento ${money(composition.finishingSubtotalCents)}${composition.minimumAdjustmentCents > 0 ? ` · mínimo do lote ${money(composition.minimumRunCents)} aplicado` : ''}`
+    : '';
+  return `Livreto: ${imposition.originalPageCount} páginas originais → ${imposition.imposedPageCount} para produção${blanks}${layers}`;
 }
 
 function checkoutActorHash(userId: string | undefined, guestEmail: string | null): string {
@@ -334,6 +340,7 @@ export async function processCheckout(
         return { fileId, pageCount: Math.max(1, file.page_count) };
       }),
       pdfDimensionAssessment: assessPdfDimensionsForAutomaticQuote(itemFiles),
+      bookletFileAssessment: assessBookletFileForAutomaticQuote(itemFiles),
       dimensions: item.dimensions ?? {},
       bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
     };
@@ -606,6 +613,7 @@ export async function previewCheckout(
         return { fileId, pageCount: Math.max(1, file.page_count) };
       }),
       pdfDimensionAssessment: assessPdfDimensionsForAutomaticQuote(itemFiles),
+      bookletFileAssessment: assessBookletFileForAutomaticQuote(itemFiles),
       dimensions: item.dimensions ?? {},
       bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
     }, supabase);

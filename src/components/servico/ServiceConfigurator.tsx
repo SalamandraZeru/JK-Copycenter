@@ -25,6 +25,10 @@ function formatDimensions(dimensions: PricingDimensions | null | undefined): str
   return `${format(dimensions.widthCm)} × ${format(dimensions.heightCm)} cm`;
 }
 
+function formatCents(value: number): string {
+  return (value / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
 function technicalReviewHref(review: PdfDimensionReview): string {
   const entered = formatDimensions(review.enteredDimensions) ?? 'não informada';
   const measured = formatDimensions(review.measuredDimensions) ?? 'não disponível';
@@ -110,8 +114,11 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
             ...(pricingResult.bindingSelections.length > 0
               ? [`Encadernação: ${pricingResult.bindingSelections.length} arquivo(s) selecionado(s)`]
               : []),
-            ...(pricingResult.bookletPaddedPages
-              ? [`Livreto: ${pricingResult.bookletImposition?.originalPageCount} páginas originais → ${pricingResult.bookletPaddedPages} páginas de produção (+${pricingResult.bookletImposition?.blankPagesAdded} em branco)`]
+            ...(pricingResult.bookletImposition
+              ? [`Livreto: ${pricingResult.bookletImposition.originalPageCount} páginas originais → ${pricingResult.bookletImposition.imposedPageCount} páginas de produção${pricingResult.bookletImposition.blankPagesAdded > 0 ? ` (+${pricingResult.bookletImposition.blankPagesAdded} em branco)` : ''}`]
+              : []),
+            ...(pricingResult.bookletPricing
+              ? [`Composição: miolo ${formatCents(pricingResult.bookletPricing.coreSubtotalCents)}, capa ${formatCents(pricingResult.bookletPricing.coverSubtotalCents)}, acabamento ${formatCents(pricingResult.bookletPricing.finishingSubtotalCents)} por livreto`]
               : []),
           ],
           fileNames: uploadedFiles.map((file) => file.originalName),
@@ -201,9 +208,14 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
             bindingAvailable={service.bindingAvailable}
             bindingFileIds={config.bindingFileIds}
             onBindingFileIdsChange={setBindingFileIds}
+            {...(service.pricingProfile === 'booklet_imposition' ? {
+              acceptedExtensions: ['.pdf'],
+              maxFiles: 1,
+              requirementsText: 'Cotação automática: envie um único PDF completo, já com miolo e capa na ordem final. Capa em arquivo separado ou qualquer outro formato exige análise técnica.',
+            } : {})}
           />
           {service.pricingProfile === 'booklet_imposition' && (
-            <p className="mt-3 text-xs font-medium text-slate-600">Envie o arquivo do livreto: a quantidade de páginas é conferida no servidor antes de liberar a cotação.</p>
+            <p className="mt-3 text-xs font-medium text-slate-600">A quantidade de páginas e o tipo do arquivo são conferidos no servidor antes de liberar a cotação.</p>
           )}
           {service.pricingProfile === 'per_square_meter' && profileConfig.validateUploadedPdfDimensions && (
             <p className="mt-3 text-xs font-medium text-slate-600">A cotação automática usa exclusivamente a MediaBox de um único PDF com uma página. Arquivos múltiplos, PDFs com várias páginas ou metadados ambíguos seguem para análise técnica.</p>
@@ -296,6 +308,14 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
               <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
                 <p className="font-bold">Imposição confirmada</p>
                 <p className="mt-1">{pricingResult.bookletImposition.originalPageCount} páginas no arquivo → {pricingResult.bookletImposition.imposedPageCount} páginas para produção{pricingResult.bookletImposition.blankPagesAdded > 0 ? `, com ${pricingResult.bookletImposition.blankPagesAdded} página(s) técnica(s) em branco` : ''}. O preço exibido já considera esta imposição.</p>
+                {pricingResult.bookletPricing && (
+                  <div className="mt-3 space-y-1 border-t border-blue-200 pt-3 text-xs">
+                    <p><strong>Miolo:</strong> {formatCents(pricingResult.bookletPricing.coreSubtotalCents)} por livreto ({pricingResult.bookletPricing.productionPageCount} páginas de produção).</p>
+                    <p><strong>Capa:</strong> {formatCents(pricingResult.bookletPricing.coverSubtotalCents)} por livreto ({pricingResult.bookletPricing.coverPages} páginas consideradas).</p>
+                    <p><strong>Acabamento:</strong> {formatCents(pricingResult.bookletPricing.finishingSubtotalCents)} por livreto.</p>
+                    {pricingResult.bookletPricing.minimumAdjustmentCents > 0 && <p><strong>Mínimo do lote:</strong> {formatCents(pricingResult.bookletPricing.minimumRunCents)}; acréscimo aplicado: {formatCents(pricingResult.bookletPricing.minimumAdjustmentCents)}.</p>}
+                  </div>
+                )}
               </div>
             )}
             {pricingResult?.squareMeterPricing && (

@@ -10,6 +10,7 @@ import { readGuestUploadSession } from '@/lib/upload/guest-session';
 import { loadAuthorizedReadyFiles } from '@/lib/upload/access';
 import { enforceCloudflareRateLimit } from '@/lib/security/cloudflare-rate-limit';
 import { assessPdfDimensionsForAutomaticQuote } from '@/lib/upload/pdf-dimensions';
+import { assessBookletFileForAutomaticQuote } from '@/lib/upload/booklet-file';
 
 const previewSchema = z.object({
   serviceId: z.string().uuid(),
@@ -83,6 +84,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
     let isEstimate = false;
     let bindingFiles: Array<{ fileId: string; pageCount: number }> = [];
     let pdfDimensionAssessment;
+    let bookletFileAssessment = assessBookletFileForAutomaticQuote([]);
     if (intent.fileIds.length > 0) {
       let files;
       try {
@@ -111,6 +113,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
         pageCount: Math.max(1, filesById.get(fileId)!.page_count),
       }));
       pdfDimensionAssessment = assessPdfDimensionsForAutomaticQuote(files);
+      bookletFileAssessment = assessBookletFileForAutomaticQuote(files);
     } else if (intent.bindingFileIds.length > 0) {
       return NextResponse.json({
         success: false,
@@ -130,6 +133,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
       bindingFiles,
       dimensions: intent.dimensions,
       bookletPaddingApproved: intent.bookletPaddingApproved,
+      bookletFileAssessment,
       ...(pdfDimensionAssessment ? { pdfDimensionAssessment } : {}),
     };
     const result = await validateAndRecalculate(pricingInput, supabaseAdmin);

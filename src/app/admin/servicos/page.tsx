@@ -347,14 +347,16 @@ export default function ServicosPage() {
                     ? <>Grandes formatos exigem <code>min_width_cm</code>, <code>max_width_cm</code>, <code>min_height_cm</code>, <code>max_height_cm</code>, <code>minimum_billable_area_cm2</code>, <code>waste_margin_bps</code>, <code>validate_uploaded_pdf_dimensions</code>, <code>pdf_dimension_policy: "media_box_single_page"</code> e <code>pdf_dimension_tolerance_bps</code>. Cadastre os limites reais do equipamento antes de publicar.</>
                     : formData.pricing_profile === 'per_print_run'
                       ? <>Tiragem exige <code>run_field_key</code> (campo de seleção criado no serviço) e <code>production_lead_time_business_days</code>. A publicação só é liberada com regras específicas e cobertura completa.</>
-                      : <>Ex.: livreto usa <code>page_multiple</code>, <code>min_pages</code>, <code>allow_blank_page_padding</code> e <code>requires_customer_approval_for_padding</code>.</>}
+                      : formData.pricing_profile === 'booklet_imposition'
+                        ? <>Livreto exige <code>page_multiple</code>, <code>min_pages</code>, <code>allow_blank_page_padding</code>, <code>requires_customer_approval_for_padding</code>, <code>booklet_core_field_keys</code>, <code>booklet_cover_field_keys</code>, <code>booklet_finishing_field_keys</code> e <code>booklet_cover_pages</code>. O preço-base é o mínimo por lote; a regra de preço define o miolo por página de produção.</>
+                        : <>Configure somente limites e unidades compatíveis com o perfil escolhido.</>}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
-                    Preço Base Inicial (R$) *
+                    {formData.pricing_profile === 'booklet_imposition' ? 'Mínimo por lote (R$) *' : 'Preço Base Inicial (R$) *'}
                   </label>
                   <input
                     type="number"

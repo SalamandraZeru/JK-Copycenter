@@ -1,5 +1,9 @@
 import type {
+  BookletFileAssessment,
   BookletImpositionSnapshot,
+  BookletPricingComponent,
+  BookletPricingComponentKind,
+  BookletPricingSnapshot,
   BindingSelectionSnapshot,
   PricingCalculationInput,
   PricingContext,
@@ -290,6 +294,151 @@ function resolveRateWithEffects(
   return { rateCents, extraPerUnitCents };
 }
 
+function bookletFileAssessmentMessage(assessment: BookletFileAssessment | undefined): string {
+  switch (assessment?.status) {
+    case 'multiple_files':
+      return 'A cotação automática de livreto exige um único PDF completo, com miolo e capa na ordem final. Envie a capa separada apenas para análise técnica.';
+    case 'file_not_pdf':
+      return 'A cotação automática de livreto exige um PDF completo. Outros formatos seguem para análise técnica.';
+    case 'page_count_unconfirmed':
+      return 'Não foi possível confirmar com segurança as páginas do PDF. Envie o arquivo novamente ou solicite análise técnica.';
+    case 'trusted':
+      return 'A contagem de páginas do livreto não corresponde ao arquivo validado.';
+    default:
+      return 'Envie um único PDF completo para conferir a imposição do livreto.';
+  }
+}
+
+type BookletComponentResult =
+  | { success: true; unitCents: number; subtotalCents: number; snapshot: BookletPricingSnapshot }
+  | { success: false; message: string };
+
+/**
+ * Prices a booklet as independent production layers. The matching price rule
+ * is always the core rate per imposed page. Dynamic field effects must be
+ * explicitly classified in the service profile, preventing a cover or staple
+ * amount from being silently folded into an opaque "price per page" value.
+ */
+function calculateBookletComponents(
+  input: PricingCalculationInput,
+  context: PricingContext,
+  coreRateCents: number,
+  imposedPageCount: number,
+  fields: PricingFieldSnapshot[],
+): BookletComponentResult {
+  const config = context.service.pricingProfileConfig;
+  const coreKeys = config.bookletCoreFieldKeys;
+  const coverKeys = config.bookletCoverFieldKeys;
+  const finishingKeys = config.bookletFinishingFieldKeys;
+  const coverPages = config.bookletCoverPages;
+  if (!coreKeys || !coverKeys || !finishingKeys || !coverPages) {
+    return { success: false, message: 'A composição de miolo, capa e acabamento deste livreto ainda não está configurada.' };
+  }
+
+  const activeFieldKeys = new Set(context.fields.filter((field) => field.isActive).map((field) => field.key));
+  const configuredKeys = [...coreKeys, ...coverKeys, ...finishingKeys];
+  if (configuredKeys.some((key) => !activeFieldKeys.has(key))
+      || new Set(configuredKeys).size !== configuredKeys.length) {
+    return { success: false, message: 'A classificação dos campos de preço do livreto está inválida.' };
+  }
+
+  const categoryByKey = new Map<string, BookletPricingComponentKind>();
+  for (const key of coreKeys) categoryByKey.set(key, 'core');
+  for (const key of coverKeys) categoryByKey.set(key, 'cover');
+  for (const key of finishingKeys) categoryByKey.set(key, 'finishing');
+
+  const components: BookletPricingComponent[] = [];
+  let coreSubtotalCents = 0;
+  let coverSubtotalCents = 0;
+  let finishingSubtotalCents = 0;
+  const add = (kind: BookletPricingComponentKind, label: string, quantity: number, unitCents: number): boolean => {
+    const totalCents = checkedMultiply(quantity, unitCents);
+    if (totalCents === null) return false;
+    components.push({ kind, label, quantity, unitCents, totalCents });
+    if (kind === 'core') coreSubtotalCents = checkedAdd(coreSubtotalCents, totalCents) ?? Number.NaN;
+    if (kind === 'cover') coverSubtotalCents = checkedAdd(coverSubtotalCents, totalCents) ?? Number.NaN;
+    if (kind === 'finishing') finishingSubtotalCents = checkedAdd(finishingSubtotalCents, totalCents) ?? Number.NaN;
+    return Number.isSafeInteger(coreSubtotalCents)
+      && Number.isSafeInteger(coverSubtotalCents)
+      && Number.isSafeInteger(finishingSubtotalCents);
+  };
+
+  let adjustedCoreRateCents = coreRateCents;
+  if (!add('core', 'Miolo — regra por página de produção', imposedPageCount, adjustedCoreRateCents)) {
+    return { success: false, message: 'Cotação excede o limite monetário seguro.' };
+  }
+
+  for (const field of fields) {
+    const effect = field.priceEffect;
+    if (effect.type === 'none') continue;
+    const kind = categoryByKey.get(field.fieldKey);
+    if (!kind) {
+      return { success: false, message: `O adicional de “${field.fieldLabel}” não foi classificado como miolo, capa ou acabamento.` };
+    }
+    const label = `${kind === 'core' ? 'Miolo' : kind === 'cover' ? 'Capa' : 'Acabamento'} — ${field.fieldLabel}: ${field.valueLabel}`;
+    if (kind === 'core') {
+      if (effect.type === 'multiply') {
+        const previousRateCents = adjustedCoreRateCents;
+        try {
+          adjustedCoreRateCents = applyBps(adjustedCoreRateCents, effect.multiplierBps, context.roundingMode);
+        } catch {
+          return { success: false, message: 'Cotação excede o limite monetário seguro.' };
+        }
+        const deltaCents = adjustedCoreRateCents - previousRateCents;
+        if (!add('core', label, imposedPageCount, deltaCents)) {
+          return { success: false, message: 'Cotação excede o limite monetário seguro.' };
+        }
+      } else if (effect.type === 'per_page') {
+        adjustedCoreRateCents = checkedAdd(adjustedCoreRateCents, effect.valueCents) ?? Number.NaN;
+        if (!Number.isSafeInteger(adjustedCoreRateCents) || !add('core', label, imposedPageCount, effect.valueCents)) {
+          return { success: false, message: 'Cotação excede o limite monetário seguro.' };
+        }
+      } else if (!add('core', label, 1, effect.valueCents)) {
+        return { success: false, message: 'Cotação excede o limite monetário seguro.' };
+      }
+      continue;
+    }
+
+    if (effect.type === 'multiply') {
+      return { success: false, message: `O campo “${field.fieldLabel}” usa multiplicador, permitido apenas em componentes de miolo.` };
+    }
+    const quantity = effect.type === 'per_page'
+      ? (kind === 'cover' ? coverPages : imposedPageCount)
+      : 1;
+    if (!add(kind, label, quantity, effect.valueCents)) {
+      return { success: false, message: 'Cotação excede o limite monetário seguro.' };
+    }
+  }
+
+  const unitCents = checkedAdd(checkedAdd(coreSubtotalCents, coverSubtotalCents) ?? Number.NaN, finishingSubtotalCents);
+  const amountBeforeMinimumCents = unitCents === null ? null : checkedMultiply(unitCents, input.quantity);
+  if (unitCents === null || amountBeforeMinimumCents === null || unitCents < 0) {
+    return { success: false, message: 'Cotação excede o limite monetário seguro.' };
+  }
+  const minimumRunCents = context.service.basePriceCents;
+  const minimumAdjustmentCents = Math.max(0, minimumRunCents - amountBeforeMinimumCents);
+  const subtotalCents = checkedAdd(amountBeforeMinimumCents, minimumAdjustmentCents);
+  if (subtotalCents === null) return { success: false, message: 'Cotação excede o limite monetário seguro.' };
+
+  return {
+    success: true,
+    unitCents,
+    subtotalCents,
+    snapshot: {
+      productionPageCount: imposedPageCount,
+      coverPages,
+      quantity: input.quantity,
+      components,
+      coreSubtotalCents,
+      coverSubtotalCents,
+      finishingSubtotalCents,
+      amountBeforeMinimumCents,
+      minimumRunCents,
+      minimumAdjustmentCents,
+    },
+  };
+}
+
 interface ProfilePrice {
   unitCents: number;
   subtotalCents: number;
@@ -297,6 +446,7 @@ interface ProfilePrice {
   dimensions: PricingDimensions | null;
   bookletPaddedPages: number | null;
   bookletImposition: BookletImpositionSnapshot | null;
+  bookletPricing: BookletPricingSnapshot | null;
   squareMeterPricing: SquareMeterPricingSnapshot | null;
 }
 
@@ -347,6 +497,7 @@ function resolveProfilePrice(
   context: PricingContext,
   priceCents: number,
   effects: ServerFieldPriceEffect[],
+  fields: PricingFieldSnapshot[],
 ): ProfilePrice | PricingResult {
   const profile = context.service.pricingProfile;
   const config = context.service.pricingProfileConfig;
@@ -355,9 +506,11 @@ function resolveProfilePrice(
   let pagesForPricing = input.pageCount;
   let bookletPaddedPages: number | null = null;
   let bookletImposition: BookletImpositionSnapshot | null = null;
+  let bookletPricing: BookletPricingSnapshot | null = null;
   if (profile === 'booklet_imposition') {
-    if ((input.fileIds?.length ?? 0) === 0) {
-      return profileError('Envie ao menos um arquivo para conferir a quantidade de páginas do livreto.');
+    const fileAssessment = input.bookletFileAssessment;
+    if (!fileAssessment || fileAssessment.status !== 'trusted' || fileAssessment.pageCount !== input.pageCount) {
+      return profileError(bookletFileAssessmentMessage(fileAssessment));
     }
     const minimum = config.minPages ?? 1;
     const maximum = config.maxPages ?? 1_000_000;
@@ -385,6 +538,20 @@ function resolveProfilePrice(
       pageMultiple: multiple,
       customerApprovalRecorded,
     };
+
+    const calculation = calculateBookletComponents(input, context, priceCents, pagesForPricing, fields);
+    if (!calculation.success) return profileError(calculation.message);
+    bookletPricing = calculation.snapshot;
+    return {
+      unitCents: calculation.unitCents,
+      subtotalCents: calculation.subtotalCents,
+      pricingUnit: 'livreto finalizado',
+      dimensions: null,
+      bookletPaddedPages,
+      bookletImposition,
+      bookletPricing,
+      squareMeterPricing: null,
+    };
   }
 
   const rates = resolveRateWithEffects(priceCents, effects, pagesForPricing, profile, context.roundingMode);
@@ -398,7 +565,7 @@ function resolveProfilePrice(
   ): ProfilePrice | PricingResult => {
     const subtotalCents = checkedMultiply(unitCents, input.quantity);
     if (unitCents < 0 || subtotalCents === null) return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
-    return { unitCents, subtotalCents, pricingUnit, dimensions, bookletPaddedPages, bookletImposition, squareMeterPricing };
+    return { unitCents, subtotalCents, pricingUnit, dimensions, bookletPaddedPages, bookletImposition, bookletPricing, squareMeterPricing };
   };
 
   if (profile === 'per_page') {
@@ -497,10 +664,6 @@ function resolveProfilePrice(
     const unitCents = checkedAdd(byLength, rates.extraPerUnitCents);
     return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'metro linear', dimensions);
   }
-  if (profile === 'booklet_imposition') {
-    const unitCents = checkedAdd(rates.rateCents, rates.extraPerUnitCents);
-    return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'livreto finalizado');
-  }
   if (profile === 'binding_by_file_pages') {
     return create(0, 'arquivo encadernado');
   }
@@ -545,12 +708,15 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
   if (!resolvedRule) return error('QUOTE_UNAVAILABLE', 'Regra de preço ausente ou ambígua.');
 
   const rule = resolvedRule.rule;
+  if (profile === 'booklet_imposition' && !rule) {
+    return error('QUOTE_UNAVAILABLE', 'Livreto exige uma regra específica para definir o preço do miolo por página de produção.');
+  }
   const pricePerPageCents = rule?.pricePerPageCents ?? context.service.basePriceCents;
   if (!Number.isSafeInteger(pricePerPageCents) || pricePerPageCents < 0) {
     return error('QUOTE_UNAVAILABLE', 'Preço do serviço inválido.');
   }
 
-  let profilePrice = resolveProfilePrice(input, context, pricePerPageCents, resolvedFields.effects);
+  let profilePrice = resolveProfilePrice(input, context, pricePerPageCents, resolvedFields.effects, resolvedFields.snapshots);
   if ('success' in profilePrice) return profilePrice;
 
   if (input.isFrontAndBack && profile === 'per_page') {
@@ -610,6 +776,7 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
       squareMeterPricing: profilePrice.squareMeterPricing,
       bookletPaddedPages: profilePrice.bookletPaddedPages,
       bookletImposition: profilePrice.bookletImposition,
+      bookletPricing: profilePrice.bookletPricing,
       unitPriceCents,
       subtotalBeforeDiscountCents,
       discountBps,

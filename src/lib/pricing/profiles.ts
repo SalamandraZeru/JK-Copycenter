@@ -53,6 +53,14 @@ function fieldKey(value: Json | undefined): string | undefined {
   return typeof value === 'string' && /^[A-Za-z][A-Za-z0-9_]*$/.test(value) ? value : undefined;
 }
 
+function fieldKeys(value: Json | undefined): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const keys = value.map((entry) => fieldKey(entry));
+  if (keys.some((key) => key === undefined)) return undefined;
+  const normalized = keys as string[];
+  return new Set(normalized).size === normalized.length ? normalized : undefined;
+}
+
 function pdfDimensionPolicy(value: Json | undefined): PricingProfileConfig['pdfDimensionPolicy'] | undefined {
   return value === 'media_box_single_page' ? value : undefined;
 }
@@ -78,6 +86,10 @@ export function normalizePricingProfileConfig(value: Json): PricingProfileConfig
   const pdfDimensionToleranceBps = nonNegativeInteger(source.pdf_dimension_tolerance_bps, 10_000);
   const runFieldKey = fieldKey(source.run_field_key);
   const productionLeadTimeBusinessDays = integer(source.production_lead_time_business_days, 1, 365);
+  const bookletCoreFieldKeys = fieldKeys(source.booklet_core_field_keys);
+  const bookletCoverFieldKeys = fieldKeys(source.booklet_cover_field_keys);
+  const bookletFinishingFieldKeys = fieldKeys(source.booklet_finishing_field_keys);
+  const bookletCoverPages = integer(source.booklet_cover_pages, 1, 32);
 
   const normalized: PricingProfileConfig = {};
   if (pagesPerSheet !== undefined) normalized.pagesPerSheet = pagesPerSheet;
@@ -98,6 +110,10 @@ export function normalizePricingProfileConfig(value: Json): PricingProfileConfig
   if (pdfDimensionToleranceBps !== undefined) normalized.pdfDimensionToleranceBps = pdfDimensionToleranceBps;
   if (runFieldKey !== undefined) normalized.runFieldKey = runFieldKey;
   if (productionLeadTimeBusinessDays !== undefined) normalized.productionLeadTimeBusinessDays = productionLeadTimeBusinessDays;
+  if (bookletCoreFieldKeys !== undefined) normalized.bookletCoreFieldKeys = bookletCoreFieldKeys;
+  if (bookletCoverFieldKeys !== undefined) normalized.bookletCoverFieldKeys = bookletCoverFieldKeys;
+  if (bookletFinishingFieldKeys !== undefined) normalized.bookletFinishingFieldKeys = bookletFinishingFieldKeys;
+  if (bookletCoverPages !== undefined) normalized.bookletCoverPages = bookletCoverPages;
   return normalized;
 }
 
@@ -118,6 +134,18 @@ export function validatePricingProfileConfig(profile: PricingProfile, value: Jso
     if (normalized.minPages === undefined) errors.push('Informe o mínimo de páginas do livreto.');
     if (normalized.allowBlankPagePadding === undefined) errors.push('Defina se o livreto permite páginas técnicas em branco.');
     if (normalized.requiresCustomerApprovalForPadding === undefined) errors.push('Defina se a complementação exige aprovação do cliente.');
+    if (normalized.bookletCoreFieldKeys === undefined) errors.push('Classifique os campos que compõem o miolo do livreto.');
+    if (normalized.bookletCoverFieldKeys === undefined) errors.push('Classifique os campos que compõem a capa do livreto.');
+    if (normalized.bookletFinishingFieldKeys === undefined) errors.push('Classifique os campos que compõem o acabamento do livreto.');
+    if (normalized.bookletCoverPages === undefined) errors.push('Informe a quantidade de páginas de capa usada nos adicionais por página.');
+    const bookletFieldKeys = [
+      ...(normalized.bookletCoreFieldKeys ?? []),
+      ...(normalized.bookletCoverFieldKeys ?? []),
+      ...(normalized.bookletFinishingFieldKeys ?? []),
+    ];
+    if (new Set(bookletFieldKeys).size !== bookletFieldKeys.length) {
+      errors.push('Um campo de livreto não pode pertencer a mais de uma camada de preço.');
+    }
   }
   if (profile === 'per_square_meter') {
     if (normalized.minWidthCm === undefined || normalized.maxWidthCm === undefined
@@ -180,6 +208,10 @@ export const pricingProfileTemplates: Record<PricingProfile, Record<string, Json
     min_pages: 8,
     allow_blank_page_padding: false,
     requires_customer_approval_for_padding: false,
+    booklet_core_field_keys: [],
+    booklet_cover_field_keys: [],
+    booklet_finishing_field_keys: [],
+    booklet_cover_pages: 4,
   },
   manual_quote: {},
 };

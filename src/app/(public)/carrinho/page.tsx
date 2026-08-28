@@ -66,6 +66,12 @@ function snapshotFromService(item: CartItem, quote: PricingCalculationResult): C
       ...(quote.bindingSelections.length > 0
         ? [`Encadernação: ${quote.bindingSelections.length} arquivo(s) selecionado(s)`]
         : []),
+      ...(quote.bookletImposition
+        ? [`Livreto: ${quote.bookletImposition.originalPageCount} páginas do arquivo → ${quote.bookletImposition.imposedPageCount} páginas de produção${quote.bookletImposition.blankPagesAdded > 0 ? ` (+${quote.bookletImposition.blankPagesAdded} em branco)` : ''}`]
+        : []),
+      ...(quote.bookletPricing
+        ? [`Composição por livreto: miolo ${formatCurrencyFromCents(quote.bookletPricing.coreSubtotalCents)}, capa ${formatCurrencyFromCents(quote.bookletPricing.coverSubtotalCents)}, acabamento ${formatCurrencyFromCents(quote.bookletPricing.finishingSubtotalCents)}`]
+        : []),
     ],
     fileNames: item.displaySnapshot.fileNames,
     estimatedTotalCents: quote.totalCents,

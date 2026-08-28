@@ -79,6 +79,41 @@ function plotagemSpecification(value: unknown): string | null {
   return parts.length > 0 ? parts.join(' · ') : null;
 }
 
+function bookletSpecification(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const snapshot = value as Record<string, unknown>;
+  const imposition = snapshot.bookletImposition;
+  const pricing = snapshot.bookletPricing;
+  const impositionRecord = imposition && typeof imposition === 'object' && !Array.isArray(imposition)
+    ? imposition as Record<string, unknown>
+    : null;
+  const pricingRecord = pricing && typeof pricing === 'object' && !Array.isArray(pricing)
+    ? pricing as Record<string, unknown>
+    : null;
+  const number = (record: Record<string, unknown> | null, key: string) => {
+    const candidate = record?.[key];
+    return typeof candidate === 'number' && Number.isFinite(candidate) ? candidate : null;
+  };
+  const originalPages = number(impositionRecord, 'originalPageCount');
+  const imposedPages = number(impositionRecord, 'imposedPageCount');
+  const blankPages = number(impositionRecord, 'blankPagesAdded');
+  const approved = impositionRecord?.customerApprovalRecorded === true;
+  const core = number(pricingRecord, 'coreSubtotalCents');
+  const cover = number(pricingRecord, 'coverSubtotalCents');
+  const finishing = number(pricingRecord, 'finishingSubtotalCents');
+  const minimum = number(pricingRecord, 'minimumRunCents');
+  const minimumAdjustment = number(pricingRecord, 'minimumAdjustmentCents');
+  const parts = [
+    originalPages === null || imposedPages === null ? null : `Imposição: ${originalPages} pág. do arquivo → ${imposedPages} pág. de produção`,
+    blankPages && blankPages > 0 ? `${blankPages} pág. técnica(s) em branco${approved ? ' aprovada(s) pelo cliente' : ''}` : null,
+    core === null ? null : `miolo: ${cents(core)}/un.`,
+    cover === null ? null : `capa: ${cents(cover)}/un.`,
+    finishing === null ? null : `acabamento: ${cents(finishing)}/un.`,
+    minimum === null ? null : `mínimo do lote: ${cents(minimum)}${minimumAdjustment && minimumAdjustment > 0 ? ` (+${cents(minimumAdjustment)})` : ''}`,
+  ].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 export default async function OrdemServicoPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   if (!isUuid(params.id)) notFound();
@@ -128,7 +163,7 @@ export default async function OrdemServicoPage(props: { params: Promise<{ id: st
         </section>
 
         <section className="py-4"><h2 className="mb-2 border-b-2 border-slate-950 pb-1 font-black uppercase">Itens e especificações</h2>
-          <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-xs"><thead><tr className="border-b border-slate-950"><th className="py-2 pr-2">Item</th><th className="py-2 pr-2">Configuração / acabamento</th><th className="py-2 text-center">Pág.</th><th className="py-2 text-center">Qtd.</th><th className="py-2 text-right">Valor vigente</th></tr></thead><tbody>{(order.order_items || []).map((item: any) => <tr key={item.id} className="border-b border-slate-300 align-top"><td className="py-2 pr-2 font-bold">{item.service_name_snapshot || item.product_name_snapshot || 'Item'}{catalogVersion(item.pricing_rule_snapshot) && <span className="mt-0.5 block text-[10px] font-medium text-slate-600">{catalogVersion(item.pricing_rule_snapshot)}</span>}</td><td className="py-2 pr-2">{fields(item.fields_snapshot)}{plotagemSpecification(item.pricing_rule_snapshot) && <span className="mt-1 block text-[10px] text-slate-700">{plotagemSpecification(item.pricing_rule_snapshot)}</span>}</td><td className="py-2 text-center">{item.pages_count || '—'}</td><td className="py-2 text-center">{item.quantity}</td><td className="py-2 text-right font-bold">{cents(item.total_price_cents)}</td></tr>)}</tbody></table></div>
+          <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-xs"><thead><tr className="border-b border-slate-950"><th className="py-2 pr-2">Item</th><th className="py-2 pr-2">Configuração / acabamento</th><th className="py-2 text-center">Pág.</th><th className="py-2 text-center">Qtd.</th><th className="py-2 text-right">Valor vigente</th></tr></thead><tbody>{(order.order_items || []).map((item: any) => <tr key={item.id} className="border-b border-slate-300 align-top"><td className="py-2 pr-2 font-bold">{item.service_name_snapshot || item.product_name_snapshot || 'Item'}{catalogVersion(item.pricing_rule_snapshot) && <span className="mt-0.5 block text-[10px] font-medium text-slate-600">{catalogVersion(item.pricing_rule_snapshot)}</span>}</td><td className="py-2 pr-2">{fields(item.fields_snapshot)}{plotagemSpecification(item.pricing_rule_snapshot) && <span className="mt-1 block text-[10px] text-slate-700">{plotagemSpecification(item.pricing_rule_snapshot)}</span>}{bookletSpecification(item.pricing_rule_snapshot) && <span className="mt-1 block text-[10px] text-slate-700">{bookletSpecification(item.pricing_rule_snapshot)}</span>}</td><td className="py-2 text-center">{item.pages_count || '—'}</td><td className="py-2 text-center">{item.quantity}</td><td className="py-2 text-right font-bold">{cents(item.total_price_cents)}</td></tr>)}</tbody></table></div>
         </section>
 
         <section className="border-t border-slate-950 py-4"><h2 className="mb-2 border-b border-slate-400 pb-1 font-black uppercase">Arquivos autorizados</h2>{activeFiles.length === 0 ? <p>Nenhum arquivo vinculado.</p> : <ul className="space-y-1">{activeFiles.map((file: any) => <li key={file.id}>• {file.original_name} — {file.page_count || '—'} pág. ({file.page_count_method})</li>)}</ul>}</section>

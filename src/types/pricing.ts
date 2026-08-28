@@ -43,6 +43,18 @@ export interface PricingProfileConfig {
   runFieldKey?: string;
   /** Lead time shown/validated for a published print-run product. */
   productionLeadTimeBusinessDays?: number;
+  /**
+   * Booklet fields whose option effects alter the printed core. The price rule
+   * remains the core rate per imposed page; these keys only classify visible
+   * additions so a quote never hides a commercial layer in a generic total.
+   */
+  bookletCoreFieldKeys?: string[];
+  /** Booklet fields whose option effects belong to the cover. */
+  bookletCoverFieldKeys?: string[];
+  /** Booklet fields whose option effects belong to folding/stapling/finishing. */
+  bookletFinishingFieldKeys?: string[];
+  /** Number of printed cover pages used only for a `per_page` cover effect. */
+  bookletCoverPages?: number;
 }
 
 export interface PricingDimensions {
@@ -168,6 +180,47 @@ export interface BookletImpositionSnapshot {
   customerApprovalRecorded: boolean;
 }
 
+/** Built only by the server from owned, ready upload metadata. */
+export type BookletFileAssessmentStatus =
+  | 'trusted'
+  | 'missing_file'
+  | 'multiple_files'
+  | 'file_not_pdf'
+  | 'page_count_unconfirmed';
+
+export interface BookletFileAssessment {
+  status: BookletFileAssessmentStatus;
+  fileCount: number;
+  pageCount: number | null;
+}
+
+export type BookletPricingComponentKind = 'core' | 'cover' | 'finishing';
+
+/**
+ * One reproducible portion of a booklet quote. Values are per finished
+ * booklet; the snapshot separately records the quantity and lot minimum.
+ */
+export interface BookletPricingComponent {
+  kind: BookletPricingComponentKind;
+  label: string;
+  quantity: number;
+  unitCents: number;
+  totalCents: number;
+}
+
+export interface BookletPricingSnapshot {
+  productionPageCount: number;
+  coverPages: number;
+  quantity: number;
+  components: BookletPricingComponent[];
+  coreSubtotalCents: number;
+  coverSubtotalCents: number;
+  finishingSubtotalCents: number;
+  amountBeforeMinimumCents: number;
+  minimumRunCents: number;
+  minimumAdjustmentCents: number;
+}
+
 export type ServerFieldPriceEffect =
   | { type: 'none' }
   | { type: 'fixed' | 'per_page'; valueCents: number }
@@ -237,6 +290,9 @@ export interface PricingCalculationInput {
   bindingFiles?: BindingFileSelection[];
   // Populado exclusivamente no servidor a partir de processing_metadata.
   pdfDimensionAssessment?: PdfDimensionAssessment;
+  // Populado exclusivamente no servidor a partir de tipo detectado, contagem
+  // de páginas e titularidade do arquivo. Nunca aceitar do navegador.
+  bookletFileAssessment?: BookletFileAssessment;
   dimensions?: PricingDimensions;
   bookletPaddingApproved?: boolean;
 }
@@ -268,6 +324,7 @@ export interface PricingCalculationResult {
   squareMeterPricing: SquareMeterPricingSnapshot | null;
   bookletPaddedPages: number | null;
   bookletImposition: BookletImpositionSnapshot | null;
+  bookletPricing: BookletPricingSnapshot | null;
   unitPriceCents: number;
   subtotalBeforeDiscountCents: number;
   discountBps: number;
