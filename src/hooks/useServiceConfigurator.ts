@@ -46,6 +46,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     bindingFileIds: [],
     dimensions: {},
     bookletPaddingApproved: false,
+    artworkBleedAcknowledged: false,
     estimatedPrice: service.basePrice,
     isLoadingPrice: false,
   });
@@ -65,6 +66,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
   }, [config.fieldValues, service]);
 
   const isConfigurationComplete = useMemo(() => {
+    const profileConfig = service.pricingProfileConfig;
     if (config.quantity < 1 || config.pageCount < 1) return false;
     if (service.pricingProfile === 'manual_quote') return false;
     if (service.pricingProfile === 'per_square_meter'
@@ -74,11 +76,14 @@ export function useServiceConfigurator(service: ServiceWithFields) {
         && (!(config.dimensions.lengthCm && config.dimensions.lengthCm > 0))) return false;
     if (service.pricingProfile === 'booklet_imposition') {
       if (config.fileIds.length === 0) return false;
-      const profileConfig = service.pricingProfileConfig;
       const pageMultiple = profileConfig.pageMultiple ?? 4;
       const mustPad = config.pageCount % pageMultiple !== 0;
       if (mustPad && !profileConfig.allowBlankPagePadding) return false;
       if (mustPad && profileConfig.requiresCustomerApprovalForPadding && !config.bookletPaddingApproved) return false;
+    }
+    if (service.pricingProfile === 'per_print_run') {
+      if (profileConfig.requiresArtworkFile && config.fileIds.length === 0) return false;
+      if (profileConfig.requiresArtworkBleedAcknowledgement && !config.artworkBleedAcknowledged) return false;
     }
     return service.fields
       .filter((field) => field.isRequired)
@@ -93,6 +98,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
       });
   }, [
     config.bookletPaddingApproved,
+    config.artworkBleedAcknowledged,
     config.dimensions.heightCm,
     config.dimensions.lengthCm,
     config.dimensions.widthCm,
@@ -123,6 +129,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
         quantity: config.quantity,
         dimensions: config.dimensions,
         bookletPaddingApproved: config.bookletPaddingApproved,
+        artworkBleedAcknowledged: config.artworkBleedAcknowledged,
       }).catch(console.error);
     }, 500);
 
@@ -138,6 +145,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     config.quantity,
     config.dimensions,
     config.bookletPaddingApproved,
+    config.artworkBleedAcknowledged,
     fetchPreview,
     isConfigurationComplete,
   ]);
@@ -191,6 +199,10 @@ export function useServiceConfigurator(service: ServiceWithFields) {
 
   const setBookletPaddingApproved = useCallback((bookletPaddingApproved: boolean) => {
     setConfig(prev => ({ ...prev, bookletPaddingApproved }));
+  }, []);
+
+  const setArtworkBleedAcknowledged = useCallback((artworkBleedAcknowledged: boolean) => {
+    setConfig(prev => ({ ...prev, artworkBleedAcknowledged }));
   }, []);
 
   const addFile = useCallback((fileId: string) => {
@@ -252,6 +264,7 @@ export function useServiceConfigurator(service: ServiceWithFields) {
     updateQuantity,
     updateDimensions,
     setBookletPaddingApproved,
+    setArtworkBleedAcknowledged,
     addFile,
     removeFile,
     replaceFiles,

@@ -56,6 +56,7 @@ export const checkoutIntentSchema = z.object({
       lengthCm: z.number().finite().positive().max(100_000).optional(),
     }).default({}),
     bookletPaddingApproved: z.boolean().default(false),
+    artworkBleedAcknowledged: z.boolean().default(false),
   }).refine((item) => Boolean(item.serviceId || item.productId), {
     message: 'Item deve indicar serviço ou produto.',
   })).min(1, 'Carrinho não pode estar vazio').max(1_000),

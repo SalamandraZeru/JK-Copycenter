@@ -90,6 +90,18 @@ function bookletDescription(quote: PricingCalculationResult): string {
   return `Livreto: ${imposition.originalPageCount} páginas originais → ${imposition.imposedPageCount} para produção${blanks}${layers}`;
 }
 
+function printRunDescription(quote: PricingCalculationResult): string {
+  const run = quote.printRun;
+  if (!run) return '';
+  const review = run.artworkFileRequired
+    ? ' · arte seguirá para pré-impressão antes da produção'
+    : '';
+  const acknowledgement = run.artworkBleedAcknowledgementRequired
+    ? ` · sangria e margem segura ${run.artworkBleedAcknowledged ? 'declaradas pelo cliente' : 'pendentes'}`
+    : '';
+  return `${run.runFieldLabel}: ${run.runOptionLabel} (${run.unitsPerRun.toLocaleString('pt-BR')} un. por lote × ${run.lotCount} lote(s) = ${run.totalUnits.toLocaleString('pt-BR')} un.) · prazo de produção: ${run.productionLeadTimeBusinessDays} dia(s) útil(eis)${acknowledgement}${review}`;
+}
+
 function checkoutActorHash(userId: string | undefined, guestEmail: string | null): string {
   const actor = userId ? `user:${userId}` : `guest:${guestEmail || ''}`;
   return crypto.createHash('sha256').update(actor).digest('hex');
@@ -113,6 +125,7 @@ function checkoutRequestHash(
       quantity: item.quantity,
       fileIds: [...item.fileIds].sort(),
       bindingFileIds: [...(item.bindingFileIds ?? [])].sort(),
+      artworkBleedAcknowledged: Boolean(item.artworkBleedAcknowledged),
     })),
     deliveryType: payload.deliveryType,
     deliveryAddressId: payload.deliveryAddressId || null,
@@ -343,6 +356,7 @@ export async function processCheckout(
       bookletFileAssessment: assessBookletFileForAutomaticQuote(itemFiles),
       dimensions: item.dimensions ?? {},
       bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
+      artworkBleedAcknowledged: Boolean(item.artworkBleedAcknowledged),
     };
     const pricingResult = await validateAndRecalculate(pricingInput, supabase);
     if (!pricingResult.success) throw new Error(`${pricingResult.error.code}: ${pricingResult.error.message}`);
@@ -359,7 +373,7 @@ export async function processCheckout(
     const bindingDescription = quote.bindingSelections.length > 0
       ? `Encadernação: ${quote.bindingSelections.length} ${quote.bindingSelections.length === 1 ? 'arquivo' : 'arquivos'}`
       : '';
-    const description = [fieldsDescription, bindingDescription, bookletDescription(quote)].filter(Boolean).join(' · ');
+    const description = [fieldsDescription, bindingDescription, bookletDescription(quote), printRunDescription(quote)].filter(Boolean).join(' · ');
 
     processedItems.push({
       id: crypto.randomUUID(),
@@ -616,6 +630,7 @@ export async function previewCheckout(
       bookletFileAssessment: assessBookletFileForAutomaticQuote(itemFiles),
       dimensions: item.dimensions ?? {},
       bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
+      artworkBleedAcknowledged: Boolean(item.artworkBleedAcknowledged),
     }, supabase);
     if (!pricingResult.success) throw new Error(`${pricingResult.error.code}: ${pricingResult.error.message}`);
 

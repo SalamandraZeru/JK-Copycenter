@@ -72,6 +72,9 @@ function snapshotFromService(item: CartItem, quote: PricingCalculationResult): C
       ...(quote.bookletPricing
         ? [`Composição por livreto: miolo ${formatCurrencyFromCents(quote.bookletPricing.coreSubtotalCents)}, capa ${formatCurrencyFromCents(quote.bookletPricing.coverSubtotalCents)}, acabamento ${formatCurrencyFromCents(quote.bookletPricing.finishingSubtotalCents)}`]
         : []),
+      ...(quote.printRun
+        ? [`Tiragem: ${quote.printRun.runOptionLabel} (${quote.printRun.unitsPerRun.toLocaleString('pt-BR')} un. × ${quote.printRun.lotCount} lote(s) = ${quote.printRun.totalUnits.toLocaleString('pt-BR')} un.) · prazo ${quote.printRun.productionLeadTimeBusinessDays} dia(s) útil(eis)`]
+        : []),
     ],
     fileNames: item.displaySnapshot.fileNames,
     estimatedTotalCents: quote.totalCents,
@@ -142,6 +145,7 @@ export default function CarrinhoPage() {
             bindingFileIds: item.bindingFileIds ?? [],
             dimensions: item.dimensions ?? {},
             bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
+            artworkBleedAcknowledged: Boolean(item.artworkBleedAcknowledged),
             pageCount: item.pageCount,
             isFrontAndBack: item.isFrontAndBack,
             quantity: item.quantity,

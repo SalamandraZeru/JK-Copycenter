@@ -43,6 +43,10 @@ export interface PricingProfileConfig {
   runFieldKey?: string;
   /** Lead time shown/validated for a published print-run product. */
   productionLeadTimeBusinessDays?: number;
+  /** Requires a production file before an automatic print-run quote can proceed. */
+  requiresArtworkFile?: boolean;
+  /** Records that the customer was informed about bleed and safe-area limits. */
+  requiresArtworkBleedAcknowledgement?: boolean;
   /**
    * Booklet fields whose option effects alter the printed core. The price rule
    * remains the core rate per imposed page; these keys only classify visible
@@ -231,6 +235,12 @@ export interface ServerPricingOption {
   label: string;
   isActive: boolean;
   priceEffect: ServerFieldPriceEffect;
+  /**
+   * Closed quantity represented by this option when it is the configured
+   * print-run field. It is populated only from the catalog option, never
+   * from the browser request.
+   */
+  runQuantity?: number;
 }
 
 export interface ServerPricingField {
@@ -295,6 +305,7 @@ export interface PricingCalculationInput {
   bookletFileAssessment?: BookletFileAssessment;
   dimensions?: PricingDimensions;
   bookletPaddingApproved?: boolean;
+  artworkBleedAcknowledged?: boolean;
 }
 
 export interface PricingFieldSnapshot {
@@ -303,6 +314,21 @@ export interface PricingFieldSnapshot {
   value: string | number | boolean;
   valueLabel: string;
   priceEffect: ServerFieldPriceEffect;
+}
+
+/** Server-built audit snapshot for a closed print run. */
+export interface PrintRunSnapshot {
+  runFieldKey: string;
+  runFieldLabel: string;
+  runOptionValue: string;
+  runOptionLabel: string;
+  unitsPerRun: number;
+  lotCount: number;
+  totalUnits: number;
+  productionLeadTimeBusinessDays: number;
+  artworkFileRequired: boolean;
+  artworkBleedAcknowledgementRequired: boolean;
+  artworkBleedAcknowledged: boolean;
 }
 
 export interface PricingCalculationResult {
@@ -325,6 +351,7 @@ export interface PricingCalculationResult {
   bookletPaddedPages: number | null;
   bookletImposition: BookletImpositionSnapshot | null;
   bookletPricing: BookletPricingSnapshot | null;
+  printRun: PrintRunSnapshot | null;
   unitPriceCents: number;
   subtotalBeforeDiscountCents: number;
   discountBps: number;

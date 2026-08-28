@@ -27,6 +27,7 @@ const previewSchema = z.object({
     lengthCm: z.number().finite().positive().max(100_000).optional(),
   }).default({}),
   bookletPaddingApproved: z.boolean().default(false),
+  artworkBleedAcknowledged: z.boolean().default(false),
   pageCount: z.number().int().optional(),
   isFrontAndBack: z.boolean().default(false),
   quantity: z.number().int().min(1).max(100_000_000),
@@ -133,6 +134,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<PricingResult
       bindingFiles,
       dimensions: intent.dimensions,
       bookletPaddingApproved: intent.bookletPaddingApproved,
+      artworkBleedAcknowledged: intent.artworkBleedAcknowledged,
       bookletFileAssessment,
       ...(pdfDimensionAssessment ? { pdfDimensionAssessment } : {}),
     };

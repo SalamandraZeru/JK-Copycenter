@@ -9,6 +9,7 @@ import type {
   PricingContext,
   PricingFieldSnapshot,
   PricingDimensions,
+  PrintRunSnapshot,
   PdfDimensionReview,
   PricingProfile,
   PricingResult,
@@ -447,7 +448,63 @@ interface ProfilePrice {
   bookletPaddedPages: number | null;
   bookletImposition: BookletImpositionSnapshot | null;
   bookletPricing: BookletPricingSnapshot | null;
+  printRun: PrintRunSnapshot | null;
   squareMeterPricing: SquareMeterPricingSnapshot | null;
+}
+
+function resolvePrintRunSnapshot(
+  input: PricingCalculationInput,
+  context: PricingContext,
+  fields: PricingFieldSnapshot[],
+): { success: true; snapshot: PrintRunSnapshot } | { success: false; message: string } {
+  const config = context.service.pricingProfileConfig;
+  if (!config.runFieldKey || !config.productionLeadTimeBusinessDays) {
+    return { success: false, message: 'A configuração de tiragem deste serviço está incompleta.' };
+  }
+
+  const runField = context.fields.find((field) => field.isActive && field.key === config.runFieldKey);
+  if (!runField || (runField.fieldType !== 'select' && runField.fieldType !== 'radio')) {
+    return { success: false, message: 'O campo de tiragem deste serviço não está disponível.' };
+  }
+  const selected = fields.find((field) => field.fieldKey === runField.key);
+  if (!selected || typeof selected.value !== 'string') {
+    return { success: false, message: 'Selecione uma tiragem fechada para continuar.' };
+  }
+  const option = runField.options.find((candidate) => candidate.isActive && candidate.value === selected.value);
+  if (!option || !Number.isSafeInteger(option.runQuantity) || option.runQuantity! < 1) {
+    return { success: false, message: 'A tiragem selecionada não possui uma quantidade comercial válida.' };
+  }
+  if (option.priceEffect.type !== 'none') {
+    return { success: false, message: 'A tiragem deve ser precificada por regra comercial, sem adicional na opção.' };
+  }
+
+  const totalUnits = checkedMultiply(option.runQuantity!, input.quantity);
+  if (totalUnits === null) {
+    return { success: false, message: 'A quantidade total da tiragem excede o limite seguro.' };
+  }
+  if (config.requiresArtworkFile && (input.fileIds?.length ?? 0) === 0) {
+    return { success: false, message: 'Anexe a arte final para cotar esta tiragem.' };
+  }
+  if (config.requiresArtworkBleedAcknowledgement && !input.artworkBleedAcknowledged) {
+    return { success: false, message: 'Confirme que revisou a sangria e a margem segura antes de continuar.' };
+  }
+
+  return {
+    success: true,
+    snapshot: {
+      runFieldKey: runField.key,
+      runFieldLabel: runField.label,
+      runOptionValue: option.value,
+      runOptionLabel: option.label,
+      unitsPerRun: option.runQuantity!,
+      lotCount: input.quantity,
+      totalUnits,
+      productionLeadTimeBusinessDays: config.productionLeadTimeBusinessDays,
+      artworkFileRequired: config.requiresArtworkFile === true,
+      artworkBleedAcknowledgementRequired: config.requiresArtworkBleedAcknowledgement === true,
+      artworkBleedAcknowledged: input.artworkBleedAcknowledged === true,
+    },
+  };
 }
 
 function areasMatchWithinTolerance(
@@ -507,6 +564,7 @@ function resolveProfilePrice(
   let bookletPaddedPages: number | null = null;
   let bookletImposition: BookletImpositionSnapshot | null = null;
   let bookletPricing: BookletPricingSnapshot | null = null;
+  let printRun: PrintRunSnapshot | null = null;
   if (profile === 'booklet_imposition') {
     const fileAssessment = input.bookletFileAssessment;
     if (!fileAssessment || fileAssessment.status !== 'trusted' || fileAssessment.pageCount !== input.pageCount) {
@@ -550,6 +608,7 @@ function resolveProfilePrice(
       bookletPaddedPages,
       bookletImposition,
       bookletPricing,
+      printRun,
       squareMeterPricing: null,
     };
   }
@@ -565,7 +624,7 @@ function resolveProfilePrice(
   ): ProfilePrice | PricingResult => {
     const subtotalCents = checkedMultiply(unitCents, input.quantity);
     if (unitCents < 0 || subtotalCents === null) return error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.');
-    return { unitCents, subtotalCents, pricingUnit, dimensions, bookletPaddedPages, bookletImposition, bookletPricing, squareMeterPricing };
+    return { unitCents, subtotalCents, pricingUnit, dimensions, bookletPaddedPages, bookletImposition, bookletPricing, printRun, squareMeterPricing };
   };
 
   if (profile === 'per_page') {
@@ -577,6 +636,9 @@ function resolveProfilePrice(
     return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'unidade');
   }
   if (profile === 'per_print_run') {
+    const resolvedRun = resolvePrintRunSnapshot(input, context, fields);
+    if (!resolvedRun.success) return profileError(resolvedRun.message);
+    printRun = resolvedRun.snapshot;
     const unitCents = checkedAdd(rates.rateCents, rates.extraPerUnitCents);
     return unitCents === null ? error('INVALID_INPUT', 'Cotação excede o limite monetário seguro.') : create(unitCents, 'tiragem');
   }
@@ -777,6 +839,7 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
       bookletPaddedPages: profilePrice.bookletPaddedPages,
       bookletImposition: profilePrice.bookletImposition,
       bookletPricing: profilePrice.bookletPricing,
+      printRun: profilePrice.printRun,
       unitPriceCents,
       subtotalBeforeDiscountCents,
       discountBps,

@@ -72,11 +72,15 @@ function normalizeOptions(value: Json): ServerPricingOption[] {
   for (const rawOption of value) {
     const option = asRecord(rawOption);
     if (!option || typeof option.value !== 'string' || typeof option.label !== 'string') continue;
+    const runQuantity = numericValue(option.run_quantity);
     options.push({
       value: option.value,
       label: option.label,
       isActive: option.is_active !== false,
       priceEffect: normalizePriceEffect(option.price_effect),
+      ...(Number.isSafeInteger(runQuantity) && runQuantity! > 0 && runQuantity! <= 100_000_000
+        ? { runQuantity: runQuantity! }
+        : {}),
     });
   }
   return options;

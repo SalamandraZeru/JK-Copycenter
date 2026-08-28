@@ -73,6 +73,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         bindingFileIds: item.bindingFileIds,
         dimensions: item.dimensions,
         bookletPaddingApproved: item.bookletPaddingApproved,
+        artworkBleedAcknowledged: item.artworkBleedAcknowledged,
       })),
       deliveryType: valid.deliveryType,
       ...(valid.deliveryAddressId ? { deliveryAddressId: valid.deliveryAddressId } : {}),

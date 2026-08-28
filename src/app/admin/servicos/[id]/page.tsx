@@ -10,6 +10,7 @@ const fetcher = (url: string) => fetch(url).then(res => res.json());
 interface OptionItem {
   label: string;
   value: string;
+  run_quantity?: number;
   price_effect: {
     type: 'fixed' | 'multiply' | 'per_page' | 'none';
     value: number;
@@ -20,6 +21,7 @@ interface StoredOptionItem {
   label: string;
   value: string;
   is_active?: boolean;
+  run_quantity?: number;
   price_effect?: {
     type: 'fixed' | 'multiply' | 'per_page' | 'none';
     value?: number;
@@ -46,6 +48,8 @@ interface ServiceDetailResponse {
   slug: string;
   description: string | null;
   base_price: number;
+  pricing_profile?: string;
+  pricing_profile_config?: { run_field_key?: string } | null;
   fields?: ServiceField[];
   error?: string;
 }
@@ -91,6 +95,8 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
   if (error || !data || data.error) return <div className="p-20 text-center text-red-600 font-bold">Erro ao carregar campos do serviço.</div>;
 
   const { fields = [], ...service } = data;
+  const isClosedRunField = service.pricing_profile === 'per_print_run'
+    && service.pricing_profile_config?.run_field_key === formData.key;
 
   const startNew = () => {
     setEditingId('new');
@@ -123,6 +129,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
             ? opt.price_effect.value_cents / 100
             : opt.price_effect?.value ?? 0,
       },
+      ...(Number.isSafeInteger(opt.run_quantity) && opt.run_quantity! > 0 ? { run_quantity: opt.run_quantity } : {}),
     }));
     setFormData({
       key: field.key,
@@ -155,7 +162,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
     setFormData({ ...formData, options: newOptions });
   };
 
-  const updateOption = (index: number, field: 'label' | 'value' | 'effectType' | 'effectValue', val: string) => {
+  const updateOption = (index: number, field: 'label' | 'value' | 'runQuantity' | 'effectType' | 'effectValue', val: string) => {
     const newOptions = [...formData.options];
     const target = newOptions[index];
     if (!target) return;
@@ -174,6 +181,10 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
       target.label = val;
     } else if (field === 'value') {
       target.value = val;
+    } else if (field === 'runQuantity') {
+      const runQuantity = Number(val);
+      if (Number.isSafeInteger(runQuantity) && runQuantity > 0) target.run_quantity = runQuantity;
+      else delete target.run_quantity;
     }
     setFormData({ ...formData, options: newOptions });
   };
@@ -182,6 +193,16 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
     if (!formData.key.trim() || !formData.label.trim()) {
       alert('Por favor informe a Chave e o Rótulo do campo.');
       return;
+    }
+    if (isClosedRunField) {
+      if (formData.options.some((option) => !Number.isSafeInteger(option.run_quantity) || option.run_quantity! < 1)) {
+        alert('Cada opção de tiragem precisa informar uma quantidade inteira de unidades por lote.');
+        return;
+      }
+      if (formData.options.some((option) => option.price_effect?.type !== 'none')) {
+        alert('A opção de tiragem não pode ter acréscimo próprio. Defina o preço na regra comercial da combinação.');
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -408,7 +429,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
               <div className="space-y-3">
                 {formData.options.map((opt, idx) => (
                   <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                    <div className="sm:col-span-4">
+                    <div className="sm:col-span-3">
                       <label className="block text-[11px] font-semibold text-slate-800 mb-1">Rótulo Visível</label>
                       <input
                         type="text"
@@ -419,7 +440,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                       />
                     </div>
 
-                    <div className="sm:col-span-3">
+                    <div className="sm:col-span-2">
                       <label className="block text-[11px] font-semibold text-slate-800 mb-1">Valor Interno</label>
                       <input
                         type="text"
@@ -430,11 +451,27 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                       />
                     </div>
 
+                    {isClosedRunField && (
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-semibold text-slate-800 mb-1">Unid. por lote *</label>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          placeholder="Ex: 100"
+                          value={opt.run_quantity ?? ''}
+                          onChange={(e) => updateOption(idx, 'runQuantity', e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm transition"
+                        />
+                      </div>
+                    )}
+
                     <div className="sm:col-span-3">
                       <label className="block text-[11px] font-semibold text-slate-800 mb-1">Efeito no Preço</label>
                       <select
                         value={opt.price_effect?.type || 'none'}
                         onChange={(e) => updateOption(idx, 'effectType', e.target.value)}
+                        disabled={isClosedRunField}
                         className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-xs cursor-pointer transition"
                       >
                         <option value="none">Sem Efeito (R$ 0,00)</option>
@@ -451,7 +488,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                           type="number"
                           step="0.01"
                           placeholder="0.00"
-                          disabled={opt.price_effect?.type === 'none'}
+                          disabled={isClosedRunField || opt.price_effect?.type === 'none'}
                           value={opt.price_effect?.value || ''}
                           onChange={(e) => updateOption(idx, 'effectValue', e.target.value)}
                           className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm disabled:bg-slate-100 disabled:text-slate-400 transition"

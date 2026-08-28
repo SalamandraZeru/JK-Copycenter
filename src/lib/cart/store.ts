@@ -64,6 +64,7 @@ type PersistedCartItem = Pick<
   | 'isFrontAndBack'
   | 'dimensions'
   | 'bookletPaddingApproved'
+  | 'artworkBleedAcknowledged'
   | 'displaySnapshot'
   | 'revalidationStatus'
   | 'requiresFileReupload'
@@ -108,7 +109,7 @@ function displayValue(value: string | number | boolean): string {
 
 export function cartConfigurationFingerprint(item: Pick<
   CartItem,
-  'serviceId' | 'productId' | 'attributeIds' | 'fieldValues' | 'pageCount' | 'quantity' | 'isFrontAndBack' | 'bindingFileIds' | 'dimensions' | 'bookletPaddingApproved'
+  'serviceId' | 'productId' | 'attributeIds' | 'fieldValues' | 'pageCount' | 'quantity' | 'isFrontAndBack' | 'bindingFileIds' | 'dimensions' | 'bookletPaddingApproved' | 'artworkBleedAcknowledged'
 >): string {
   return JSON.stringify({
     serviceId: item.serviceId || null,
@@ -123,11 +124,12 @@ export function cartConfigurationFingerprint(item: Pick<
     bindingFileIds: [...(item.bindingFileIds ?? [])].sort(),
     dimensions: item.dimensions ?? {},
     bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
+    artworkBleedAcknowledged: Boolean(item.artworkBleedAcknowledged),
   });
 }
 
 export function createCartDisplaySnapshot(
-  item: Pick<CartItem, 'serviceId' | 'productId' | 'attributeIds' | 'fieldValues' | 'pageCount' | 'quantity' | 'isFrontAndBack' | 'bindingFileIds' | 'dimensions' | 'bookletPaddingApproved' | 'name' | 'imageUrl' | 'estimatedTotal'>,
+  item: Pick<CartItem, 'serviceId' | 'productId' | 'attributeIds' | 'fieldValues' | 'pageCount' | 'quantity' | 'isFrontAndBack' | 'bindingFileIds' | 'dimensions' | 'bookletPaddingApproved' | 'artworkBleedAcknowledged' | 'name' | 'imageUrl' | 'estimatedTotal'>,
   overrides: Partial<CartDisplaySnapshot> = {},
 ): CartDisplaySnapshot {
   const summary = overrides.summary
@@ -160,6 +162,7 @@ export function createCartDisplaySnapshot(
       bindingFileIds: item.bindingFileIds ?? [],
       dimensions: item.dimensions ?? {},
       bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
+      artworkBleedAcknowledged: Boolean(item.artworkBleedAcknowledged),
     }),
   };
 }
@@ -247,6 +250,7 @@ function normalizePersistedItem(raw: Partial<CartItem>): CartItem {
       }
       : {},
     bookletPaddingApproved: Boolean(raw.bookletPaddingApproved),
+    artworkBleedAcknowledged: Boolean(raw.artworkBleedAcknowledged),
     ...(raw.type ? { type: raw.type } : {}),
     ...(typeof raw.name === 'string' ? { name: raw.name } : {}),
     ...(typeof raw.imageUrl === 'string' || raw.imageUrl === null ? { imageUrl: raw.imageUrl } : {}),
@@ -415,6 +419,7 @@ export const useCartStore = create<CartState>()(
           isFrontAndBack: item.isFrontAndBack,
           dimensions: item.dimensions ?? {},
           bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
+          artworkBleedAcknowledged: Boolean(item.artworkBleedAcknowledged),
           displaySnapshot: item.displaySnapshot,
           revalidationStatus: item.displaySnapshot.fileNames.length > 0 ? 'requires_file_reupload' : 'pending',
           requiresFileReupload: item.fileIds.length > 0 || item.displaySnapshot.fileNames.length > 0,

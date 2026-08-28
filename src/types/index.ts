@@ -37,6 +37,7 @@ export type {
   BookletPricingComponent,
   BookletPricingComponentKind,
   BookletPricingSnapshot,
+  PrintRunSnapshot,
   ServerFieldPriceEffect,
   ServerPricingOption,
   ServerPricingField,

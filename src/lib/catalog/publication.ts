@@ -40,6 +40,39 @@ function optionValues(value: Json): Array<{ value: string; isActive: boolean }> 
   return values;
 }
 
+function printRunOptionErrors(value: Json): string[] {
+  if (!Array.isArray(value)) return ['O campo de tiragem precisa ter opções válidas.'];
+  const quantities = new Set<number>();
+  const errors: string[] = [];
+  for (const rawOption of value) {
+    if (!rawOption || typeof rawOption !== 'object' || Array.isArray(rawOption)) {
+      errors.push('O campo de tiragem possui uma opção inválida.');
+      continue;
+    }
+    const option = rawOption as Record<string, Json | undefined>;
+    if (option.is_active === false) continue;
+    const quantity = option.run_quantity;
+    if (typeof quantity !== 'number' || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 100_000_000) {
+      errors.push('Cada opção ativa de tiragem deve informar unidades inteiras por lote.');
+      continue;
+    }
+    if (quantities.has(quantity)) {
+      errors.push('O campo de tiragem possui quantidades de lote duplicadas.');
+    }
+    quantities.add(quantity);
+    const priceEffect = option.price_effect;
+    const priceEffectType = !priceEffect
+      ? 'none'
+      : typeof priceEffect === 'object' && !Array.isArray(priceEffect)
+      ? (priceEffect as Record<string, Json | undefined>).type
+      : null;
+    if (priceEffectType !== 'none') {
+      errors.push('A opção de tiragem não pode ter efeito de preço; use a regra comercial da combinação.');
+    }
+  }
+  return Array.from(new Set(errors));
+}
+
 function ruleSignature(rule: {
   pricing_rule_attributes: Array<{ attribute_id: string | null; attribute_group_id: string }> | null;
   pricing_rule_field_conditions: Array<{ service_field_id: string; expected_value: Json }> | null;
@@ -226,9 +259,17 @@ export async function inspectServicePublication(
       if (!technicalConfig.runFieldKey || !technicalConfig.productionLeadTimeBusinessDays) {
         errors.push('Produtos por tiragem exigem campo de tiragem e prazo de produção configurados.');
       }
+      if (technicalConfig.requiresArtworkFile === undefined) {
+        errors.push('Produtos por tiragem devem declarar se exigem arquivo de arte antes da cotação.');
+      }
+      if (technicalConfig.requiresArtworkBleedAcknowledgement === undefined) {
+        errors.push('Produtos por tiragem devem declarar a política de sangria e margem segura.');
+      }
       const runField = (fieldsResult.data ?? []).find((field) => field.is_active && field.key === technicalConfig.runFieldKey);
       if (!runField || (runField.field_type !== 'select' && runField.field_type !== 'radio')) {
         errors.push('O campo de tiragem precisa existir, estar ativo e ser de seleção única.');
+      } else {
+        errors.push(...printRunOptionErrors(runField.options));
       }
       if (coverage.uncoveredCombinations > 0 || coverage.limited) {
         errors.push('Produtos por tiragem exigem cobertura inequívoca de todas as combinações antes da publicação.');

@@ -37,6 +37,7 @@ export interface CheckoutItem {
   bindingFileIds?: string[];
   dimensions?: PricingDimensions;
   bookletPaddingApproved?: boolean;
+  artworkBleedAcknowledged?: boolean;
 }
 
 export interface CheckoutPayload {

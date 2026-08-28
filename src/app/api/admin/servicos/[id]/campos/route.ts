@@ -15,6 +15,7 @@ const optionSchema = z.object({
   value: z.string().trim().min(1).max(200),
   label: z.string().trim().min(1).max(200),
   is_active: z.boolean().optional(),
+  run_quantity: z.number().int().min(1).max(100_000_000).optional(),
   price_effect: z.object({
     type: z.enum(['fixed', 'multiply', 'per_page', 'none']),
     value: z.number().finite().min(0).max(1_000_000),
@@ -44,6 +45,7 @@ function normalizedOptions(options: z.infer<typeof optionSchema>[]): Json {
       value: option.value,
       label: option.label,
       is_active: option.is_active ?? true,
+      ...(option.run_quantity !== undefined ? { run_quantity: option.run_quantity } : {}),
       price_effect: priceEffect,
     };
   });

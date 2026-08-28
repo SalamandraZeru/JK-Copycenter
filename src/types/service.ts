@@ -62,6 +62,7 @@ export interface ServiceConfiguration {
   bindingFileIds: string[];
   dimensions: PricingDimensions;
   bookletPaddingApproved: boolean;
+  artworkBleedAcknowledged: boolean;
   estimatedPrice: number | null;
   isLoadingPrice: boolean;
 }

@@ -52,6 +52,7 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
     updateQuantity,
     updateDimensions,
     setBookletPaddingApproved,
+    setArtworkBleedAcknowledged,
     replaceFiles,
     setBindingFileIds,
     validate,
@@ -93,6 +94,7 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
         bindingFileIds: config.bindingFileIds,
         dimensions: config.dimensions,
         bookletPaddingApproved: config.bookletPaddingApproved,
+        artworkBleedAcknowledged: config.artworkBleedAcknowledged,
         displaySnapshot: createCartDisplaySnapshot({
           serviceId: service.id,
           attributeIds: [],
@@ -103,6 +105,7 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
           bindingFileIds: config.bindingFileIds,
           dimensions: config.dimensions,
           bookletPaddingApproved: config.bookletPaddingApproved,
+          artworkBleedAcknowledged: config.artworkBleedAcknowledged,
           name: pricingResult.serviceSnapshot.name,
           imageUrl: service.imageUrl,
           estimatedTotal: pricingResult.totalCents / 100,
@@ -119,6 +122,9 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
               : []),
             ...(pricingResult.bookletPricing
               ? [`Composição: miolo ${formatCents(pricingResult.bookletPricing.coreSubtotalCents)}, capa ${formatCents(pricingResult.bookletPricing.coverSubtotalCents)}, acabamento ${formatCents(pricingResult.bookletPricing.finishingSubtotalCents)} por livreto`]
+              : []),
+            ...(pricingResult.printRun
+              ? [`Tiragem: ${pricingResult.printRun.runOptionLabel} (${pricingResult.printRun.unitsPerRun.toLocaleString('pt-BR')} un. × ${pricingResult.printRun.lotCount} lote(s) = ${pricingResult.printRun.totalUnits.toLocaleString('pt-BR')} un.) · prazo: ${pricingResult.printRun.productionLeadTimeBusinessDays} dia(s) útil(eis)`]
               : []),
           ],
           fileNames: uploadedFiles.map((file) => file.originalName),
@@ -219,6 +225,20 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
           )}
           {service.pricingProfile === 'per_square_meter' && profileConfig.validateUploadedPdfDimensions && (
             <p className="mt-3 text-xs font-medium text-slate-600">A cotação automática usa exclusivamente a MediaBox de um único PDF com uma página. Arquivos múltiplos, PDFs com várias páginas ou metadados ambíguos seguem para análise técnica.</p>
+          )}
+          {service.pricingProfile === 'per_print_run' && profileConfig.requiresArtworkBleedAcknowledgement && (
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <input
+                type="checkbox"
+                checked={config.artworkBleedAcknowledged}
+                onChange={(event) => setArtworkBleedAcknowledged(event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-amber-600 text-blue-700 focus:ring-blue-600"
+              />
+              <span><strong>Ciência de sangria e margem segura.</strong> Revisei a arte conforme o gabarito do produto. Entendo que este aceite não substitui a conferência de pré-impressão; divergências podem exigir correção ou aprovação antes da produção.</span>
+            </label>
+          )}
+          {service.pricingProfile === 'per_print_run' && profileConfig.requiresArtworkFile && uploadedFiles.length === 0 && (
+            <p className="mt-3 text-xs font-medium text-amber-800">Envie a arte final para liberar a cotação desta tiragem.</p>
           )}
         </div>
 
@@ -324,6 +344,13 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
                 <p className="mt-1">Valor por m²: {(pricingResult.squareMeterPricing.rateCentsPerSquareMeter / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}. Área informada: {(pricingResult.squareMeterPricing.submittedAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m². Área faturável: {(pricingResult.squareMeterPricing.billableAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m²{pricingResult.squareMeterPricing.minimumBillableAreaCm2 > pricingResult.squareMeterPricing.submittedAreaCm2 ? ` (mínimo: ${(pricingResult.squareMeterPricing.minimumBillableAreaCm2 / 10_000).toLocaleString('pt-BR', { maximumFractionDigits: 4 })} m²)` : ''}{pricingResult.squareMeterPricing.wasteMarginBps > 0 ? `, incluindo ${pricingResult.squareMeterPricing.wasteMarginBps / 100}% de margem de perda` : ''}.</p>
                 {pricingResult.squareMeterPricing.additionsCentsPerUnit > 0 && <p className="mt-1">Adicionais da configuração: {(pricingResult.squareMeterPricing.additionsCentsPerUnit / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} por unidade.</p>}
                 {pricingResult.squareMeterPricing.dimensionReview.status === 'verified' && <p className="mt-1 text-xs font-medium">Dimensões conferidas na MediaBox do PDF enviado: {formatDimensions(pricingResult.squareMeterPricing.dimensionReview.measuredDimensions)}.</p>}
+              </div>
+            )}
+            {pricingResult?.printRun && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
+                <p className="font-bold">Tiragem fechada confirmada</p>
+                <p className="mt-1"><strong>{pricingResult.printRun.runOptionLabel}</strong>: {pricingResult.printRun.unitsPerRun.toLocaleString('pt-BR')} unidades por lote × {pricingResult.printRun.lotCount} lote(s) = {pricingResult.printRun.totalUnits.toLocaleString('pt-BR')} unidades. Prazo de produção: {pricingResult.printRun.productionLeadTimeBusinessDays} dia(s) útil(eis).</p>
+                {pricingResult.printRun.artworkFileRequired && <p className="mt-2 text-xs font-medium">A arte será encaminhada para pré-impressão; a produção só avança após a aprovação técnica aplicável.</p>}
               </div>
             )}
             {dimensionReview && dimensionReview.status !== 'not_required' && dimensionReview.status !== 'verified' && (

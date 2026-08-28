@@ -86,6 +86,8 @@ export function normalizePricingProfileConfig(value: Json): PricingProfileConfig
   const pdfDimensionToleranceBps = nonNegativeInteger(source.pdf_dimension_tolerance_bps, 10_000);
   const runFieldKey = fieldKey(source.run_field_key);
   const productionLeadTimeBusinessDays = integer(source.production_lead_time_business_days, 1, 365);
+  const requiresArtworkFile = boolean(source.requires_artwork_file);
+  const requiresArtworkBleedAcknowledgement = boolean(source.requires_artwork_bleed_acknowledgement);
   const bookletCoreFieldKeys = fieldKeys(source.booklet_core_field_keys);
   const bookletCoverFieldKeys = fieldKeys(source.booklet_cover_field_keys);
   const bookletFinishingFieldKeys = fieldKeys(source.booklet_finishing_field_keys);
@@ -110,6 +112,10 @@ export function normalizePricingProfileConfig(value: Json): PricingProfileConfig
   if (pdfDimensionToleranceBps !== undefined) normalized.pdfDimensionToleranceBps = pdfDimensionToleranceBps;
   if (runFieldKey !== undefined) normalized.runFieldKey = runFieldKey;
   if (productionLeadTimeBusinessDays !== undefined) normalized.productionLeadTimeBusinessDays = productionLeadTimeBusinessDays;
+  if (requiresArtworkFile !== undefined) normalized.requiresArtworkFile = requiresArtworkFile;
+  if (requiresArtworkBleedAcknowledgement !== undefined) {
+    normalized.requiresArtworkBleedAcknowledgement = requiresArtworkBleedAcknowledgement;
+  }
   if (bookletCoreFieldKeys !== undefined) normalized.bookletCoreFieldKeys = bookletCoreFieldKeys;
   if (bookletCoverFieldKeys !== undefined) normalized.bookletCoverFieldKeys = bookletCoverFieldKeys;
   if (bookletFinishingFieldKeys !== undefined) normalized.bookletFinishingFieldKeys = bookletFinishingFieldKeys;
@@ -168,6 +174,12 @@ export function validatePricingProfileConfig(profile: PricingProfile, value: Jso
     if (!normalized.runFieldKey) errors.push('Informe a chave do campo que representa a tiragem.');
     if (normalized.productionLeadTimeBusinessDays === undefined) {
       errors.push('Informe o prazo de produção em dias úteis.');
+    }
+    if (normalized.requiresArtworkFile === undefined) {
+      errors.push('Defina se a tiragem exige arquivo de arte antes da cotação automática.');
+    }
+    if (normalized.requiresArtworkBleedAcknowledgement === undefined) {
+      errors.push('Defina se a tiragem exige ciência de sangria e margem segura.');
     }
   }
   if (normalized.minPages !== undefined && normalized.maxPages !== undefined && normalized.maxPages < normalized.minPages) {
