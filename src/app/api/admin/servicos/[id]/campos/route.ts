@@ -7,6 +7,7 @@ import type { Json } from '@/types/supabase';
 import type { TablesUpdate } from '@/types';
 import { isUuid, parseAdminJson } from '@/lib/security/admin-input';
 import { multiplierToBps, reaisToCents } from '@/lib/pricing/money';
+import { getCatalogEditability } from '@/lib/catalog/editorial';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,11 +51,23 @@ function normalizedOptions(options: z.infer<typeof optionSchema>[]): Json {
 }
 
 function serviceFieldErrorMessage(message: string): string {
+  if (message.includes('SERVICE_CATALOG_PUBLISHED_EDIT_LOCKED')) {
+    return 'O serviço está publicado. Mova-o para revisão antes de alterar campos, vínculos ou regras de preço.';
+  }
   if (message.includes('SERVICE_FIELD_DEPENDENCY_FIELD_STILL_REFERENCED')) {
     return 'Este campo possui vínculos entre opções. Exclua os vínculos antes de desativá-lo.';
   }
   if (message.includes('SERVICE_FIELD_DEPENDENCY_OPTION_STILL_REFERENCED')) {
     return 'Uma opção removida ou inativada ainda é usada em vínculos. Exclua esses vínculos antes de salvar o campo.';
+  }
+  if (message.includes('SERVICE_FIELD_PRICING_OPTION_REMOVAL_BLOCKED')) {
+    return 'Uma opção removida ainda é referenciada por regras ou histórico comercial. Mantenha-a inativa em vez de apagá-la.';
+  }
+  if (message.includes('SERVICE_FIELD_ACTIVE_PRICING_OPTION_STILL_REFERENCED')) {
+    return 'Uma opção usada por regra ativa não pode ser inativada. Desative ou substitua a regra antes de salvar o campo.';
+  }
+  if (message.includes('SERVICE_FIELD_ACTIVE_PRICING_FIELD_STILL_REFERENCED')) {
+    return 'Este campo ainda é usado por regra ativa. Desative ou substitua a regra antes de alterar sua estrutura.';
   }
   return message;
 }
@@ -105,6 +118,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     if (!isUuid(params.id)) return NextResponse.json({ error: 'ID do serviço inválido' }, { status: 400 });
 
     const supabase = createServiceRoleClient();
+    const editability = await getCatalogEditability(supabase, params.id);
+    if (!editability.editable) return NextResponse.json({ error: editability.error }, { status: editability.status });
     const parsed = await parseAdminJson(request, createServiceFieldSchema);
     if (!parsed.success) return parsed.errorResponse;
     const body = parsed.data;
@@ -146,6 +161,8 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
     if (!isUuid(params.id)) return NextResponse.json({ error: 'ID do serviço inválido' }, { status: 400 });
 
     const supabase = createServiceRoleClient();
+    const editability = await getCatalogEditability(supabase, params.id);
+    if (!editability.editable) return NextResponse.json({ error: editability.error }, { status: editability.status });
     const parsed = await parseAdminJson(request, updateServiceFieldSchema);
     if (!parsed.success) return parsed.errorResponse;
     const body = parsed.data;
@@ -189,6 +206,8 @@ export async function DELETE(request: Request, props: { params: Promise<{ id: st
     if (!isUuid(params.id)) return NextResponse.json({ error: 'ID do serviço inválido' }, { status: 400 });
 
     const supabase = createServiceRoleClient();
+    const editability = await getCatalogEditability(supabase, params.id);
+    if (!editability.editable) return NextResponse.json({ error: editability.error }, { status: editability.status });
     const { searchParams } = new URL(request.url);
     const fieldId = searchParams.get('fieldId');
 

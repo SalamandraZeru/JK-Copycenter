@@ -1042,6 +1042,7 @@ export interface Database {
           reason: string;
           order_version_before: number;
           order_version_after: number;
+          catalog_version: number | null;
           created_at: string;
         };
         Insert: {
@@ -1059,6 +1060,7 @@ export interface Database {
           reason: string;
           order_version_before: number;
           order_version_after: number;
+          catalog_version?: number | null;
           created_at?: string;
         };
         Update: {
@@ -1076,6 +1078,7 @@ export interface Database {
           reason?: string;
           order_version_before?: number;
           order_version_after?: number;
+          catalog_version?: number | null;
           created_at?: string;
         };
         Relationships: [

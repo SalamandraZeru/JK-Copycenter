@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, Json } from '@/types/supabase';
 import type { PricingProfile } from '@/types/pricing';
 import { normalizePricingProfileConfig } from '@/lib/pricing/profiles';
+import { inspectCatalogCoverage } from './coverage';
 
 export type CatalogState = 'draft' | 'review' | 'published' | 'inactive';
 
@@ -27,15 +28,14 @@ export interface CatalogReadiness {
   };
 }
 
-function optionValues(value: Json): string[] | null {
+function optionValues(value: Json): Array<{ value: string; isActive: boolean }> | null {
   if (!Array.isArray(value)) return [];
-  const values: string[] = [];
+  const values: Array<{ value: string; isActive: boolean }> = [];
   for (const option of value) {
     if (!option || typeof option !== 'object' || Array.isArray(option)) return null;
     const record = option as Record<string, Json | undefined>;
-    if (record.is_active === false) continue;
     if (typeof record.value !== 'string' || record.value.trim() === '') return null;
-    values.push(record.value);
+    values.push({ value: record.value, isActive: record.is_active !== false });
   }
   return values;
 }
@@ -79,7 +79,7 @@ export async function inspectServicePublication(
     errors.push('O preço-base do serviço é inválido.');
   }
 
-  const [fieldsResult, rulesResult, bindingTiersResult] = await Promise.all([
+  const [fieldsResult, rulesResult, bindingTiersResult, dependenciesResult] = await Promise.all([
     supabase
       .from('service_fields')
       .select('id, key, label, field_type, options, is_required, is_active')
@@ -99,9 +99,13 @@ export async function inspectServicePublication(
       .select('id')
       .eq('service_id', serviceId)
       .eq('is_active', true),
+    supabase
+      .from('service_field_option_dependencies')
+      .select('source_field_id, source_option_value, source_conditions, target_field_id, target_option_value')
+      .eq('service_id', serviceId),
   ]);
 
-  if (fieldsResult.error || rulesResult.error || bindingTiersResult.error) {
+  if (fieldsResult.error || rulesResult.error || bindingTiersResult.error || dependenciesResult.error) {
     return {
       ready: false,
       errors: ['Não foi possível validar os campos e regras do serviço.'],
@@ -111,7 +115,6 @@ export async function inspectServicePublication(
   }
 
   const activeKeys = new Set<string>();
-  const selectableFields: Array<{ id: string; values: string[] }> = [];
   for (const field of fieldsResult.data ?? []) {
     if (!field.is_active) continue;
     const key = field.key.trim();
@@ -124,13 +127,13 @@ export async function inspectServicePublication(
         errors.push(`O campo “${field.label}” possui uma opção inválida.`);
         continue;
       }
-      if (field.is_required && values.length === 0) {
+      const activeValues = values.filter((option) => option.isActive).map((option) => option.value);
+      if (field.is_required && activeValues.length === 0) {
         errors.push(`O campo obrigatório “${field.label}” não possui opções ativas.`);
       }
-      if (new Set(values).size !== values.length) {
+      if (new Set(values.map((option) => option.value)).size !== values.length) {
         errors.push(`O campo “${field.label}” possui valores internos de opção duplicados.`);
       }
-      if (field.is_required && values.length > 0) selectableFields.push({ id: field.id, values });
     }
   }
 
@@ -145,43 +148,47 @@ export async function inspectServicePublication(
     signatures.add(signature);
   }
 
-  const combinationCount = selectableFields.reduce((total, field) => total * field.values.length, 1);
-  if (selectableFields.length > 0 && combinationCount <= 256) {
-    const combinations: Array<Map<string, string>> = [new Map()];
-    for (const field of selectableFields) {
-      const next: Array<Map<string, string>> = [];
-      for (const combination of combinations) {
-        for (const value of field.values) {
-          const selection = new Map(combination);
-          selection.set(field.id, value);
-          next.push(selection);
-        }
-      }
-      combinations.splice(0, combinations.length, ...next);
-    }
-    coverage.inspectedCombinations = combinations.length;
-    for (const combination of combinations) {
-      const matching = activeRules.filter((rule) => (
-        // Attribute rules cannot be proven covered from service-only options.
-        // They remain available for the engine, but need manual review here.
-        (rule.pricing_rule_attributes ?? []).length === 0
-        && (rule.pricing_rule_field_conditions ?? []).every((condition) => (
-          condition.expected_value === null
-          || combination.get(condition.service_field_id) === condition.expected_value
-        ))
-      ));
-      if (matching.length === 0) coverage.uncoveredCombinations += 1;
-      const specificities = matching.map((rule) => (
-        (rule.pricing_rule_field_conditions ?? []).filter((condition) => condition.expected_value !== null).length
-      ));
-      const highest = specificities.length > 0 ? Math.max(...specificities) : -1;
-      if (specificities.filter((specificity) => specificity === highest).length > 1) {
-        coverage.ambiguousCombinations += 1;
-      }
-    }
-  } else if (combinationCount > 256) {
-    coverage.limited = true;
-  }
+  const technicalConfig = normalizePricingProfileConfig(candidate.pricingProfileConfig ?? {});
+  const computedCoverage = inspectCatalogCoverage(
+    (fieldsResult.data ?? []).map((field) => ({
+      id: field.id,
+      fieldType: field.field_type,
+      isRequired: field.is_required,
+      isActive: field.is_active,
+      options: optionValues(field.options) ?? [],
+    })),
+    (dependenciesResult.data ?? []).map((dependency) => ({
+      sourceFieldId: dependency.source_field_id,
+      sourceOptionValue: dependency.source_option_value,
+      sourceConditions: Array.isArray(dependency.source_conditions)
+        ? dependency.source_conditions.flatMap((condition) => {
+          if (!condition || typeof condition !== 'object' || Array.isArray(condition)) return [];
+          const value = condition as Record<string, Json | undefined>;
+          return typeof value.field_id === 'string' && typeof value.option_value === 'string'
+            ? [{ fieldId: value.field_id, optionValue: value.option_value }]
+            : [];
+        })
+        : [{ fieldId: dependency.source_field_id, optionValue: dependency.source_option_value }],
+      targetFieldId: dependency.target_field_id,
+      targetOptionValue: dependency.target_option_value,
+    })),
+    activeRules.map((rule) => ({
+      id: rule.id,
+      hasAttributeConditions: (rule.pricing_rule_attributes ?? []).length > 0,
+      fieldConditions: (rule.pricing_rule_field_conditions ?? []).map((condition) => ({
+        serviceFieldId: condition.service_field_id,
+        expectedValue: condition.expected_value as string | number | boolean | null,
+      })),
+    })),
+    {
+      requireCompleteCompatibility: technicalConfig.requireCompleteCompatibility === true,
+      fallbackBehavior: candidate.fallbackBehavior === 'use_base' ? 'use_base' : 'block',
+    },
+  );
+  coverage.inspectedCombinations = computedCoverage.inspectedCombinations;
+  coverage.uncoveredCombinations = computedCoverage.uncoveredCombinations;
+  coverage.ambiguousCombinations = computedCoverage.ambiguousCombinations;
+  coverage.limited = computedCoverage.limited;
 
   if (coverage.ambiguousCombinations > 0) {
     errors.push(`${coverage.ambiguousCombinations} combinação(ões) de campos possuem mais de uma regra vencedora.`);
@@ -192,14 +199,19 @@ export async function inspectServicePublication(
     else warnings.push(`${message} Elas usarão o preço-base explicitamente configurado.`);
   }
   if (coverage.limited) {
-    warnings.push('Há mais de 256 combinações de campos; revise a cobertura de regras pelo painel de preços.');
+    warnings.push('Há mais de 10.000 combinações possíveis; a cobertura integral precisa ser simplificada antes da publicação automática.');
+  }
+  if (computedCoverage.unsupportedRuleFieldIds.length > 0) {
+    errors.push('Há regra de preço condicionada a um campo livre (texto ou número), cuja cobertura não pode ser comprovada.');
+  }
+  if (computedCoverage.rulesWithLegacyAttributes > 0) {
+    errors.push('Há regras ativas usando atributos legados fora dos campos do serviço. Migre-as para campos do catálogo antes de publicar.');
   }
 
   if (candidate.state === 'published') {
     const isManualQuote = candidate.pricingProfile === 'manual_quote';
     const isBindingByFile = candidate.pricingProfile === 'binding_by_file_pages';
     const isPrintRun = candidate.pricingProfile === 'per_print_run';
-    const technicalConfig = normalizePricingProfileConfig(candidate.pricingProfileConfig ?? {});
     if (isBindingByFile && (bindingTiersResult.data?.length ?? 0) === 0) {
       errors.push('A encadernação por arquivo exige ao menos uma faixa de preço ativa.');
     }
@@ -221,6 +233,13 @@ export async function inspectServicePublication(
       if (coverage.uncoveredCombinations > 0 || coverage.limited) {
         errors.push('Produtos por tiragem exigem cobertura inequívoca de todas as combinações antes da publicação.');
       }
+    }
+    if (!isManualQuote && !isBindingByFile && candidate.fallbackBehavior === 'block'
+        && coverage.uncoveredCombinations > 0) {
+      errors.push('A publicação com cotação automática bloqueada exige uma regra vencedora para cada combinação permitida.');
+    }
+    if (!isManualQuote && !isBindingByFile && coverage.limited) {
+      errors.push('A publicação automática exige cobertura integral; reduza a matriz ou configure orçamento manual.');
     }
     if (candidate.fallbackBehavior !== 'block' && candidate.fallbackBehavior !== 'use_base') {
       errors.push('O comportamento de fallback de preço é inválido.');

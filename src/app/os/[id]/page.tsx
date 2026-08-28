@@ -46,6 +46,14 @@ function fields(value: unknown): string {
   return pairs.length > 0 ? pairs.join(' · ') : 'Padrão';
 }
 
+function catalogVersion(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const serviceSnapshot = (value as Record<string, unknown>).serviceSnapshot;
+  if (!serviceSnapshot || typeof serviceSnapshot !== 'object' || Array.isArray(serviceSnapshot)) return null;
+  const version = (serviceSnapshot as Record<string, unknown>).catalogVersion;
+  return typeof version === 'number' && Number.isSafeInteger(version) && version >= 1 ? `Catálogo v${version}` : null;
+}
+
 export default async function OrdemServicoPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   if (!isUuid(params.id)) notFound();
@@ -61,9 +69,9 @@ export default async function OrdemServicoPage(props: { params: Promise<{ id: st
       delivery_type, notes, created_at, original_subtotal_cents, original_total_cents, subtotal_cents,
       total_cents, delivery_fee_cents, artwork_status,
       profiles (full_name, phone),
-      order_items (id, service_name_snapshot, product_name_snapshot, fields_snapshot, quantity, pages_count, original_total_price_cents, total_price_cents),
+      order_items (id, service_name_snapshot, product_name_snapshot, fields_snapshot, pricing_rule_snapshot, quantity, pages_count, original_total_price_cents, total_price_cents),
       order_files (id, original_name, page_count, page_count_method, mime_type, status, order_item_id, deleted_at),
-      order_price_adjustments (id, previous_order_total_cents, new_order_total_cents, reason, created_at, order_version_before, order_version_after)
+      order_price_adjustments (id, previous_order_total_cents, new_order_total_cents, reason, created_at, order_version_before, order_version_after, catalog_version)
     `)
     .eq('id', params.id)
     .maybeSingle();
@@ -95,14 +103,14 @@ export default async function OrdemServicoPage(props: { params: Promise<{ id: st
         </section>
 
         <section className="py-4"><h2 className="mb-2 border-b-2 border-slate-950 pb-1 font-black uppercase">Itens e especificações</h2>
-          <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-xs"><thead><tr className="border-b border-slate-950"><th className="py-2 pr-2">Item</th><th className="py-2 pr-2">Configuração / acabamento</th><th className="py-2 text-center">Pág.</th><th className="py-2 text-center">Qtd.</th><th className="py-2 text-right">Valor vigente</th></tr></thead><tbody>{(order.order_items || []).map((item: any) => <tr key={item.id} className="border-b border-slate-300 align-top"><td className="py-2 pr-2 font-bold">{item.service_name_snapshot || item.product_name_snapshot || 'Item'}</td><td className="py-2 pr-2">{fields(item.fields_snapshot)}</td><td className="py-2 text-center">{item.pages_count || '—'}</td><td className="py-2 text-center">{item.quantity}</td><td className="py-2 text-right font-bold">{cents(item.total_price_cents)}</td></tr>)}</tbody></table></div>
+          <div className="overflow-x-auto"><table className="w-full border-collapse text-left text-xs"><thead><tr className="border-b border-slate-950"><th className="py-2 pr-2">Item</th><th className="py-2 pr-2">Configuração / acabamento</th><th className="py-2 text-center">Pág.</th><th className="py-2 text-center">Qtd.</th><th className="py-2 text-right">Valor vigente</th></tr></thead><tbody>{(order.order_items || []).map((item: any) => <tr key={item.id} className="border-b border-slate-300 align-top"><td className="py-2 pr-2 font-bold">{item.service_name_snapshot || item.product_name_snapshot || 'Item'}{catalogVersion(item.pricing_rule_snapshot) && <span className="mt-0.5 block text-[10px] font-medium text-slate-600">{catalogVersion(item.pricing_rule_snapshot)}</span>}</td><td className="py-2 pr-2">{fields(item.fields_snapshot)}</td><td className="py-2 text-center">{item.pages_count || '—'}</td><td className="py-2 text-center">{item.quantity}</td><td className="py-2 text-right font-bold">{cents(item.total_price_cents)}</td></tr>)}</tbody></table></div>
         </section>
 
         <section className="border-t border-slate-950 py-4"><h2 className="mb-2 border-b border-slate-400 pb-1 font-black uppercase">Arquivos autorizados</h2>{activeFiles.length === 0 ? <p>Nenhum arquivo vinculado.</p> : <ul className="space-y-1">{activeFiles.map((file: any) => <li key={file.id}>• {file.original_name} — {file.page_count || '—'} pág. ({file.page_count_method})</li>)}</ul>}</section>
 
         {order.notes && <section className="border-t border-slate-950 py-4"><h2 className="mb-2 border-b border-slate-400 pb-1 font-black uppercase">Observações</h2><p className="whitespace-pre-wrap">{order.notes}</p></section>}
 
-        <section className="border-t border-slate-950 py-4"><h2 className="mb-2 border-b border-slate-400 pb-1 font-black uppercase">Valores comerciais</h2><div className="ml-auto max-w-sm space-y-1"><p className="flex justify-between"><span>Total calculado original</span><strong>{cents(order.original_total_cents)}</strong></p>{adjustments.map((adjustment: any) => <p key={adjustment.id} className="border-t border-slate-200 pt-1 text-xs"><span>v{adjustment.order_version_before} → v{adjustment.order_version_after}: {adjustment.reason}</span><strong className="float-right">{cents(adjustment.previous_order_total_cents)} → {cents(adjustment.new_order_total_cents)}</strong></p>)}<p className="flex justify-between border-t-2 border-slate-950 pt-2 text-base font-black"><span>Total vigente</span><span>{cents(order.total_cents)}</span></p></div></section>
+        <section className="border-t border-slate-950 py-4"><h2 className="mb-2 border-b border-slate-400 pb-1 font-black uppercase">Valores comerciais</h2><div className="ml-auto max-w-sm space-y-1"><p className="flex justify-between"><span>Total calculado original</span><strong>{cents(order.original_total_cents)}</strong></p>{adjustments.map((adjustment: any) => <p key={adjustment.id} className="border-t border-slate-200 pt-1 text-xs"><span>v{adjustment.order_version_before} → v{adjustment.order_version_after}{adjustment.catalog_version ? ` · Catálogo v${adjustment.catalog_version}` : ''}: {adjustment.reason}</span><strong className="float-right">{cents(adjustment.previous_order_total_cents)} → {cents(adjustment.new_order_total_cents)}</strong></p>)}<p className="flex justify-between border-t-2 border-slate-950 pt-2 text-base font-black"><span>Total vigente</span><span>{cents(order.total_cents)}</span></p></div></section>
 
         <footer className="mt-8 grid grid-cols-2 gap-10 text-xs"><div><p className="mb-8 font-bold">Conferência da produção:</p><div className="border-b border-slate-950" /></div><div><p className="mb-8 font-bold">Retirada / entrega:</p><div className="border-b border-slate-950" /></div></footer>
       </article>

@@ -109,7 +109,8 @@ function resolveFields(
   const missingRequiredFields: typeof activeFields = [];
   for (const field of activeFields) {
     const selectedValue = selections.get(field.key);
-    if (selectedValue === undefined || selectedValue === '') {
+    if (selectedValue === undefined || selectedValue === ''
+        || (field.fieldType === 'checkbox' && field.isRequired && selectedValue === false)) {
       if (field.isRequired) missingRequiredFields.push(field);
       continue;
     }
@@ -545,6 +546,7 @@ export function calculatePrice(input: PricingCalculationInput, context: PricingC
         name: context.service.name,
         description: context.service.description,
         pricingVersion: context.service.pricingVersion,
+        catalogVersion: context.service.catalogVersion,
         pricingProfile: context.service.pricingProfile,
         pricingProfileConfig: context.service.pricingProfileConfig,
       },

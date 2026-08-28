@@ -5,6 +5,7 @@ import { requireApiAdminPermission } from '@/lib/auth/api-admin';
 import { logAdminAction } from '@/lib/auth/admin';
 import { isUuid, parseAdminJson } from '@/lib/security/admin-input';
 import type { Json } from '@/types/supabase';
+import { getCatalogEditability } from '@/lib/catalog/editorial';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,7 @@ const replaceTreeSchema = z.object({
 }).strict();
 
 function dependencyErrorMessage(message: string): string {
+  if (message.includes('SERVICE_CATALOG_PUBLISHED_EDIT_LOCKED')) return 'O serviço está publicado. Mova-o para revisão antes de alterar campos, vínculos ou regras de preço.';
   if (message.includes('SERVICE_FIELD_COMPATIBILITY_ROOT_INVALID')) return 'O campo inicial precisa estar ativo e ser de seleção, rádio ou caixa de marcar.';
   if (message.includes('SERVICE_FIELD_COMPATIBILITY_ROOT_OPTION_INVALID')) return 'A opção inicial não está ativa neste campo.';
   if (message.includes('SERVICE_FIELD_COMPATIBILITY_CHECKBOX_VALUE_INVALID')) return 'Para uma caixa de marcar, escolha apenas “permitir” ou “não permitir”.';
@@ -92,6 +94,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
 
   try {
     const supabase = createServiceRoleClient();
+    const editability = await getCatalogEditability(supabase, params.id);
+    if (!editability.editable) return NextResponse.json({ error: editability.error }, { status: editability.status });
     const { data, error } = await supabase
       .from('service_field_option_dependencies')
       .insert({
@@ -130,6 +134,8 @@ export async function PUT(request: Request, props: { params: Promise<{ id: strin
 
   try {
     const supabase = createServiceRoleClient();
+    const editability = await getCatalogEditability(supabase, params.id);
+    if (!editability.editable) return NextResponse.json({ error: editability.error }, { status: editability.status });
     const { data, error } = await supabase.rpc('replace_service_field_option_dependencies', {
       p_service_id: params.id,
       p_root_field_id: parsed.data.root.field_id,
@@ -160,6 +166,8 @@ export async function DELETE(request: Request, props: { params: Promise<{ id: st
 
   try {
     const supabase = createServiceRoleClient();
+    const editability = await getCatalogEditability(supabase, params.id);
+    if (!editability.editable) return NextResponse.json({ error: editability.error }, { status: editability.status });
     const { data, error } = await supabase
       .from('service_field_option_dependencies')
       .delete()

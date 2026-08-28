@@ -6,6 +6,7 @@ import { logAdminAction } from '@/lib/auth/admin';
 import { isUuid, parseAdminJson } from '@/lib/security/admin-input';
 import { reaisToCents } from '@/lib/pricing/money';
 import type { Json } from '@/types/supabase';
+import { getCatalogEditability } from '@/lib/catalog/editorial';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,9 @@ const pricingRuleSchema = z.object({
 type ScalarFieldValue = string | number | boolean | null;
 
 function pricingRuleErrorMessage(message: string): string {
+  if (message.includes('SERVICE_CATALOG_PUBLISHED_EDIT_LOCKED')) {
+    return 'O serviço está publicado. Mova-o para revisão antes de alterar campos, vínculos ou regras de preço.';
+  }
   if (message.includes('PRICING_RULE_FIELD_SERVICE_MISMATCH')) {
     return 'Os campos deste serviço foram alterados. Atualize a página e monte a regra novamente com as opções atuais.';
   }
@@ -103,14 +107,8 @@ export async function POST(request: Request): Promise<NextResponse> {
   const supabase = createServiceRoleClient();
   let createdRuleId: string | null = null;
   try {
-    const { data: service } = await supabase
-      .from('services')
-      .select('id')
-      .eq('id', body.service_id)
-      .neq('catalog_state', 'inactive')
-      .is('deleted_at', null)
-      .maybeSingle();
-    if (!service) return NextResponse.json({ error: 'Serviço inexistente, excluído ou inativo.' }, { status: 409 });
+    const editability = await getCatalogEditability(supabase, body.service_id);
+    if (!editability.editable) return NextResponse.json({ error: editability.error }, { status: editability.status });
 
     const attributeIds = body.attribute_ids ?? [];
     const wildcardGroupIds = body.wildcard_group_ids ?? [];
@@ -237,7 +235,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (createdRuleId) await supabase.from('pricing_rules').delete().eq('id', createdRuleId);
     const rawMessage = caught instanceof Error ? caught.message : 'Erro ao criar regra de preço';
     const message = pricingRuleErrorMessage(rawMessage);
-    const status = rawMessage.includes('AMBIGUOUS_PRICING_RULE') ? 409 : 500;
+    const status = rawMessage.includes('AMBIGUOUS_PRICING_RULE') || rawMessage.includes('SERVICE_CATALOG_PUBLISHED_EDIT_LOCKED') ? 409 : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }
@@ -250,18 +248,30 @@ export async function DELETE(request: Request): Promise<NextResponse> {
 
   try {
     const supabase = createServiceRoleClient();
+    const { data: existing, error: lookupError } = await supabase
+      .from('pricing_rules')
+      .select('id, name, service_id, is_active')
+      .eq('id', id)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (!existing) return NextResponse.json({ error: 'Regra não encontrada' }, { status: 404 });
+    const editability = await getCatalogEditability(supabase, existing.service_id);
+    if (!editability.editable) return NextResponse.json({ error: editability.error }, { status: editability.status });
+    if (!existing.is_active) return NextResponse.json({ error: 'Esta regra já está desativada.' }, { status: 409 });
+
     const { data, error } = await supabase
       .from('pricing_rules')
-      .delete()
+      .update({ is_active: false })
       .eq('id', id)
+      .eq('is_active', true)
       .select('id, name, service_id')
       .maybeSingle();
     if (error) throw error;
-    if (!data) return NextResponse.json({ error: 'Regra não encontrada' }, { status: 404 });
-    await logAdminAction(supabase, auth.session.id, 'delete_pricing_rule', 'pricing_rules', id, {
+    if (!data) return NextResponse.json({ error: 'A regra foi alterada por outra pessoa. Atualize a página.' }, { status: 409 });
+    await logAdminAction(supabase, auth.session.id, 'deactivate_pricing_rule', 'pricing_rules', id, {
       name: data.name,
       service_id: data.service_id,
-      permanent: true,
+      permanent: false,
     });
     return NextResponse.json({ success: true });
   } catch (caught: unknown) {

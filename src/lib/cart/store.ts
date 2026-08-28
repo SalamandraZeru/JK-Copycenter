@@ -25,6 +25,7 @@ export interface CartDisplaySnapshot {
   estimatedUnitCents: number | null;
   calculatedAt: string | null;
   pricingVersion: number | null;
+  catalogVersion: number | null;
   isEstimate: boolean;
   configurationFingerprint: string;
 }
@@ -152,6 +153,7 @@ export function createCartDisplaySnapshot(
     estimatedUnitCents: safeInteger(overrides.estimatedUnitCents),
     calculatedAt: typeof overrides.calculatedAt === 'string' ? overrides.calculatedAt : null,
     pricingVersion: safeInteger(overrides.pricingVersion),
+    catalogVersion: safeInteger(overrides.catalogVersion),
     isEstimate: Boolean(overrides.isEstimate),
     configurationFingerprint: overrides.configurationFingerprint || cartConfigurationFingerprint({
       ...item,
@@ -261,6 +263,7 @@ function normalizePersistedItem(raw: Partial<CartItem>): CartItem {
     ...(previousSnapshot?.estimatedUnitCents !== undefined ? { estimatedUnitCents: previousSnapshot.estimatedUnitCents } : {}),
     ...(previousSnapshot?.calculatedAt ? { calculatedAt: previousSnapshot.calculatedAt } : {}),
     ...(previousSnapshot?.pricingVersion !== undefined ? { pricingVersion: previousSnapshot.pricingVersion } : {}),
+    ...(previousSnapshot?.catalogVersion !== undefined ? { catalogVersion: previousSnapshot.catalogVersion } : {}),
     ...(previousSnapshot?.isEstimate !== undefined ? { isEstimate: previousSnapshot.isEstimate } : {}),
     ...(previousSnapshot?.configurationFingerprint ? { configurationFingerprint: previousSnapshot.configurationFingerprint } : {}),
   });

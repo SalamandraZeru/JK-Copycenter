@@ -96,7 +96,7 @@ export async function loadPricingData(
 ): Promise<PricingContext> {
   const { data: service, error: serviceError } = await supabase
     .from('services')
-    .select('id, name, description, base_price_cents, pricing_fallback_behavior, pricing_version, pricing_profile, pricing_profile_config')
+    .select('id, name, description, base_price_cents, pricing_fallback_behavior, pricing_version, catalog_version, pricing_profile, pricing_profile_config')
     .eq('id', serviceId)
     .eq('is_active', true)
     .eq('catalog_state', 'published')
@@ -254,6 +254,7 @@ export async function loadPricingData(
       basePriceCents: service.base_price_cents,
       fallbackBehavior: service.pricing_fallback_behavior as FallbackBehavior,
       pricingVersion: service.pricing_version,
+      catalogVersion: service.catalog_version,
       pricingProfile: service.pricing_profile,
       pricingProfileConfig: normalizePricingProfileConfig(service.pricing_profile_config),
     },

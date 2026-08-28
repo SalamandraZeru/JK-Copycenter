@@ -167,6 +167,7 @@ export interface PricingContext {
     basePriceCents: number;
     fallbackBehavior: FallbackBehavior;
     pricingVersion: number;
+    catalogVersion: number;
     pricingProfile: PricingProfile;
     pricingProfileConfig: PricingProfileConfig;
   };
@@ -217,6 +218,7 @@ export interface PricingCalculationResult {
     name: string;
       description: string | null;
       pricingVersion: number;
+      catalogVersion: number;
       pricingProfile: PricingProfile;
       pricingProfileConfig: PricingProfileConfig;
   };

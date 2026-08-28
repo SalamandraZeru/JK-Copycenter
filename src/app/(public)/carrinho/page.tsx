@@ -72,6 +72,7 @@ function snapshotFromService(item: CartItem, quote: PricingCalculationResult): C
     estimatedUnitCents: quote.unitPriceCents,
     calculatedAt: new Date().toISOString(),
     pricingVersion: quote.serviceSnapshot.pricingVersion,
+    catalogVersion: quote.serviceSnapshot.catalogVersion,
     isEstimate: quote.isEstimate,
     configurationFingerprint: cartConfigurationFingerprint(item),
   };
@@ -146,7 +147,8 @@ export default function CarrinhoPage() {
         const nextSnapshot = snapshotFromService(item, body.data);
         const priceChanged = hasSameConfiguration
           && (item.displaySnapshot.estimatedTotalCents !== nextSnapshot.estimatedTotalCents
-            || item.displaySnapshot.pricingVersion !== nextSnapshot.pricingVersion);
+            || item.displaySnapshot.pricingVersion !== nextSnapshot.pricingVersion
+            || item.displaySnapshot.catalogVersion !== nextSnapshot.catalogVersion);
         applyRevalidation(item.id, { displaySnapshot: nextSnapshot, revalidationStatus: 'ready', requiresFileReupload: false, priceChanged });
       } catch (error) {
         if (cancelled) return;

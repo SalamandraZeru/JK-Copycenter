@@ -99,6 +99,7 @@ export function ServiceConfigurator({ service }: ServiceConfiguratorProps) {
           estimatedUnitCents: pricingResult.unitPriceCents,
           calculatedAt: new Date().toISOString(),
           pricingVersion: pricingResult.serviceSnapshot.pricingVersion,
+          catalogVersion: pricingResult.serviceSnapshot.catalogVersion,
           isEstimate: pricingResult.isEstimate,
         }),
       });

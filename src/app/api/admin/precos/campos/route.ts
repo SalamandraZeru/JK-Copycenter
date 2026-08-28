@@ -19,13 +19,12 @@ export async function GET(request: Request): Promise<NextResponse> {
   const supabase = createServiceRoleClient();
   const { data: service, error: serviceError } = await supabase
     .from('services')
-    .select('id, name')
+    .select('id, name, catalog_state')
     .eq('id', serviceId)
-    .eq('is_active', true)
     .is('deleted_at', null)
     .maybeSingle();
   if (serviceError) return NextResponse.json({ error: serviceError.message }, { status: 500 });
-  if (!service) return NextResponse.json({ error: 'Serviço inexistente ou inativo.' }, { status: 404 });
+  if (!service || service.catalog_state === 'inactive') return NextResponse.json({ error: 'Serviço inexistente ou inativo.' }, { status: 404 });
 
   const { data: fields, error: fieldsError } = await supabase
     .from('service_fields')
