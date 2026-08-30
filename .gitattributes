@@ -1,0 +1,2 @@
+# Keep text files consistent when the repository moves between Windows and Linux.
+* text=auto eol=lf

@@ -344,7 +344,7 @@ export default function ServicosPage() {
                 />
                 <p id="pricing-profile-help" className="mt-1 text-xs text-slate-500">
                   {formData.pricing_profile === 'per_square_meter'
-                    ? <>Grandes formatos exigem <code>min_width_cm</code>, <code>max_width_cm</code>, <code>min_height_cm</code>, <code>max_height_cm</code>, <code>minimum_billable_area_cm2</code>, <code>waste_margin_bps</code>, <code>validate_uploaded_pdf_dimensions</code>, <code>pdf_dimension_policy: "media_box_single_page"</code> e <code>pdf_dimension_tolerance_bps</code>. Cadastre os limites reais do equipamento antes de publicar.</>
+                    ? <>Grandes formatos exigem <code>min_width_cm</code>, <code>max_width_cm</code>, <code>min_height_cm</code>, <code>max_height_cm</code>, <code>minimum_billable_area_cm2</code>, <code>waste_margin_bps</code>, <code>validate_uploaded_pdf_dimensions</code>, <code>pdf_dimension_policy: &quot;media_box_single_page&quot;</code> e <code>pdf_dimension_tolerance_bps</code>. Cadastre os limites reais do equipamento antes de publicar.</>
                     : formData.pricing_profile === 'per_print_run'
                       ? <>Tiragem exige <code>run_field_key</code> (campo de seleção criado no serviço), <code>production_lead_time_business_days</code>, <code>requires_artwork_file</code> e <code>requires_artwork_bleed_acknowledgement</code>. Cada opção do campo de tiragem informa suas unidades por lote; o preço fica apenas nas regras da combinação. A publicação só é liberada com cobertura completa.</>
                       : formData.pricing_profile === 'booklet_imposition'
