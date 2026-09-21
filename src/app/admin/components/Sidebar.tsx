@@ -11,7 +11,7 @@ interface SidebarProps {
 
 export function Sidebar({ role }: SidebarProps) {
   return (
-    <div className="w-64 bg-[#092653] text-white flex flex-col min-h-screen">
+    <div className="flex h-full min-h-screen w-64 flex-col bg-[#092653] text-white">
       <div className="p-5 border-b border-white/10">
         <Link href="/admin/dashboard" className="flex items-center gap-2">
           <div className="rounded-md bg-white p-1">
