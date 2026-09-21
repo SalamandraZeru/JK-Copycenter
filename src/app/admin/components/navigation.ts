@@ -1,5 +1,4 @@
 import {
-  Calculator,
   ClipboardList,
   Images,
   Layers,
@@ -33,7 +32,6 @@ const adminNavItems: AdminNavItem[] = [
   { name: 'Serviços', href: '/admin/servicos', icon: Layers, action: 'manage_catalog' },
   { name: 'Categorias', href: '/admin/categorias', icon: Tag, action: 'manage_catalog' },
   { name: 'Galeria', href: '/admin/galeria', icon: Images, action: 'manage_catalog' },
-  { name: 'Preços', href: '/admin/precos', icon: Calculator, action: 'manage_pricing' },
   { name: 'Configurações', href: '/admin/configuracoes', icon: Settings, action: 'manage_config' },
   { name: 'Usuários', href: '/admin/usuarios', icon: Users, action: 'manage_users' },
   { name: 'Auditoria', href: '/admin/auditoria', icon: ClipboardList, action: 'read_audit' },
