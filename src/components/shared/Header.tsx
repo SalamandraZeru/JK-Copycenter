@@ -12,6 +12,7 @@ import { useCartStore } from '@/lib/cart/store';
 const navigation = [
   { href: '/grafica', label: 'Gráfica' },
   { href: '/papelaria', label: 'Papelaria' },
+  { href: '/galeria', label: 'Galeria' },
   { href: '/sobre', label: 'A JK' },
 ] as const;
 

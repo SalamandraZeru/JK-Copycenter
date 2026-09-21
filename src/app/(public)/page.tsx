@@ -4,17 +4,31 @@ import { ArrowRight, Check, FileUp, MapPin, MessageCircle, PackageOpen, ShieldCh
 import { createClient } from '@/lib/supabase/server';
 import { ServiceCard } from '@/components/loja/ServiceCard';
 import { CategoryCard } from '@/components/loja/CategoryCard';
+import { GalleryCard, type GalleryCardItem } from '@/components/loja/GalleryCard';
 
 export const revalidate = 60;
 
+type HomeGalleryRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string;
+  service: { name: string } | { name: string }[] | null;
+};
+
 export default async function HomePage() {
   const supabase = await createClient();
-  const [serviceResult, categoryResult] = await Promise.all([
+  const [serviceResult, categoryResult, galleryResult] = await Promise.all([
     supabase.from('services').select('id, name, slug, description, image_url').eq('is_active', true).eq('catalog_state', 'published').is('deleted_at', null).order('sort_order').limit(6),
     supabase.from('categories').select('id, name, slug, image_url').eq('catalog_scope', 'stationery').eq('is_active', true).order('sort_order').limit(6),
+    supabase.from('gallery_items').select('id, title, description, image_url, service:services(name)').eq('is_active', true).order('sort_order').order('created_at', { ascending: false }).limit(6),
   ]);
   const services = serviceResult.data || [];
   const categories = categoryResult.data || [];
+  const galleryItems: GalleryCardItem[] = ((galleryResult.data as HomeGalleryRow[] | null) || []).map((row) => {
+    const service = Array.isArray(row.service) ? row.service[0] : row.service;
+    return { id: row.id, title: row.title, description: row.description, image_url: row.image_url, serviceName: service?.name ?? null };
+  });
 
   return <div className="jk-paper-grid overflow-hidden">
     <section className="relative border-b border-[#092653]/15 bg-[#fffdf8]">
@@ -36,6 +50,8 @@ export default async function HomePage() {
     </section>
 
     <section className="border-y border-[#092653]/10 bg-[#092653] py-16 text-white sm:py-20"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div className="mb-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[.2em] text-blue-200">Serviços gráficos</p><h2 className="jk-display mt-3 text-4xl font-black sm:text-5xl">Comece pelo que você precisa.</h2></div><Link href="/grafica" className="inline-flex min-h-11 items-center gap-2 font-bold text-white underline decoration-blue-300 underline-offset-4">Ver catálogo completo <ArrowRight className="h-4 w-4" /></Link></div>{services.length ? <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{services.map((service) => <ServiceCard key={service.id} service={service} manualQuote />)}</div> : <div className="rounded-2xl border border-white/20 bg-white/5 p-8 text-slate-200">O catálogo está temporariamente indisponível. Fale com a equipe para solicitar um serviço.</div>}</div></section>
+
+    {galleryItems.length > 0 && <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8"><div className="mb-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div className="max-w-2xl"><p className="text-xs font-black uppercase tracking-[.2em] text-[#b4232d]">Galeria de trabalhos</p><h2 className="jk-display mt-3 text-4xl font-black text-[#092653] sm:text-5xl">Prova no papel, não só na promessa.</h2><p className="mt-4 text-slate-600">Viu algo parecido com o que precisa? Toque no trabalho e envie a referência pelo WhatsApp.</p></div><Link href="/galeria" className="inline-flex min-h-11 items-center gap-2 font-bold text-[#092653] underline decoration-[#b4232d] underline-offset-4">Ver a galeria <ArrowRight className="h-4 w-4" /></Link></div><div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{galleryItems.map((item) => <GalleryCard key={item.id} item={item} />)}</div></section>}
 
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8"><div className="grid gap-10 lg:grid-cols-[.75fr_1.25fr] lg:items-end"><div><p className="text-xs font-black uppercase tracking-[.2em] text-[#b4232d]">Papelaria</p><h2 className="jk-display mt-3 text-4xl font-black text-[#092653] sm:text-5xl">Produtos para a rotina, sem misturar com o orçamento gráfico.</h2><p className="mt-4 leading-7 text-slate-600">Na papelaria, preço e estoque continuam visíveis e a compra segue pelo carrinho.</p><Link href="/papelaria" className="mt-7 inline-flex min-h-12 items-center gap-2 rounded-full bg-[#092653] px-6 font-black text-white">Explorar produtos <PackageOpen className="h-5 w-5" /></Link></div>{categories.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{categories.map((category) => <CategoryCard key={category.id} category={category} />)}</div> : <div className="rounded-2xl border border-[#092653]/15 bg-[#fffdf8] p-8 text-slate-600">Categorias serão exibidas quando estiverem publicadas.</div>}</div></section>
   </div>;
