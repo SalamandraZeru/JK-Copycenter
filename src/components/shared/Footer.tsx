@@ -108,9 +108,7 @@ export function Footer() {
         <nav aria-label="Documentos legais" className="mt-12 border-t border-slate-800 pt-8">
           <ul className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <li><Link href="/privacidade" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Política de Privacidade</Link></li>
-            <li><Link href="/cookies" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Política de Cookies</Link></li>
             <li><Link href="/termos" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Termos de Uso</Link></li>
-            <li><Link href="/direitos-do-titular" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Seus direitos (LGPD)</Link></li>
           </ul>
         </nav>
 

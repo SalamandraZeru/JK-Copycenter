@@ -35,7 +35,7 @@ export default function TermosPage() {
       <p>A JK pode recusar ou interromper trabalhos que violem estes termos ou a lei, sem que isso gere obrigação de execução. A responsabilidade pelo conteúdo enviado é do cliente.</p>
 
       <h2>6. Arquivos, privacidade e retenção</h2>
-      <p>Os arquivos ficam em armazenamento privado, acessados por autorização temporária, e não são anexados às mensagens de WhatsApp. Após a conclusão ou o cancelamento do trabalho, os arquivos são <strong>eliminados fisicamente em até 15 dias</strong>; solicitações recusadas, expiradas ou abandonadas seguem a mesma janela, e uploads órfãos são eliminados 24 horas após o vencimento da intenção. Detalhes e bases legais estão no <Link href="/privacidade">Aviso de Privacidade</Link> e na <Link href="/cookies">Política de Cookies</Link>.</p>
+      <p>Os arquivos ficam em armazenamento privado, acessados por autorização temporária, e não são anexados às mensagens de WhatsApp. Após a conclusão ou o cancelamento do trabalho, os arquivos são <strong>eliminados fisicamente em até 15 dias</strong>; solicitações recusadas, expiradas ou abandonadas seguem a mesma janela, e uploads órfãos são eliminados 24 horas após o vencimento da intenção. Detalhes, uso de cookies e bases legais estão no <Link href="/privacidade">Aviso de Privacidade</Link>.</p>
 
       <h2>7. Pagamento, entrega e retirada</h2>
       <p>Para papelaria, valor, disponibilidade e formas de pagamento são exibidos antes da finalização. A entrega ou a retirada em Passos/MG segue as condições informadas no pedido. Para serviços gráficos, o pagamento ocorre conforme a proposta aceita.</p>
