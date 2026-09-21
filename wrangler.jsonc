@@ -26,7 +26,7 @@
     {
       "name": "JK_PRIVACY_REQUEST_RATE_LIMIT",
       "namespace_id": "2026091401",
-      "simple": { "limit": 5, "period": 3600 }
+      "simple": { "limit": 3, "period": 60 }
     }
   ],
   "assets": {
