@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { ShoppingCart, Check, BookOpen, PenTool, Layers, Package, ShoppingBag } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/format';
 import { useCartStore } from '@/lib/cart/store';
@@ -54,11 +55,11 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <div className="group bg-white rounded-3xl overflow-hidden border border-slate-200 hover:border-slate-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full">
-      <div className="aspect-square bg-slate-50 overflow-hidden relative flex items-center justify-center p-6 border-b border-slate-100">
+      <Link href={`/produto/${product.slug}`} aria-label={product.name} className="aspect-square bg-slate-50 overflow-hidden relative flex items-center justify-center p-6 border-b border-slate-100">
         {product.image_url ? (
-          <img 
-            src={product.image_url} 
-            alt={product.name} 
+          <img
+            src={product.image_url}
+            alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 rounded-2xl"
           />
         ) : (
@@ -66,12 +67,12 @@ export function ProductCard({ product }: ProductCardProps) {
             <Icon className="w-8 h-8" />
           </div>
         )}
-      </div>
-      
+      </Link>
+
       <div className="flex flex-1 flex-col p-4 sm:p-6">
-        <h3 className="text-base font-bold text-[#1A1A2E] mb-1 font-serif group-hover:text-[#CC1A1A] transition-colors">
+        <Link href={`/produto/${product.slug}`} className="mb-1 block text-base font-bold text-[#1A1A2E] font-serif transition-colors hover:text-[#CC1A1A]">
           {product.name}
-        </h3>
+        </Link>
         <p className="text-slate-500 text-xs mb-4 flex-1 line-clamp-2 leading-relaxed">
           {product.description || 'Consulte a disponibilidade deste item na JK Copycenter.'}
         </p>
