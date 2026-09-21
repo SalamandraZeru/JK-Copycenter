@@ -2,18 +2,15 @@ import React from 'react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
-import { ServiceConfigurator } from '@/components/servico/ServiceConfigurator';
 import { GraphicQuoteConfigurator } from '@/components/servico/GraphicQuoteConfigurator';
 import type {
   GraphicQuoteService,
   ServiceField,
   ServiceFieldOption,
   ServiceFieldOptionDependency,
-  ServiceWithFields,
 } from '@/types/service';
 import type { Database, Json } from '@/types/supabase';
 import { isPricingProfile, normalizePricingProfileConfig } from '@/lib/pricing/profiles';
-import { isServiceManualQuoteEnabled } from '@/lib/features/service-manual-quote';
 import { graphicQuoteTechnicalRequirements } from '@/lib/orders/graphic-quote-technical';
 
 const SERVICE_ALIASES: Record<string, string> = { 'impressao-pb': 'impressao' };
@@ -124,39 +121,8 @@ async function loadManualService(idOrSlug: string): Promise<GraphicQuoteService 
   };
 }
 
-async function loadLegacyService(idOrSlug: string): Promise<ServiceWithFields | null> {
-  if (!UUID_PATTERN.test(idOrSlug) && !SLUG_PATTERN.test(idOrSlug)) return null;
-  const supabase = createServiceRoleClient();
-  let query = supabase
-    .from('services')
-    .select('id, name, slug, description, image_url, base_price, pricing_profile, pricing_profile_config, service_fields(id, service_id, key, label, field_type, options, is_required, sort_order, is_active)')
-    .eq('is_active', true)
-    .eq('catalog_state', 'published')
-    .is('deleted_at', null);
-  query = UUID_PATTERN.test(idOrSlug) ? query.eq('id', idOrSlug) : query.eq('slug', idOrSlug);
-  const { data: service, error } = await query.maybeSingle();
-  if (error || !service || !isPricingProfile(service.pricing_profile)) return null;
-  const relations = await loadRelations(service.id);
-  if (!relations) return null;
-  return {
-    id: service.id,
-    name: service.name,
-    slug: service.slug,
-    description: service.description,
-    imageUrl: service.image_url,
-    basePrice: service.base_price,
-    pricingProfile: service.pricing_profile,
-    pricingProfileConfig: normalizePricingProfileConfig(service.pricing_profile_config),
-    bindingAvailable: relations.bindingAvailable,
-    fields: mapFields(service.service_fields),
-    fieldOptionDependencies: relations.dependencies,
-  };
-}
-
-async function loadService(idOrSlug: string) {
-  return isServiceManualQuoteEnabled()
-    ? loadManualService(idOrSlug)
-    : loadLegacyService(idOrSlug);
+async function loadService(idOrSlug: string): Promise<GraphicQuoteService | null> {
+  return loadManualService(idOrSlug);
 }
 
 export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
@@ -184,9 +150,7 @@ export default async function ServicoPage(props: { params: Promise<{ id: string 
         <span className="mx-2">/</span>
         <span className="text-slate-900 font-medium">{service.name}</span>
       </nav>
-      {'commercialMode' in service
-        ? <GraphicQuoteConfigurator service={service} />
-        : <ServiceConfigurator service={service} />}
+      <GraphicQuoteConfigurator service={service} />
     </div>
   );
 }
