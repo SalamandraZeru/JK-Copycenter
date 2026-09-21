@@ -66,15 +66,6 @@ export function Footer() {
               <li>
                 <Link href="/login" className="text-sm text-slate-400 hover:text-white transition-colors">Área do Cliente</Link>
               </li>
-              <li>
-                <Link href="/privacidade" className="text-sm text-slate-400 hover:text-white transition-colors">Privacidade</Link>
-              </li>
-              <li>
-                <Link href="/cookies" className="text-sm text-slate-400 hover:text-white transition-colors">Cookies</Link>
-              </li>
-              <li>
-                <Link href="/direitos-do-titular" className="text-sm text-slate-400 hover:text-white transition-colors">Seus direitos</Link>
-              </li>
             </ul>
           </div>
 
@@ -114,7 +105,16 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
+        <nav aria-label="Documentos legais" className="mt-12 border-t border-slate-800 pt-8">
+          <ul className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <li><Link href="/privacidade" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Política de Privacidade</Link></li>
+            <li><Link href="/cookies" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Política de Cookies</Link></li>
+            <li><Link href="/termos" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Termos de Uso</Link></li>
+            <li><Link href="/direitos-do-titular" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Seus direitos (LGPD)</Link></li>
+          </ul>
+        </nav>
+
+        <div className="mt-8 pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-slate-500">
             &copy; {new Date().getFullYear()} JK Copycenter. Todos os direitos reservados.
           </p>
