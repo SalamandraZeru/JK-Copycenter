@@ -237,7 +237,24 @@ export default function GaleriaAdminPage() {
             <p className="text-xs text-slate-500 mt-1">Clique em &ldquo;Novo Trabalho&rdquo; para adicionar o primeiro.</p>
           </div>
         ) : (
-          <table className="w-full text-left">
+          <>
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {items.map((item) => (
+              <li key={item.id} className={`flex gap-3 p-4 ${!item.is_active ? 'opacity-60' : ''}`}>
+                {item.image_url ? <img src={item.image_url} alt={item.title} className="h-16 w-20 shrink-0 rounded-lg border border-slate-200 object-cover" /> : <div className="flex h-16 w-20 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-500"><ImageIcon className="h-5 w-5" /></div>}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-extrabold text-slate-900">{item.title}</p>
+                  <p className="truncate text-xs text-slate-500">#{item.sort_order} · {serviceName(item) || 'Sem vínculo'}</p>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    {item.is_active ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-emerald-800">Visível</span> : <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-extrabold uppercase text-slate-800">Oculto</span>}
+                    <button onClick={() => startEdit(item)} disabled={editingId !== null} className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-700 disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
+                    <button onClick={() => handleDelete(item.id)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-red-50 px-3 text-xs font-bold text-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <table className="hidden w-full text-left md:table">
             <thead className="bg-slate-50 text-slate-800 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4 w-16">Ordem</th>
@@ -277,6 +294,7 @@ export default function GaleriaAdminPage() {
               ))}
             </tbody>
           </table>
+          </>
         )}
       </div>
     </div>

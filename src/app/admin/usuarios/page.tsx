@@ -120,7 +120,8 @@ export default function UsuariosPage() {
         ) : error ? (
           <div className="p-16 text-center text-red-600 font-bold">Erro ao carregar usuários.</div>
         ) : (
-          <table className="w-full text-left">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[680px] text-left">
             <thead className="bg-slate-50 text-slate-800 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4">Usuário</th>
@@ -281,6 +282,7 @@ export default function UsuariosPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

@@ -393,7 +393,30 @@ export default function ServicosPage() {
             <p className="text-xs text-slate-500 mt-1">Clique em &ldquo;Novo Serviço&rdquo; para criar o primeiro.</p>
           </div>
         ) : (
-          <table className="w-full text-left">
+          <>
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {servicos.map((serv) => (
+              <li key={serv.id} className={`p-4 ${serv.catalog_state !== 'published' ? 'bg-slate-50/50' : ''}`}>
+                <div className="flex gap-3">
+                  {serv.image_url ? <img src={serv.image_url} alt={serv.name} className="h-14 w-14 shrink-0 rounded-xl border border-slate-200 object-cover" /> : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-500"><ImageIcon className="h-5 w-5" /></div>}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-extrabold text-slate-900">{serv.name}</p>
+                    <p className="truncate font-mono text-xs text-slate-500">{serv.slug}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-[#092653]">Orçamento manual</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${serv.catalog_state === 'published' ? 'bg-emerald-100 text-emerald-800' : serv.catalog_state === 'review' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-800'}`}>{serv.catalog_state === 'draft' ? 'Rascunho' : serv.catalog_state === 'review' ? 'Em revisão' : serv.catalog_state === 'published' ? 'Publicado' : 'Inativo'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link href={`/admin/servicos/${serv.id}`} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-700"><Settings className="h-3.5 w-3.5" /> Personalização</Link>
+                  <button onClick={() => startEdit(serv)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-slate-100 px-3 text-xs font-bold text-slate-700 disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
+                  <button onClick={() => handleDelete(serv.id)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-red-50 px-3 text-xs font-bold text-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> Excluir</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <table className="hidden w-full text-left md:table">
             <thead className="bg-slate-50 text-slate-800 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4 w-20">Foto</th>
@@ -461,6 +484,7 @@ export default function ServicosPage() {
               ))}
             </tbody>
           </table>
+          </>
         )}
       </div>
     </div>
