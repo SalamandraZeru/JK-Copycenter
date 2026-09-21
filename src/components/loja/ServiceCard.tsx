@@ -11,8 +11,9 @@ interface ServiceCardProps {
     slug: string;
     description: string | null;
     image_url: string | null;
-    base_price: number;
+    base_price?: number;
   };
+  manualQuote?: boolean;
 }
 
 function getServiceIcon(slug: string) {
@@ -24,12 +25,12 @@ function getServiceIcon(slug: string) {
   return FileText;
 }
 
-export function ServiceCard({ service }: ServiceCardProps) {
+export function ServiceCard({ service, manualQuote = false }: ServiceCardProps) {
   const Icon = getServiceIcon(service.slug || service.name.toLowerCase());
 
   return (
-    <div className="group bg-white rounded-xl overflow-hidden border border-slate-200 hover:border-[#1769aa] hover:shadow-lg transition-all duration-200 flex flex-col h-full">
-      <div className="aspect-[4/3] bg-[#0d2b5c] overflow-hidden relative flex items-center justify-center p-6">
+    <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#fffdf8] text-slate-900 transition duration-300 hover:-translate-y-1 hover:border-white/35">
+      <div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden bg-[#061a3b] p-6">
         {service.image_url ? (
           <img 
             src={service.image_url} 
@@ -47,26 +48,28 @@ export function ServiceCard({ service }: ServiceCardProps) {
           </div>
         )}
         
-        <div className="absolute top-4 right-4 bg-white px-3.5 py-1.5 rounded-full text-xs font-bold text-[#0d2b5c] shadow-sm border border-slate-100">
-          A partir de {formatCurrency(service.base_price)}
+        <div className="absolute right-4 top-4 rounded-full border border-white/50 bg-white/95 px-3.5 py-1.5 text-xs font-bold text-[#0d2b5c]">
+          {manualQuote || service.base_price === undefined
+            ? 'Análise pela equipe'
+            : `A partir de ${formatCurrency(service.base_price)}`}
         </div>
       </div>
       
-      <div className="p-6 flex flex-col flex-1">
-        <h3 className="text-xl font-bold text-[#13233b] mb-2 font-serif group-hover:text-[#b4232d] transition-colors">
+      <div className="flex flex-1 flex-col p-6">
+        <h3 className="jk-display mb-2 text-2xl font-black text-[#092653] transition-colors group-hover:text-[#b4232d]">
           {service.name}
         </h3>
         <p className="text-slate-600 text-sm mb-6 flex-1 line-clamp-3 leading-relaxed">
-          {service.description || 'Configuração personalizada com papéis nobres e acabamentos sob medida.'}
+          {service.description || 'Informe os detalhes e envie os arquivos para análise da equipe.'}
         </p>
         
         <Link 
           href={`/servico/${service.slug}`}
-          className="w-full min-h-11 inline-flex items-center justify-center gap-2 bg-[#0d2b5c] hover:bg-[#b4232d] text-white px-5 py-3 rounded-lg font-bold text-sm transition-colors mt-auto"
+          className="mt-auto inline-flex min-h-11 w-full items-center justify-between gap-2 border-t border-slate-200 pt-4 text-sm font-black text-[#092653] transition-colors hover:text-[#b4232d]"
         >
-          Configurar Pedido <ArrowRight className="w-4 h-4" />
+          {manualQuote ? 'Solicitar orçamento' : 'Configurar pedido'} <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
-    </div>
+    </article>
   );
 }

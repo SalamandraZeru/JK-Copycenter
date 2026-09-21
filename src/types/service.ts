@@ -44,6 +44,47 @@ export interface ServiceWithFields {
   fieldOptionDependencies: ServiceFieldOptionDependency[];
 }
 
+export type GraphicQuoteTechnicalKind =
+  | 'standard'
+  | 'booklet'
+  | 'square_meter'
+  | 'linear_meter'
+  | 'print_run';
+
+/**
+ * Public, non-commercial production constraints used by the manual quote UI.
+ * Prices, margins and billable minimums must never be added to this contract.
+ */
+export interface GraphicQuoteTechnicalRequirements {
+  kind: GraphicQuoteTechnicalKind;
+  requireCompleteCompatibility: boolean;
+  minPages?: number;
+  maxPages?: number;
+  pageMultiple?: number;
+  allowBlankPagePadding?: boolean;
+  requiresCustomerApprovalForPadding?: boolean;
+  minWidthCm?: number;
+  maxWidthCm?: number;
+  minHeightCm?: number;
+  maxHeightCm?: number;
+  validateUploadedPdfDimensions?: boolean;
+  requiresArtworkBleedAcknowledgement?: boolean;
+}
+
+/** Dedicated public contract for graphic requests. It intentionally has no price fields. */
+export interface GraphicQuoteService {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  imageUrl: string | null;
+  commercialMode: 'manual_quote';
+  bindingAvailable: boolean;
+  technicalRequirements: GraphicQuoteTechnicalRequirements;
+  fields: ServiceField[];
+  fieldOptionDependencies: ServiceFieldOptionDependency[];
+}
+
 export interface FieldValue {
   fieldKey: string;
   value: string | number | boolean;

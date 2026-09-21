@@ -5,6 +5,7 @@ export type AdminAction =
   | 'manage_config'
   | 'manage_catalog'
   | 'manage_pricing'
+  | 'manage_quotes'
   | 'read_orders'
   | 'update_orders'
   | 'payments_confirm'
@@ -19,6 +20,7 @@ const PERMISSIONS: Record<AdminRole, RolePermissions> = {
     manage_config: true,
     manage_catalog: true,
     manage_pricing: true,
+    manage_quotes: true,
     read_orders: true,
     update_orders: true,
     payments_confirm: true,
@@ -30,6 +32,7 @@ const PERMISSIONS: Record<AdminRole, RolePermissions> = {
     manage_config: true,
     manage_catalog: true,
     manage_pricing: true,
+    manage_quotes: true,
     read_orders: true,
     update_orders: true,
     payments_confirm: true,
@@ -41,6 +44,7 @@ const PERMISSIONS: Record<AdminRole, RolePermissions> = {
     manage_config: false,
     manage_catalog: false,
     manage_pricing: false,
+    manage_quotes: false,
     read_orders: true,
     update_orders: true,
     payments_confirm: false,
@@ -52,6 +56,7 @@ const PERMISSIONS: Record<AdminRole, RolePermissions> = {
     manage_config: false,
     manage_catalog: true,
     manage_pricing: false,
+    manage_quotes: false,
     read_orders: false,
     update_orders: false,
     payments_confirm: false,

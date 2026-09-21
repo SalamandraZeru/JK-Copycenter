@@ -72,7 +72,7 @@ export default async function DashboardLayout({
             <span>Precisa de Impressão?</span>
           </div>
           <p className="text-[11px] text-slate-600 mb-2.5 leading-relaxed">
-            Acesse nosso catálogo completo com cálculo automático de preços.
+            Acesse o catálogo, escolha os detalhes e envie seus arquivos para análise.
           </p>
           <Link
             href="/grafica"

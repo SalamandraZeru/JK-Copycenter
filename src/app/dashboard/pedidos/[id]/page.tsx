@@ -8,6 +8,7 @@ import { OrderStatusBadge } from '@/components/dashboard/OrderStatusBadge';
 import { OrderTimeline } from '@/components/dashboard/OrderTimeline';
 import { ArtworkApprovalPanel } from '@/components/dashboard/ArtworkApprovalPanel';
 import { formatCurrency } from '@/lib/utils/format';
+import { QuoteDecisionPanel } from '@/components/orders/QuoteDecisionPanel';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -115,6 +116,9 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
   const orderItems = order.order_items || [];
   const orderEvents = order.order_events || [];
   const priceAdjustments = order.order_price_adjustments || [];
+  const isGraphicQuote = order.order_kind === 'graphic_quote';
+  const hasAcceptedQuote = isGraphicQuote && order.quote_status === 'accepted';
+  const showCommercialValues = !isGraphicQuote || hasAcceptedQuote;
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -124,7 +128,7 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-            Pedido #{order.order_number}
+            {isGraphicQuote && !hasAcceptedQuote ? 'Solicitação' : 'Pedido'} #{order.order_number}
             <OrderStatusBadge status={order.status} />
           </h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -159,33 +163,35 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
                         <div className="mt-2 text-sm text-slate-500">
                           {item.quantity} {item.quantity === 1 ? 'unidade' : 'unidades'} 
                           {pagesCount > 0 ? ` • ${pagesCount} págs` : ''}
-                          {unitPrice > 0 ? ` • R$ ${unitPrice.toFixed(2).replace('.', ',')} un.` : ''}
+                          {showCommercialValues && unitPrice > 0 ? ` • R$ ${unitPrice.toFixed(2).replace('.', ',')} un.` : ''}
                         </div>
                       </div>
-                      <div className="text-right font-semibold text-slate-900">
+                      {showCommercialValues && <div className="text-right font-semibold text-slate-900">
                         R$ {totalPrice.toFixed(2).replace('.', ',')}
-                      </div>
+                      </div>}
                     </div>
                   </li>
                 );
               })}
             </ul>
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 text-right">
+            {showCommercialValues && <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 text-right">
               <div className="text-sm text-slate-500 mb-1">
                 Taxa de Entrega: R$ {(order.delivery_fee ?? 0).toFixed(2).replace('.', ',')}
               </div>
               <div className="text-lg font-bold text-slate-900">
                 Total: R$ {(order.total ?? 0).toFixed(2).replace('.', ',')}
               </div>
-            </div>
+            </div>}
           </div>
+
+          {isGraphicQuote && !hasAcceptedQuote && <QuoteDecisionPanel orderId={order.id} />}
 
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
             <h3 className="font-semibold text-slate-900 mb-6">Linha do Tempo</h3>
             <OrderTimeline events={orderEvents} />
           </div>
 
-          {priceAdjustments.length > 0 && (
+          {showCommercialValues && priceAdjustments.length > 0 && (
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
               <h3 className="font-semibold text-slate-900">Ajustes de valor</h3>
               <p className="mt-1 text-sm text-slate-600">Base calculada: <strong>{formatCurrency(Number(order.original_total_cents ?? order.total_cents) / 100)}</strong> · Total vigente: <strong>{formatCurrency(Number(order.total_cents ?? 0) / 100)}</strong></p>
@@ -206,7 +212,7 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
 
         {/* Sidebar Info */}
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          {showCommercialValues && <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
             <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-slate-400" /> Pagamento
             </h3>
@@ -221,9 +227,9 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
                 </span>
               </p>
             </div>
-          </div>
+          </div>}
 
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          {showCommercialValues && <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
             <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-slate-400" /> Entrega
             </h3>
@@ -247,7 +253,7 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
                 </>
               )}
             </div>
-          </div>
+          </div>}
 
           <div className="space-y-3">
             {whatsappLink && <a 
@@ -259,14 +265,14 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
               <MessageCircle className="w-5 h-5" /> Falar no WhatsApp
             </a>}
 
-            <form action={`/api/dashboard/pedidos/${order.id}/repetir`} method="POST">
+            {!isGraphicQuote && <form action={`/api/dashboard/pedidos/${order.id}/repetir`} method="POST">
               <button 
                 type="submit"
                 className="w-full bg-white border border-slate-300 text-slate-700 px-4 py-2.5 rounded-md font-medium hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-5 h-5" /> Repetir Pedido
               </button>
-            </form>
+            </form>}
           </div>
         </div>
       </div>

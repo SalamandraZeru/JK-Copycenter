@@ -109,11 +109,12 @@ export default async function PapelariaPage(
   const totalPages = Math.ceil(count / limit);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="jk-paper-grid mx-auto min-h-screen w-full min-w-0 max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
       <div className="mb-10">
-        <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Papelaria</h1>
+        <p className="mb-3 text-xs font-black uppercase tracking-[.2em] text-[#b4232d]">Catálogo com preço e estoque</p>
+        <h1 className="jk-display mb-4 text-5xl font-black text-[#092653] sm:text-6xl">Papelaria para a rotina.</h1>
         <p className="text-lg text-slate-600 max-w-3xl">
-          Produtos de escritório, materiais escolares e suprimentos essenciais com pronta entrega.
+          Consulte os itens publicados, compare preços e adicione ao carrinho. A disponibilidade exibida vem do estoque cadastrado.
         </p>
         <form action="/papelaria" className="mt-6 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_190px_auto]">
           {categoriaSlug && categoriaSlug !== 'todas' && <input type="hidden" name="categoria" value={categoriaSlug} />}
@@ -136,16 +137,16 @@ export default async function PapelariaPage(
         </form>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className="flex flex-col gap-8">
         {/* Sidebar Filters */}
-        <div className="w-full md:w-64 flex-shrink-0">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 sticky top-24 shadow-sm">
+        <div className="w-full">
+          <div className="rounded-2xl border border-slate-200 bg-[#fffdf8] p-4 shadow-sm">
             <h3 className="font-bold text-slate-900 mb-4 text-sm uppercase tracking-wider text-slate-500">Categorias</h3>
-            <ul className="space-y-1.5">
+            <ul className="flex gap-2 overflow-x-auto pb-1">
               <li>
                 <Link 
                   href="/papelaria"
-                  className={`block px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  className={`block whitespace-nowrap px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                     !categoriaSlug || categoriaSlug === 'todas'
                       ? 'bg-blue-600 text-white shadow-sm' 
                       : 'text-slate-600 hover:bg-slate-50'
@@ -158,7 +159,7 @@ export default async function PapelariaPage(
                 <li key={cat.id}>
                   <Link 
                     href={`/papelaria?categoria=${cat.slug}${search ? `&q=${encodeURIComponent(search)}` : ''}${sort !== 'nome' ? `&ordem=${sort}` : ''}`}
-                    className={`block px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                    className={`block whitespace-nowrap px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                       categoriaSlug === cat.slug
                         ? 'bg-blue-600 text-white shadow-sm' 
                         : 'text-slate-600 hover:bg-slate-50'
@@ -176,7 +177,7 @@ export default async function PapelariaPage(
         <div className="flex-1 flex flex-col">
           {products && products.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4">
                 {products.map(product => (
                   <ProductCard key={product.id} product={product} />
                 ))}

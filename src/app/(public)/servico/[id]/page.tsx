@@ -3,9 +3,18 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { ServiceConfigurator } from '@/components/servico/ServiceConfigurator';
-import type { ServiceFieldOption, ServiceWithFields } from '@/types/service';
-import type { Json } from '@/types/supabase';
+import { GraphicQuoteConfigurator } from '@/components/servico/GraphicQuoteConfigurator';
+import type {
+  GraphicQuoteService,
+  ServiceField,
+  ServiceFieldOption,
+  ServiceFieldOptionDependency,
+  ServiceWithFields,
+} from '@/types/service';
+import type { Database, Json } from '@/types/supabase';
 import { isPricingProfile, normalizePricingProfileConfig } from '@/lib/pricing/profiles';
+import { isServiceManualQuoteEnabled } from '@/lib/features/service-manual-quote';
+import { graphicQuoteTechnicalRequirements } from '@/lib/orders/graphic-quote-technical';
 
 const SERVICE_ALIASES: Record<string, string> = { 'impressao-pb': 'impressao' };
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -22,7 +31,100 @@ function publicOptions(value: Json): ServiceFieldOption[] {
   return result;
 }
 
-async function loadService(idOrSlug: string): Promise<ServiceWithFields | null> {
+type FieldRow = Pick<Database['public']['Tables']['service_fields']['Row'],
+  'id' | 'service_id' | 'key' | 'label' | 'field_type' | 'options' | 'is_required' | 'sort_order' | 'is_active'>;
+type DependencyRow = Pick<Database['public']['Tables']['service_field_option_dependencies']['Row'],
+  'source_field_id' | 'source_option_value' | 'source_conditions' | 'target_field_id' | 'target_option_value'>;
+
+function mapFields(fields: readonly FieldRow[] | null): ServiceField[] {
+  return (fields ?? [])
+    .filter((field) => field.is_active)
+    .sort((left, right) => left.sort_order - right.sort_order)
+    .map((field) => ({
+      id: field.id,
+      serviceId: field.service_id,
+      key: field.key,
+      label: field.label,
+      fieldType: field.field_type,
+      options: publicOptions(field.options),
+      isRequired: field.is_required,
+      sortOrder: field.sort_order,
+    }));
+}
+
+function mapDependencies(dependencies: readonly DependencyRow[]): ServiceFieldOptionDependency[] {
+  return dependencies.map((dependency) => ({
+    sourceFieldId: dependency.source_field_id,
+    sourceOptionValue: dependency.source_option_value,
+    sourceConditions: Array.isArray(dependency.source_conditions)
+      ? dependency.source_conditions.flatMap((condition) => {
+        if (!condition || typeof condition !== 'object' || Array.isArray(condition)) return [];
+        const fieldId = condition.field_id;
+        const optionValue = condition.option_value;
+        return typeof fieldId === 'string' && typeof optionValue === 'string'
+          ? [{ fieldId, optionValue }]
+          : [];
+      })
+      : [{ fieldId: dependency.source_field_id, optionValue: dependency.source_option_value }],
+    targetFieldId: dependency.target_field_id,
+    targetOptionValue: dependency.target_option_value,
+  }));
+}
+
+async function loadRelations(serviceId: string) {
+  const supabase = createServiceRoleClient();
+  const [bindingResult, dependenciesResult] = await Promise.all([
+    supabase
+      .from('service_binding_price_tiers')
+      .select('id')
+      .eq('service_id', serviceId)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('service_field_option_dependencies')
+      .select('source_field_id, source_option_value, source_conditions, target_field_id, target_option_value')
+      .eq('service_id', serviceId),
+  ]);
+  if (bindingResult.error || dependenciesResult.error) return null;
+  return {
+    bindingAvailable: Boolean(bindingResult.data),
+    dependencies: mapDependencies(dependenciesResult.data ?? []),
+  };
+}
+
+async function loadManualService(idOrSlug: string): Promise<GraphicQuoteService | null> {
+  if (!UUID_PATTERN.test(idOrSlug) && !SLUG_PATTERN.test(idOrSlug)) return null;
+  const supabase = createServiceRoleClient();
+  let query = supabase
+    .from('services')
+    .select('id, name, slug, description, image_url, commercial_mode, pricing_profile, pricing_profile_config, service_fields(id, service_id, key, label, field_type, options, is_required, sort_order, is_active)')
+    .eq('is_active', true)
+    .eq('catalog_state', 'published')
+    .is('deleted_at', null);
+  query = UUID_PATTERN.test(idOrSlug) ? query.eq('id', idOrSlug) : query.eq('slug', idOrSlug);
+  const { data: service, error } = await query.maybeSingle();
+  if (error || !service) return null;
+  if (service.commercial_mode !== 'manual_quote' || !isPricingProfile(service.pricing_profile)) return null;
+  const relations = await loadRelations(service.id);
+  if (!relations) return null;
+  const profileConfig = normalizePricingProfileConfig(service.pricing_profile_config);
+
+  return {
+    id: service.id,
+    name: service.name,
+    slug: service.slug,
+    description: service.description,
+    imageUrl: service.image_url,
+    commercialMode: 'manual_quote',
+    bindingAvailable: relations.bindingAvailable,
+    technicalRequirements: graphicQuoteTechnicalRequirements(service.pricing_profile, profileConfig),
+    fields: mapFields(service.service_fields),
+    fieldOptionDependencies: relations.dependencies,
+  };
+}
+
+async function loadLegacyService(idOrSlug: string): Promise<ServiceWithFields | null> {
   if (!UUID_PATTERN.test(idOrSlug) && !SLUG_PATTERN.test(idOrSlug)) return null;
   const supabase = createServiceRoleClient();
   let query = supabase
@@ -33,24 +135,9 @@ async function loadService(idOrSlug: string): Promise<ServiceWithFields | null> 
     .is('deleted_at', null);
   query = UUID_PATTERN.test(idOrSlug) ? query.eq('id', idOrSlug) : query.eq('slug', idOrSlug);
   const { data: service, error } = await query.maybeSingle();
-  if (error || !service) return null;
-  if (!isPricingProfile(service.pricing_profile)) return null;
-
-  const [bindingResult, dependenciesResult] = await Promise.all([
-    supabase
-      .from('service_binding_price_tiers')
-      .select('id')
-      .eq('service_id', service.id)
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from('service_field_option_dependencies')
-      .select('source_field_id, source_option_value, source_conditions, target_field_id, target_option_value')
-      .eq('service_id', service.id),
-  ]);
-  if (bindingResult.error || dependenciesResult.error) return null;
-
+  if (error || !service || !isPricingProfile(service.pricing_profile)) return null;
+  const relations = await loadRelations(service.id);
+  if (!relations) return null;
   return {
     id: service.id,
     name: service.name,
@@ -60,37 +147,16 @@ async function loadService(idOrSlug: string): Promise<ServiceWithFields | null> 
     basePrice: service.base_price,
     pricingProfile: service.pricing_profile,
     pricingProfileConfig: normalizePricingProfileConfig(service.pricing_profile_config),
-    bindingAvailable: Boolean(bindingResult.data),
-    fields: (service.service_fields ?? [])
-      .filter((field) => field.is_active)
-      .sort((left, right) => left.sort_order - right.sort_order)
-      .map((field) => ({
-        id: field.id,
-        serviceId: field.service_id,
-        key: field.key,
-        label: field.label,
-        fieldType: field.field_type,
-        options: publicOptions(field.options),
-        isRequired: field.is_required,
-        sortOrder: field.sort_order,
-      })),
-    fieldOptionDependencies: (dependenciesResult.data ?? []).map((dependency) => ({
-      sourceFieldId: dependency.source_field_id,
-      sourceOptionValue: dependency.source_option_value,
-      sourceConditions: Array.isArray(dependency.source_conditions)
-        ? dependency.source_conditions.flatMap((condition) => {
-          if (!condition || typeof condition !== 'object' || Array.isArray(condition)) return [];
-          const fieldId = condition.field_id;
-          const optionValue = condition.option_value;
-          return typeof fieldId === 'string' && typeof optionValue === 'string'
-            ? [{ fieldId, optionValue }]
-            : [];
-        })
-        : [{ fieldId: dependency.source_field_id, optionValue: dependency.source_option_value }],
-      targetFieldId: dependency.target_field_id,
-      targetOptionValue: dependency.target_option_value,
-    })),
+    bindingAvailable: relations.bindingAvailable,
+    fields: mapFields(service.service_fields),
+    fieldOptionDependencies: relations.dependencies,
   };
+}
+
+async function loadService(idOrSlug: string) {
+  return isServiceManualQuoteEnabled()
+    ? loadManualService(idOrSlug)
+    : loadLegacyService(idOrSlug);
 }
 
 export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
@@ -118,7 +184,9 @@ export default async function ServicoPage(props: { params: Promise<{ id: string 
         <span className="mx-2">/</span>
         <span className="text-slate-900 font-medium">{service.name}</span>
       </nav>
-      <ServiceConfigurator service={service} />
+      {'commercialMode' in service
+        ? <GraphicQuoteConfigurator service={service} />
+        : <ServiceConfigurator service={service} />}
     </div>
   );
 }

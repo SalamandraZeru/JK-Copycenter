@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isServiceManualQuoteEnabled } from '@/lib/features/service-manual-quote';
+import {
+  PUBLIC_SERVICES_LEGACY_SELECT,
+  PUBLIC_SERVICES_MANUAL_SELECT,
+} from '@/lib/catalog/public-service-contract';
 
 export const revalidate = 60; // ISR cache for 60 seconds
 
 export async function GET() {
   const supabase = await createClient();
+  const manualQuoteEnabled = isServiceManualQuoteEnabled();
 
   try {
     // 1. Fetch categories
@@ -20,7 +26,9 @@ export async function GET() {
     // 2. Fetch services
     const { data: services, error: servError } = await supabase
       .from('services')
-      .select('id, category_id, name, slug, description, image_url, base_price, sort_order')
+      .select(manualQuoteEnabled
+        ? PUBLIC_SERVICES_MANUAL_SELECT
+        : PUBLIC_SERVICES_LEGACY_SELECT)
       .eq('is_active', true)
       .eq('catalog_state', 'published')
       .is('deleted_at', null)

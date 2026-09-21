@@ -9,11 +9,12 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2 space-y-4">
-            <div className="inline-flex w-fit rounded-lg bg-white p-2">
-              <Image src="/images/brand/jk-copycenter-horizontal.webp" alt="JK Copycenter" width={960} height={462} className="h-10 w-auto" />
+            <div className="inline-flex items-center gap-3">
+              <Image src="/images/brand/jk-monogram.webp" alt="" width={360} height={404} className="h-12 w-auto brightness-0 invert" />
+              <span className="text-lg font-black text-white">JK Copycenter</span>
             </div>
             <p className="text-sm text-slate-400 max-w-md">
-              Sua gráfica expressa e papelaria de confiança em Passos - MG. Impressões de alta definição, encadernações, plastificações, cópias e suprimentos com rapidez e excelência.
+              Gráfica e papelaria em Passos/MG. Solicite a análise dos arquivos pelo site ou fale diretamente com a equipe pelo WhatsApp.
             </p>
             <div className="flex items-center gap-4 pt-2">
               <a
@@ -64,6 +65,15 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/login" className="text-sm text-slate-400 hover:text-white transition-colors">Área do Cliente</Link>
+              </li>
+              <li>
+                <Link href="/privacidade" className="text-sm text-slate-400 hover:text-white transition-colors">Privacidade</Link>
+              </li>
+              <li>
+                <Link href="/cookies" className="text-sm text-slate-400 hover:text-white transition-colors">Cookies</Link>
+              </li>
+              <li>
+                <Link href="/direitos-do-titular" className="text-sm text-slate-400 hover:text-white transition-colors">Seus direitos</Link>
               </li>
             </ul>
           </div>

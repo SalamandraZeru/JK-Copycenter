@@ -19,6 +19,9 @@ function clientError(error: unknown): { message: string; status: number } {
     PICKUP_UNAVAILABLE: { message: 'Retirada temporariamente indisponível.', status: 409 },
     DELIVERY_ADDRESS_REQUIRED: { message: 'Informe o endereço para entrega.', status: 400 },
     DELIVERY_AREA_UNAVAILABLE: { message: 'O endereço informado está fora da área de entrega.', status: 400 },
+    MIXED_CART_NOT_ALLOWED: { message: 'Produtos de papelaria e serviços gráficos devem ser enviados separadamente.', status: 400 },
+    GRAPHIC_QUOTE_ENDPOINT_REQUIRED: { message: 'Serviços gráficos não usam a prévia de compra.', status: 400 },
+    STATIONERY_CHECKOUT_PRODUCT_ONLY: { message: 'A prévia de compra aceita somente produtos de papelaria.', status: 400 },
   };
   return mapped[code] || { message: 'Não foi possível atualizar a cotação. Revise os itens e tente novamente.', status: 400 };
 }

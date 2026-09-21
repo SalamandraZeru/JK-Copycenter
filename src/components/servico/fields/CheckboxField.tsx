@@ -30,13 +30,15 @@ export function CheckboxField({ field, value, onChange, error }: FieldProps) {
           type="checkbox"
           checked={!!value?.value}
           onChange={handleChange}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${field.key}-error` : undefined}
           className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
         />
         <span className="text-sm font-medium text-slate-900 flex-1">
           {field.label} {field.isRequired && <span className="text-red-600">*</span>}
         </span>
       </label>
-      {error && <span className="text-xs font-medium text-red-600">{error}</span>}
+      {error && <span id={`${field.key}-error`} className="text-xs font-medium text-red-600">{error}</span>}
     </div>
   );
 }

@@ -2,9 +2,14 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import type { Json } from '@/types/supabase';
-import type { ServiceFieldOption, ServiceWithFields } from '@/types/service';
+import type { ServiceFieldOption } from '@/types/service';
 import { isPricingProfile, normalizePricingProfileConfig } from '@/lib/pricing/profiles';
 import { evaluateBindingTierCoverage } from '@/lib/pricing/binding-tiers';
+import { isServiceManualQuoteEnabled } from '@/lib/features/service-manual-quote';
+import {
+  buildManualQuoteServiceContract,
+  buildPricedServiceContract,
+} from '@/lib/catalog/public-service-contract';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -24,21 +29,26 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
   }
 
   const supabase = createServiceRoleClient();
-  const { data: service, error } = await supabase
-    .from('services')
-    .select('id, name, slug, description, image_url, base_price, pricing_profile, pricing_profile_config, service_fields(id, service_id, key, label, field_type, options, is_required, sort_order, is_active)')
-    .eq('id', params.id)
-    .eq('is_active', true)
-    .eq('catalog_state', 'published')
-    .is('deleted_at', null)
-    .maybeSingle();
+  const manualQuoteEnabled = isServiceManualQuoteEnabled();
+  const serviceQuery = supabase.from('services');
+  const { data: service, error } = manualQuoteEnabled
+    ? await serviceQuery
+      .select('id, name, slug, description, image_url, pricing_profile, pricing_profile_config, commercial_mode, service_fields(id, service_id, key, label, field_type, options, is_required, sort_order, is_active)')
+      .eq('id', params.id)
+      .eq('is_active', true)
+      .eq('catalog_state', 'published')
+      .is('deleted_at', null)
+      .maybeSingle()
+    : await serviceQuery
+      .select('id, name, slug, description, image_url, base_price, pricing_profile, pricing_profile_config, commercial_mode, service_fields(id, service_id, key, label, field_type, options, is_required, sort_order, is_active)')
+      .eq('id', params.id)
+      .eq('is_active', true)
+      .eq('catalog_state', 'published')
+      .is('deleted_at', null)
+      .maybeSingle();
   if (error || !service) {
     return NextResponse.json({ success: false, error: 'Serviço não encontrado.' }, { status: 404 });
   }
-  if (!isPricingProfile(service.pricing_profile)) {
-    return NextResponse.json({ success: false, error: 'Perfil de cobrança do serviço inválido.' }, { status: 503 });
-  }
-
   const [bindingResult, dependenciesResult] = await Promise.all([
     supabase
       .from('service_binding_price_tiers')
@@ -54,15 +64,12 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
     return NextResponse.json({ success: false, error: 'Não foi possível carregar os acabamentos do serviço.' }, { status: 500 });
   }
 
-  const result: ServiceWithFields = {
+  const sharedResult = {
     id: service.id,
     name: service.name,
     slug: service.slug,
     description: service.description,
     imageUrl: service.image_url,
-    basePrice: service.base_price,
-    pricingProfile: service.pricing_profile,
-    pricingProfileConfig: normalizePricingProfileConfig(service.pricing_profile_config),
     bindingAvailable: evaluateBindingTierCoverage((bindingResult.data ?? []).map((tier) => ({
       minPages: tier.min_pages,
       maxPages: tier.max_pages,
@@ -98,5 +105,22 @@ export async function GET(_request: NextRequest, props: { params: Promise<{ id: 
       targetOptionValue: dependency.target_option_value,
     })),
   };
+  if (manualQuoteEnabled) {
+    return NextResponse.json({
+      success: true,
+      data: buildManualQuoteServiceContract(sharedResult, service.commercial_mode),
+    });
+  }
+  if (!isPricingProfile(service.pricing_profile)) {
+    return NextResponse.json({ success: false, error: 'Perfil de cobrança do serviço inválido.' }, { status: 503 });
+  }
+  if (!('base_price' in service) || typeof service.base_price !== 'number') {
+    return NextResponse.json({ success: false, error: 'Preço do fluxo legado indisponível.' }, { status: 503 });
+  }
+  const result = buildPricedServiceContract(sharedResult, {
+      basePrice: service.base_price,
+      pricingProfile: service.pricing_profile,
+      pricingProfileConfig: normalizePricingProfileConfig(service.pricing_profile_config),
+  });
   return NextResponse.json({ success: true, data: result });
 }

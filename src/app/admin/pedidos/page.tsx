@@ -6,7 +6,12 @@ import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils/format';
 import { Search, Filter, Loader2, Eye, Package, CheckCircle2, Clock } from 'lucide-react';
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = async (url: string) => {
+  const response = await fetch(url, { cache: 'no-store' });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !Array.isArray(body)) throw new Error(body?.error || 'Não foi possível carregar os pedidos.');
+  return body;
+};
 
 const STATUS_COLORS: Record<string, string> = {
   created: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -121,14 +126,14 @@ export default function PedidosPage() {
                     <td className="px-6 py-4 font-bold text-blue-600 font-mono">#{order.order_number}</td>
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-900">{order.customer_name}</p>
-                      <p className="text-xs text-slate-500 capitalize">{order.delivery_type === 'delivery' ? 'Entrega' : 'Retirada na loja'}</p>
+                      <p className="text-xs text-slate-500 capitalize">{order.order_kind === 'graphic_quote' && order.quote_status !== 'accepted' ? 'Solicitação gráfica' : order.delivery_type === 'delivery' ? 'Entrega' : 'Retirada na loja'}</p>
                     </td>
                     <td className="px-6 py-4 text-slate-700 text-sm font-medium">
                       {new Date(order.created_at).toLocaleString('pt-BR')}
                     </td>
                     <td className="px-6 py-4 font-bold text-slate-900">
-                      {formatCurrency(order.total)}
-                      <p className="text-xs text-slate-500 font-medium capitalize">{order.payment_method}</p>
+                      {order.order_kind === 'graphic_quote' && order.quote_status !== 'accepted' ? 'Após aceite' : formatCurrency(order.total)}
+                      <p className="text-xs text-slate-500 font-medium capitalize">{order.order_kind === 'graphic_quote' ? order.quote_status : order.payment_method}</p>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${STATUS_COLORS[order.status] || 'bg-slate-100 text-slate-700'}`}>

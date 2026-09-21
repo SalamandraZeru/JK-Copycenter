@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useId, useState, useRef } from 'react';
 import { UploadCloud, FileText, CheckCircle2, AlertCircle, Trash2, Loader2, Sparkles } from 'lucide-react';
 
 export interface UploadedFileItem {
@@ -22,6 +22,7 @@ interface FileUploadDropzoneProps {
   acceptedExtensions?: readonly string[];
   maxFiles?: number;
   requirementsText?: string;
+  mode?: 'automatic' | 'manual_quote';
 }
 
 export function FileUploadDropzone({
@@ -34,11 +35,14 @@ export function FileUploadDropzone({
   acceptedExtensions,
   maxFiles,
   requirementsText,
+  mode = 'automatic',
 }: FileUploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const helpId = useId();
+  const errorId = useId();
 
   const MAX_FILE_SIZE_MB = 50;
   const DEFAULT_ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.pptx', '.png', '.jpg', '.jpeg', '.webp', '.zip', '.rar'];
@@ -67,7 +71,7 @@ export function FileUploadDropzone({
 
     for (const file of fileArray) {
       if (maxFiles !== undefined && newUploadedFiles.length >= maxFiles) {
-        setUploadError(`Este serviço aceita no máximo ${maxFiles} ${maxFiles === 1 ? 'arquivo' : 'arquivos'} por cotação automática.`);
+        setUploadError(`Este serviço aceita no máximo ${maxFiles} ${maxFiles === 1 ? 'arquivo' : 'arquivos'} por solicitação.`);
         break;
       }
       if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
@@ -170,40 +174,50 @@ export function FileUploadDropzone({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
           <FileText className="w-4 h-4 text-blue-600" />
-          Anexar Arquivo para Impressão
-        </label>
+          {mode === 'manual_quote' ? 'Anexar arquivos para análise' : 'Anexar arquivo para impressão'}
+        </span>
         <span className="text-xs text-slate-500 font-medium">Até {MAX_FILE_SIZE_MB}MB por arquivo</span>
       </div>
 
-      <div
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept={allowedExtensions.join(',')}
+        onChange={(event) => {
+          if (event.target.files) handleFileSelection(event.target.files);
+          event.target.value = '';
+        }}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+      <button
+        type="button"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+        disabled={isUploading}
+        aria-describedby={`${helpId}${uploadError ? ` ${errorId}` : ''}`}
+        aria-busy={isUploading}
+        className={`relative w-full min-h-44 border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all disabled:cursor-wait ${
           isDragging
             ? 'border-blue-600 bg-blue-50/70 scale-[1.01]'
             : 'border-slate-300 bg-slate-50/50 hover:bg-slate-100/60 hover:border-slate-400'
         }`}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept={allowedExtensions.join(',')}
-          onChange={(e) => e.target.files && handleFileSelection(e.target.files)}
-          className="hidden"
-        />
-
-        <div className="flex flex-col items-center justify-center gap-2">
+        <div className="flex flex-col items-center justify-center gap-2" aria-live="polite">
           {isUploading ? (
             <div className="py-3 flex flex-col items-center gap-2 text-blue-600">
               <Loader2 className="w-8 h-8 animate-spin" />
               <p className="text-sm font-semibold text-slate-800">
-                Analisando e contando páginas automaticamente...
+                {mode === 'manual_quote'
+                  ? 'Enviando e conferindo o arquivo com segurança...'
+                  : 'Analisando e contando páginas automaticamente...'}
               </p>
               <p className="text-xs text-slate-500">Isso pode levar alguns instantes para PDFs e ZIPs.</p>
             </div>
@@ -213,22 +227,22 @@ export function FileUploadDropzone({
                 <UploadCloud className="w-6 h-6" />
               </div>
               <p className="text-sm font-semibold text-slate-800">
-                Clique para selecionar ou arraste seus arquivos aqui
+                Clique, pressione Enter ou arraste seus arquivos aqui
               </p>
-              <p className="text-xs text-slate-500">
+              <p id={helpId} className="text-xs text-slate-500">
                 Aceitamos <strong>{allowedExtensions.map((extension) => extension.replace('.', '').toUpperCase()).join(', ')}</strong>
               </p>
               <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-semibold text-blue-700">
                 <Sparkles className="w-3.5 h-3.5" />
-                Detecção e soma automática de páginas
+                Conferência técnica e contagem de páginas
               </div>
             </>
           )}
         </div>
-      </div>
+      </button>
 
       {uploadError && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700 font-medium">
+        <div id={errorId} role="alert" className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700 font-medium">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-600" />
           <span>{uploadError}</span>
         </div>
@@ -291,7 +305,7 @@ export function FileUploadDropzone({
                   type="button"
                   onClick={() => handleRemoveFile(index)}
                   className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
-                  title="Remover arquivo"
+                  aria-label={`Remover ${file.originalName}`}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -300,7 +314,9 @@ export function FileUploadDropzone({
           </div>
           {bindingAvailable && (
             <p className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-800">
-              O valor da encadernação é definido automaticamente pela quantidade de páginas detectada em cada arquivo selecionado.
+              {mode === 'manual_quote'
+                ? 'A equipe receberá sua escolha de encadernação junto com a contagem de páginas de cada arquivo.'
+                : 'O valor da encadernação é definido automaticamente pela quantidade de páginas detectada em cada arquivo selecionado.'}
             </p>
           )}
         </div>

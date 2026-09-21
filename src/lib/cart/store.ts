@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CheckoutItem } from '@/types/checkout';
+import type { FieldValue } from '@/types/service';
 
 const CART_FILE_SESSION_STORAGE_KEY = 'jk-cart-file-intents-v1';
 
@@ -52,6 +53,26 @@ export type NewCartItem = Omit<
   displaySnapshot?: Partial<CartDisplaySnapshot>;
 };
 
+/**
+ * Recoverable, non-commercial service configuration. Upload identifiers,
+ * filenames and any monetary snapshot are intentionally excluded.
+ */
+export interface GraphicQuoteDraft {
+  serviceId: string;
+  serviceSlug: string;
+  serviceName: string;
+  imageUrl: string | null;
+  fieldValues: FieldValue[];
+  pageCount: number;
+  quantity: number;
+  dimensions: NonNullable<CheckoutItem['dimensions']>;
+  bookletPaddingApproved: boolean;
+  artworkBleedAcknowledged: boolean;
+  updatedAt: string;
+}
+
+export type NewGraphicQuoteDraft = Omit<GraphicQuoteDraft, 'updatedAt'>;
+
 type PersistedCartItem = Pick<
   CartItem,
   | 'id'
@@ -86,11 +107,14 @@ interface SessionFileIntent {
 
 interface CartState {
   items: CartItem[];
+  quoteDrafts: Record<string, GraphicQuoteDraft>;
   addItem: (item: NewCartItem) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   restoreSessionFiles: () => void;
   applyRevalidation: (id: string, patch: CartRevalidationPatch) => void;
+  saveQuoteDraft: (draft: NewGraphicQuoteDraft) => void;
+  clearQuoteDraft: (serviceId: string) => void;
   clearCart: () => void;
 }
 
@@ -105,6 +129,113 @@ function safeText(value: unknown, fallback = ''): string {
 function displayValue(value: string | number | boolean): string {
   if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
   return String(value).slice(0, 160);
+}
+
+function normalizeFieldValues(value: unknown): FieldValue[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((raw) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+    const field = raw as CheckoutItem['fieldValues'][number];
+    if (typeof field.fieldKey !== 'string'
+        || !['string', 'number', 'boolean'].includes(typeof field.value)) return [];
+    return [{
+      fieldKey: field.fieldKey.slice(0, 100),
+      value: typeof field.value === 'string' ? field.value.slice(0, 5_000) : field.value,
+      label: typeof field.label === 'string' ? field.label.slice(0, 200) : field.fieldKey.slice(0, 100),
+      ...(field.selectedOption
+          && typeof field.selectedOption.value === 'string'
+          && typeof field.selectedOption.label === 'string'
+        ? {
+          selectedOption: {
+            value: field.selectedOption.value.slice(0, 300),
+            label: field.selectedOption.label.slice(0, 300),
+          },
+        }
+        : {}),
+    }];
+  }).slice(0, 100);
+}
+
+function normalizeDimensions(value: unknown): NonNullable<CheckoutItem['dimensions']> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const dimensions = value as NonNullable<CheckoutItem['dimensions']>;
+  return {
+    ...(typeof dimensions.widthCm === 'number' && Number.isFinite(dimensions.widthCm) && dimensions.widthCm > 0
+      ? { widthCm: dimensions.widthCm }
+      : {}),
+    ...(typeof dimensions.heightCm === 'number' && Number.isFinite(dimensions.heightCm) && dimensions.heightCm > 0
+      ? { heightCm: dimensions.heightCm }
+      : {}),
+    ...(typeof dimensions.lengthCm === 'number' && Number.isFinite(dimensions.lengthCm) && dimensions.lengthCm > 0
+      ? { lengthCm: dimensions.lengthCm }
+      : {}),
+  };
+}
+
+function normalizeQuoteDraft(raw: Partial<GraphicQuoteDraft>): GraphicQuoteDraft | null {
+  if (typeof raw.serviceId !== 'string') return null;
+  return {
+    serviceId: raw.serviceId,
+    serviceSlug: safeText(raw.serviceSlug, raw.serviceId),
+    serviceName: safeText(raw.serviceName, 'Serviço gráfico'),
+    imageUrl: typeof raw.imageUrl === 'string' || raw.imageUrl === null ? raw.imageUrl : null,
+    fieldValues: normalizeFieldValues(raw.fieldValues),
+    pageCount: typeof raw.pageCount === 'number' && Number.isInteger(raw.pageCount) && raw.pageCount > 0
+      ? raw.pageCount
+      : 1,
+    quantity: typeof raw.quantity === 'number' && Number.isInteger(raw.quantity) && raw.quantity > 0
+      ? raw.quantity
+      : 1,
+    dimensions: normalizeDimensions(raw.dimensions),
+    bookletPaddingApproved: Boolean(raw.bookletPaddingApproved),
+    artworkBleedAcknowledged: Boolean(raw.artworkBleedAcknowledged),
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date(0).toISOString(),
+  };
+}
+
+export function serviceQuoteDraftFromCartItem(item: CartItem): GraphicQuoteDraft | null {
+  if (!item.serviceId) return null;
+  return normalizeQuoteDraft({
+    serviceId: item.serviceId,
+    serviceSlug: item.serviceId,
+    serviceName: item.displaySnapshot.title || item.name || 'Serviço gráfico',
+    imageUrl: item.displaySnapshot.imageUrl ?? item.imageUrl ?? null,
+    fieldValues: normalizeFieldValues(item.fieldValues),
+    pageCount: item.pageCount,
+    quantity: item.quantity,
+    dimensions: item.dimensions ?? {},
+    bookletPaddingApproved: Boolean(item.bookletPaddingApproved),
+    artworkBleedAcknowledged: Boolean(item.artworkBleedAcknowledged),
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+function normalizeQuoteDrafts(value: unknown): Record<string, GraphicQuoteDraft> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.values(value).reduce<Record<string, GraphicQuoteDraft>>((drafts, raw) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return drafts;
+    const draft = normalizeQuoteDraft(raw as Partial<GraphicQuoteDraft>);
+    if (draft) drafts[draft.serviceId] = draft;
+    return drafts;
+  }, {});
+}
+
+export function migrateCartPersistedState(persistedState: unknown) {
+  const state = persistedState && typeof persistedState === 'object' && !Array.isArray(persistedState)
+    ? persistedState as { items?: Partial<CartItem>[]; quoteDrafts?: unknown }
+    : {};
+  const normalizedItems = (state.items ?? []).map(normalizePersistedItem);
+  const quoteDrafts = normalizeQuoteDrafts(state.quoteDrafts);
+  const productItems: CartItem[] = [];
+  for (const item of normalizedItems) {
+    const draft = serviceQuoteDraftFromCartItem(item);
+    if (draft) {
+      quoteDrafts[draft.serviceId] ??= draft;
+    } else {
+      productItems.push(item);
+    }
+  }
+  return { items: productItems, quoteDrafts };
 }
 
 export function cartConfigurationFingerprint(item: Pick<
@@ -224,13 +355,7 @@ function removeSessionFiles(id?: string): void {
 
 function normalizePersistedItem(raw: Partial<CartItem>): CartItem {
   const legacyFileIds = Array.isArray(raw.fileIds) ? raw.fileIds.filter((value): value is string => typeof value === 'string') : [];
-  const fieldValues = Array.isArray(raw.fieldValues)
-    ? raw.fieldValues.filter((value): value is CheckoutItem['fieldValues'][number] => (
-      Boolean(value)
-      && typeof value.fieldKey === 'string'
-      && ['string', 'number', 'boolean'].includes(typeof value.value)
-    ))
-    : [];
+  const fieldValues = normalizeFieldValues(raw.fieldValues);
   const base = {
     id: typeof raw.id === 'string' ? raw.id : crypto.randomUUID(),
     ...(typeof raw.serviceId === 'string' ? { serviceId: raw.serviceId } : {}),
@@ -242,13 +367,7 @@ function normalizePersistedItem(raw: Partial<CartItem>): CartItem {
     quantity: typeof raw.quantity === 'number' && Number.isInteger(raw.quantity) && raw.quantity > 0 ? raw.quantity : 1,
     fileIds: [],
     bindingFileIds: [],
-    dimensions: raw.dimensions && typeof raw.dimensions === 'object' && !Array.isArray(raw.dimensions)
-      ? {
-        ...(typeof raw.dimensions.widthCm === 'number' && Number.isFinite(raw.dimensions.widthCm) && raw.dimensions.widthCm > 0 ? { widthCm: raw.dimensions.widthCm } : {}),
-        ...(typeof raw.dimensions.heightCm === 'number' && Number.isFinite(raw.dimensions.heightCm) && raw.dimensions.heightCm > 0 ? { heightCm: raw.dimensions.heightCm } : {}),
-        ...(typeof raw.dimensions.lengthCm === 'number' && Number.isFinite(raw.dimensions.lengthCm) && raw.dimensions.lengthCm > 0 ? { lengthCm: raw.dimensions.lengthCm } : {}),
-      }
-      : {},
+    dimensions: normalizeDimensions(raw.dimensions),
     bookletPaddingApproved: Boolean(raw.bookletPaddingApproved),
     artworkBleedAcknowledged: Boolean(raw.artworkBleedAcknowledged),
     ...(raw.type ? { type: raw.type } : {}),
@@ -285,6 +404,7 @@ export const useCartStore = create<CartState>()(
   persist(
     (set) => ({
       items: [],
+      quoteDrafts: {},
 
       addItem: (item) => set((state) => {
         const id = crypto.randomUUID();
@@ -373,6 +493,18 @@ export const useCartStore = create<CartState>()(
         }),
       })),
 
+      saveQuoteDraft: (draft) => set((state) => {
+        const normalized = normalizeQuoteDraft({ ...draft, updatedAt: new Date().toISOString() });
+        if (!normalized) return state;
+        return { quoteDrafts: { ...state.quoteDrafts, [normalized.serviceId]: normalized } };
+      }),
+
+      clearQuoteDraft: (serviceId) => set((state) => {
+        const quoteDrafts = { ...state.quoteDrafts };
+        delete quoteDrafts[serviceId];
+        return { quoteDrafts };
+      }),
+
       clearCart: () => {
         removeSessionFiles();
         set({ items: [] });
@@ -380,24 +512,24 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'jk-cart-storage',
-      version: 4,
-      migrate: (persistedState) => {
-        const state = persistedState as { items?: Partial<CartItem>[] };
-        return {
-          ...state,
-          items: (state.items || []).map(normalizePersistedItem),
-        };
-      },
+      version: 5,
+      migrate: (persistedState, version) => version < 5
+        ? migrateCartPersistedState(persistedState)
+        : persistedState,
       // `partialize` deliberately removes upload identifiers from localStorage.
       // Normalize on every hydration (not only version migrations) so a direct
       // navigation to checkout still receives safe empty arrays before the
       // current browser session restores its file intents.
       merge: (persistedState, currentState) => {
-        const state = persistedState as { items?: Partial<CartItem>[] } | undefined;
+        const state = persistedState as {
+          items?: Partial<CartItem>[];
+          quoteDrafts?: unknown;
+        } | undefined;
         return {
           ...currentState,
           ...state,
           items: (state?.items || []).map(normalizePersistedItem),
+          quoteDrafts: normalizeQuoteDrafts(state?.quoteDrafts),
         };
       },
       partialize: (state) => ({
@@ -426,6 +558,7 @@ export const useCartStore = create<CartState>()(
           priceChanged: item.priceChanged,
           ...(item.type ? { type: item.type } : {}),
         })),
+        quoteDrafts: normalizeQuoteDrafts(state.quoteDrafts),
       }),
     },
   ),

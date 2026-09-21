@@ -9,6 +9,8 @@ import {
   ShoppingCart,
   Tag,
   Users,
+  MessagesSquare,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import type { AdminRole } from '@/types';
@@ -24,6 +26,7 @@ export interface AdminNavItem {
 const adminNavItems: AdminNavItem[] = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Pedidos', href: '/admin/pedidos', icon: ShoppingCart, action: 'read_orders' },
+  { name: 'Orçamentos', href: '/admin/orcamentos', icon: MessagesSquare, action: 'manage_quotes' },
   { name: 'Fila de Produção', href: '/admin/producao', icon: PlaySquare, action: 'manage_production' },
   { name: 'Produtos', href: '/admin/produtos', icon: Package, action: 'manage_catalog' },
   { name: 'Serviços', href: '/admin/servicos', icon: Layers, action: 'manage_catalog' },
@@ -32,6 +35,7 @@ const adminNavItems: AdminNavItem[] = [
   { name: 'Configurações', href: '/admin/configuracoes', icon: Settings, action: 'manage_config' },
   { name: 'Usuários', href: '/admin/usuarios', icon: Users, action: 'manage_users' },
   { name: 'Auditoria', href: '/admin/auditoria', icon: ClipboardList, action: 'read_audit' },
+  { name: 'Retenção', href: '/admin/retencao', icon: ShieldCheck, action: 'read_audit' },
 ];
 
 export function getAdminNavItems(role: AdminRole) {

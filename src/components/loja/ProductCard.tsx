@@ -68,12 +68,12 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
       </div>
       
-      <div className="p-6 flex flex-col flex-1">
+      <div className="flex flex-1 flex-col p-4 sm:p-6">
         <h3 className="text-base font-bold text-[#1A1A2E] mb-1 font-serif group-hover:text-[#CC1A1A] transition-colors">
           {product.name}
         </h3>
         <p className="text-slate-500 text-xs mb-4 flex-1 line-clamp-2 leading-relaxed">
-          {product.description || 'Produto de alta durabilidade e pronta entrega na JK Copycenter.'}
+          {product.description || 'Consulte a disponibilidade deste item na JK Copycenter.'}
         </p>
         
         <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-100">

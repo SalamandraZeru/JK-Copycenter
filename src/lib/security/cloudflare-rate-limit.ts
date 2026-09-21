@@ -3,7 +3,8 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 type RateLimitBindingName =
   | 'JK_PRICING_PREVIEW_RATE_LIMIT'
   | 'JK_UPLOAD_INTENTS_RATE_LIMIT'
-  | 'JK_UPLOAD_RATE_LIMIT';
+  | 'JK_UPLOAD_RATE_LIMIT'
+  | 'JK_PRIVACY_REQUEST_RATE_LIMIT';
 
 interface RateLimitBinding {
   limit(options: { key: string }): Promise<{ success: boolean }>;
@@ -14,6 +15,7 @@ declare global {
     JK_PRICING_PREVIEW_RATE_LIMIT?: RateLimitBinding;
     JK_UPLOAD_INTENTS_RATE_LIMIT?: RateLimitBinding;
     JK_UPLOAD_RATE_LIMIT?: RateLimitBinding;
+    JK_PRIVACY_REQUEST_RATE_LIMIT?: RateLimitBinding;
   }
 }
 
