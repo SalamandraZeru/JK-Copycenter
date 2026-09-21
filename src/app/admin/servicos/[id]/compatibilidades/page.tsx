@@ -400,7 +400,7 @@ export default function CompatibilidadesServicoPage(props: { params: Promise<{ i
           type="button"
           onClick={saveTree}
           disabled={!rootFieldId || !rootOptionValue || isSaving}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F2040] px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#CC1A1A] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#092653] px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#b4232d] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
           Salvar compatibilidades

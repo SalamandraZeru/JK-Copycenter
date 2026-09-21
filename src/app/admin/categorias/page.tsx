@@ -121,7 +121,7 @@ export default function CategoriasPage() {
         <button 
           onClick={startNew}
           disabled={editingId !== null}
-          className="inline-flex items-center gap-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition disabled:opacity-50"
+          className="inline-flex items-center gap-2 bg-[#092653] hover:bg-[#b4232d] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition disabled:opacity-50"
         >
           <Plus className="w-4 h-4" /> Nova Categoria
         </button>
@@ -147,7 +147,7 @@ export default function CategoriasPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 px-6 py-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white font-bold rounded-xl text-sm shadow-md transition"
+                className="inline-flex items-center gap-2 px-6 py-2 bg-[#092653] hover:bg-[#b4232d] text-white font-bold rounded-xl text-sm shadow-md transition"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Salvar Categoria

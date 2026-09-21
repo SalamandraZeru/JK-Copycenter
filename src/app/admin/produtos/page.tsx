@@ -190,7 +190,7 @@ export default function ProdutosPage() {
         <button 
           onClick={startNew}
           disabled={editingId !== null}
-          className="inline-flex w-full items-center justify-center gap-2 bg-[#0F2040] px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#CC1A1A] disabled:opacity-50 sm:w-auto"
+          className="inline-flex w-full items-center justify-center gap-2 bg-[#092653] px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#b4232d] disabled:opacity-50 sm:w-auto"
         >
           <Plus className="w-4 h-4" /> Novo Produto
         </button>
@@ -216,7 +216,7 @@ export default function ProdutosPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 px-6 py-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white font-bold rounded-xl text-sm shadow-md transition"
+                className="inline-flex items-center gap-2 px-6 py-2 bg-[#092653] hover:bg-[#b4232d] text-white font-bold rounded-xl text-sm shadow-md transition"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Salvar Produto

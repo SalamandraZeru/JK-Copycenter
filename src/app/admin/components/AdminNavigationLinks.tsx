@@ -27,11 +27,11 @@ export function AdminNavigationLinks({ role, onNavigate }: AdminNavigationLinksP
             {...(onNavigate ? { onClick: onNavigate } : {})}
             className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 transition-colors ${
               isActive
-                ? 'bg-[#1769aa] font-medium text-white'
-                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                ? 'bg-[#b4232d] font-semibold text-white shadow-sm'
+                : 'text-blue-100/70 hover:bg-white/10 hover:text-white'
             }`}
           >
-            <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-slate-400'}`} aria-hidden="true" />
+            <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-blue-100/70'}`} aria-hidden="true" />
             {item.name}
           </Link>
         );

@@ -56,9 +56,9 @@ export function AdminMobileMenu({ role }: AdminMobileMenuProps) {
             role="dialog"
             aria-modal="true"
             aria-label="Menu administrativo"
-            className="fixed inset-y-0 left-0 z-50 flex w-[min(19rem,86vw)] flex-col bg-slate-900 text-white shadow-2xl md:hidden"
+            className="fixed inset-y-0 left-0 z-50 flex w-[min(19rem,86vw)] flex-col bg-[#092653] text-white shadow-2xl md:hidden"
           >
-            <div className="flex items-center justify-between border-b border-slate-800 p-5">
+            <div className="flex items-center justify-between border-b border-white/10 p-5">
               <div className="flex items-center gap-2">
                 <div className="rounded-md bg-white p-1">
                   <Image src="/images/brand/jk-monogram.webp" alt="JK Copycenter" width={360} height={404} className="h-8 w-auto" />
@@ -68,7 +68,7 @@ export function AdminMobileMenu({ role }: AdminMobileMenuProps) {
               <button
                 type="button"
                 aria-label="Fechar menu"
-                className="rounded-lg p-2 text-slate-300 transition hover:bg-slate-800 hover:text-white"
+                className="rounded-lg p-2 text-slate-300 transition hover:bg-white/10 hover:text-white"
                 onClick={() => setIsOpen(false)}
               >
                 <X className="h-5 w-5" aria-hidden="true" />
@@ -77,9 +77,9 @@ export function AdminMobileMenu({ role }: AdminMobileMenuProps) {
 
             <AdminNavigationLinks role={role} onNavigate={() => setIsOpen(false)} />
 
-            <div className="border-t border-slate-800 p-4">
-              <div className="rounded-lg bg-slate-800 p-3 text-sm">
-                <p className="mb-1 text-xs uppercase tracking-wider text-slate-400">Seu perfil</p>
+            <div className="border-t border-white/10 p-4">
+              <div className="rounded-lg bg-white/10 p-3 text-sm">
+                <p className="mb-1 text-xs uppercase tracking-wider text-blue-100/70">Seu perfil</p>
                 <p className="font-bold capitalize text-white">{role.replace('_', ' ')}</p>
               </div>
             </div>
