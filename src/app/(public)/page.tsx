@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Check, FileUp, MapPin, MessageCircle, PackageOpen, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Check, FileUp, MessageCircle, PackageOpen, ShieldCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { ServiceCard } from '@/components/loja/ServiceCard';
 import { CategoryCard } from '@/components/loja/CategoryCard';
@@ -34,8 +34,7 @@ export default async function HomePage() {
     <section className="relative border-b border-[#092653]/15 bg-[#fffdf8]">
       <div className="mx-auto grid max-w-7xl items-stretch lg:grid-cols-[1.08fr_.92fr]">
         <div className="jk-stagger flex flex-col justify-center px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#092653]/15 bg-[#f4f0e8] px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-[#092653]"><MapPin className="h-3.5 w-3.5" />Feito em Passos, com atendimento humano</div>
-          <h1 className="jk-display mt-6 max-w-3xl text-5xl font-black leading-[.98] text-[#092653] sm:text-6xl lg:text-7xl">Seu arquivo merece chegar certo ao papel.</h1>
+          <h1 className="jk-display max-w-3xl text-5xl font-black leading-[.98] text-[#092653] sm:text-6xl lg:text-7xl">Seu arquivo merece chegar certo ao papel.</h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">Conte o que precisa, envie o material com segurança e receba uma análise da equipe antes de qualquer cobrança.</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link href="/grafica" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#b4232d] px-7 py-3.5 font-black text-white shadow-[0_8px_24px_rgba(180,35,45,.2)] transition hover:-translate-y-0.5 hover:bg-[#951c25]">Solicitar orçamento <ArrowRight className="h-4 w-4" /></Link><Link href="/papelaria" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#092653]/25 bg-white px-7 py-3.5 font-black text-[#092653] transition hover:border-[#092653]">Comprar papelaria</Link></div>
           <div className="mt-10 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-slate-200 pt-6 text-sm font-bold text-slate-700 sm:max-w-xl"><span className="flex items-center gap-2"><Check className="h-4 w-4 text-[#b4232d]" />Sem preço automático</span><span className="flex items-center gap-2"><Check className="h-4 w-4 text-[#b4232d]" />Arquivo privado</span><span className="flex items-center gap-2"><Check className="h-4 w-4 text-[#b4232d]" />Proposta registrada</span><span className="flex items-center gap-2"><Check className="h-4 w-4 text-[#b4232d]" />Retirada em Passos</span></div>
