@@ -37,7 +37,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="admin-shell min-h-screen bg-slate-50 flex">
+    <div className="admin-shell flex h-screen overflow-hidden bg-slate-50">
       {/* Sidebar with role-based links */}
       <div className="admin-sidebar hidden shrink-0 print:hidden md:block">
         <Sidebar role={session.role} />

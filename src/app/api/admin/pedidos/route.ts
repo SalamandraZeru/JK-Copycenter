@@ -9,6 +9,8 @@ export const dynamic = 'force-dynamic';
 const filtersSchema = z.object({
   status: z.enum(['created', 'awaiting_payment', 'confirmed', 'in_production', 'ready', 'completed', 'cancelled']).nullable(),
   payment: z.enum(['pix', 'card', 'cash']).nullable(),
+  kind: z.enum(['legacy_checkout', 'stationery_sale', 'graphic_quote']).nullable(),
+  quoteStatus: z.enum(['pending', 'negotiating', 'quoted', 'accepted', 'declined', 'expired', 'cancelled']).nullable(),
   q: z.string().trim().max(100).nullable(),
 });
 
@@ -20,8 +22,12 @@ interface OrderListRow {
   guest_phone: string | null;
   total: number;
   status: OrderStatus;
-  payment_method: PaymentMethod;
+  payment_method: PaymentMethod | null;
   payment_status: string;
+  order_kind: 'legacy_checkout' | 'stationery_sale' | 'graphic_quote';
+  quote_status: string;
+  latest_quote_version: number;
+  quote_expires_at: string | null;
   created_at: string;
   delivery_type: string;
   profiles: { full_name: string | null } | null;
@@ -36,10 +42,12 @@ export async function GET(request: Request) {
     const filters = filtersSchema.safeParse({
       status: searchParams.get('status') || null,
       payment: searchParams.get('payment') || null,
+      kind: searchParams.get('kind') || null,
+      quoteStatus: searchParams.get('quoteStatus') || null,
       q: searchParams.get('q') || null,
     });
     if (!filters.success) return NextResponse.json({ error: 'Filtros inválidos' }, { status: 400 });
-    const { status, payment, q } = filters.data;
+    const { status, payment, kind, quoteStatus, q } = filters.data;
 
     const supabase = createServiceRoleClient();
     
@@ -55,6 +63,10 @@ export async function GET(request: Request) {
         status,
         payment_method,
         payment_status,
+        order_kind,
+        quote_status,
+        latest_quote_version,
+        quote_expires_at,
         created_at,
         delivery_type,
         profiles (full_name)
@@ -63,14 +75,15 @@ export async function GET(request: Request) {
 
     if (status) query = query.eq('status', status as OrderStatus);
     if (payment) query = query.eq('payment_method', payment as PaymentMethod);
+    if (kind) query = query.eq('order_kind', kind);
+    if (quoteStatus) query = query.eq('quote_status', quoteStatus);
     if (q) {
       query = query.ilike('order_number', `%${q}%`);
     }
 
     const { data, error } = await query;
     if (error) {
-      // Fallback empty array on DB empty/unseeded state
-      return NextResponse.json([]);
+      return NextResponse.json({ error: 'Não foi possível carregar os pedidos.' }, { status: 503 });
     }
 
     // Format customer name from profile or guest
@@ -82,6 +95,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json(formatted);
   } catch {
-    return NextResponse.json([], { status: 200 });
+    return NextResponse.json({ error: 'Não foi possível carregar os pedidos.' }, { status: 500 });
   }
 }

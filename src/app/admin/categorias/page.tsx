@@ -121,7 +121,7 @@ export default function CategoriasPage() {
         <button 
           onClick={startNew}
           disabled={editingId !== null}
-          className="inline-flex items-center gap-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition disabled:opacity-50"
+          className="inline-flex items-center gap-2 bg-[#092653] hover:bg-[#b4232d] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition disabled:opacity-50"
         >
           <Plus className="w-4 h-4" /> Nova Categoria
         </button>
@@ -147,7 +147,7 @@ export default function CategoriasPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 px-6 py-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white font-bold rounded-xl text-sm shadow-md transition"
+                className="inline-flex items-center gap-2 px-6 py-2 bg-[#092653] hover:bg-[#b4232d] text-white font-bold rounded-xl text-sm shadow-md transition"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Salvar Categoria
@@ -261,7 +261,24 @@ export default function CategoriasPage() {
             <p className="text-xs text-slate-500 mt-1">Clique em &ldquo;Nova Categoria&rdquo; para criar a primeira.</p>
           </div>
         ) : (
-          <table className="w-full text-left">
+          <>
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {categorias.map((cat) => (
+              <li key={cat.id} className={`flex items-center gap-3 p-4 ${!cat.is_active ? 'opacity-60' : ''}`}>
+                {cat.image_url ? <img src={cat.image_url} alt={cat.name} className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 object-cover" /> : <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-500"><ImageIcon className="h-5 w-5" /></div>}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-extrabold text-slate-900">{cat.name}</p>
+                  <p className="truncate font-mono text-xs text-slate-500">#{cat.sort_order} · {cat.slug}</p>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    {cat.is_active ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-emerald-800">Ativo</span> : <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-extrabold uppercase text-slate-800">Inativo</span>}
+                    <button onClick={() => startEdit(cat)} disabled={editingId !== null} className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-700 disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
+                    <button onClick={() => handleDelete(cat.id)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-red-50 px-3 text-xs font-bold text-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <table className="hidden w-full text-left md:table">
             <thead className="bg-slate-50 text-slate-800 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4 w-16">Ordem</th>
@@ -317,6 +334,7 @@ export default function CategoriasPage() {
               ))}
             </tbody>
           </table>
+          </>
         )}
       </div>
     </div>

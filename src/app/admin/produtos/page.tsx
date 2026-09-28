@@ -190,7 +190,7 @@ export default function ProdutosPage() {
         <button 
           onClick={startNew}
           disabled={editingId !== null}
-          className="inline-flex w-full items-center justify-center gap-2 bg-[#0F2040] px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#CC1A1A] disabled:opacity-50 sm:w-auto"
+          className="inline-flex w-full items-center justify-center gap-2 bg-[#092653] px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#b4232d] disabled:opacity-50 sm:w-auto"
         >
           <Plus className="w-4 h-4" /> Novo Produto
         </button>
@@ -216,7 +216,7 @@ export default function ProdutosPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 px-6 py-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white font-bold rounded-xl text-sm shadow-md transition"
+                className="inline-flex items-center gap-2 px-6 py-2 bg-[#092653] hover:bg-[#b4232d] text-white font-bold rounded-xl text-sm shadow-md transition"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Salvar Produto
@@ -429,7 +429,36 @@ export default function ProdutosPage() {
             <p className="text-xs text-slate-500 mt-1">Clique em &ldquo;Novo Produto&rdquo; para adicionar materiais de papelaria.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile: cartões (a tabela larga vira lista tocável) */}
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {produtos.map((prod) => (
+              <li key={prod.id} className={`flex gap-3 p-4 ${!prod.is_active ? 'opacity-60' : ''}`}>
+                {prod.image_url ? (
+                  <img src={prod.image_url} alt={prod.name} className="h-16 w-16 shrink-0 rounded-xl border border-slate-200 object-cover" />
+                ) : (
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-500"><ImageIcon className="h-6 w-6" /></div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-extrabold text-slate-900">{prod.name}</p>
+                  <p className="truncate text-xs font-mono text-slate-500">{prod.sku || 'sem SKU'}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                    <span className="font-bold text-slate-900">{formatCurrency(prod.price)}</span>
+                    <span className="text-xs text-slate-600">{prod.stock_control_enabled ? `${Math.max(0, (prod.stock_quantity ?? 0) - (prod.reserved_quantity ?? 0))} em estoque` : 'sem controle'}</span>
+                    {prod.is_active
+                      ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-emerald-800">Ativo</span>
+                      : <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-extrabold uppercase text-slate-800">Inativo</span>}
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <button onClick={() => startEdit(prod)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-700 disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
+                    <button onClick={() => handleDelete(prod.id)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-red-50 px-3 text-xs font-bold text-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> Excluir</button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {/* Desktop: tabela completa */}
+          <div className="hidden overflow-x-auto md:block">
           <table className="min-w-[1120px] w-full text-left">
             <thead className="bg-slate-50 text-slate-800 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
               <tr>
@@ -512,6 +541,7 @@ export default function ProdutosPage() {
             </tbody>
           </table>
           </div>
+          </>
         )}
       </div>
     </div>

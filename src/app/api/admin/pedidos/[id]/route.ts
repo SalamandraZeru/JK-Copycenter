@@ -67,13 +67,63 @@ export async function GET(request: Request, props: { params: Promise<{ id: strin
       .single();
 
     if (error) throw error;
-    const data = rawData as unknown as { order_files?: OrderFileRecord[]; [key: string]: unknown } | null;
+    const data = rawData as unknown as {
+      id: string;
+      order_kind?: string;
+      user_id?: string | null;
+      order_token?: string;
+      order_files?: OrderFileRecord[];
+      [key: string]: unknown;
+    } | null;
     if (!data) return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
 
     const rawFiles = (data.order_files || []) as unknown as OrderFileRecord[];
     const files = rawFiles.filter((file) => !file.deleted_at);
 
-    return NextResponse.json({ ...data, files, operationView: auth.session.role === 'producao' ? 'production' : 'admin' });
+    let quotes: unknown[] = [];
+    let quoteEvents: unknown[] = [];
+    if (data.order_kind === 'graphic_quote' && auth.session.role !== 'producao') {
+      const [quoteResult, eventResult] = await Promise.all([
+        supabase
+          .from('order_quotes')
+          .select(`
+            id, version, subtotal_cents, delivery_fee_cents, total_cents,
+            commercial_observation, change_reason, expires_at, created_at,
+            admin_users (full_name),
+            order_quote_items (
+              id, order_item_id, line_position, label_snapshot, quantity,
+              unit_price_cents, total_price_cents, scope_snapshot
+            )
+          `)
+          .eq('order_id', data.id)
+          .order('version', { ascending: false }),
+        supabase
+          .from('order_quote_events')
+          .select('id, quote_id, event_type, actor_type, note, created_at, admin_users (full_name)')
+          .eq('order_id', data.id)
+          .order('created_at', { ascending: false }),
+      ]);
+      if (quoteResult.error || eventResult.error) throw quoteResult.error || eventResult.error;
+      quotes = quoteResult.data || [];
+      quoteEvents = eventResult.data || [];
+    }
+
+    const quoteCustomerActionPath = data.order_kind === 'graphic_quote'
+      ? data.user_id
+        ? `/dashboard/pedidos/${data.id}`
+        : data.order_token
+          ? `/orcamento/${data.id}#${data.order_token}`
+          : null
+      : null;
+
+    return NextResponse.json({
+      ...data,
+      files,
+      quotes,
+      quoteEvents,
+      quoteCustomerActionPath,
+      operationView: auth.session.role === 'producao' ? 'production' : 'admin',
+    }, { headers: { 'Cache-Control': 'private, no-store, max-age=0' } });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erro ao buscar pedido';
     return NextResponse.json({ error: message }, { status: 500 });

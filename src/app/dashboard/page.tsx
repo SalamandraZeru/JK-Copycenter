@@ -107,7 +107,7 @@ export default async function DashboardOverview() {
               Olá, {firstName}!
             </h1>
             <p className="mt-1.5 text-sm sm:text-base text-slate-300 max-w-xl">
-              Bem-vindo ao seu portal exclusivo JK Copycenter. Acompanhe seus pedidos em tempo real ou inicie novas impressões.
+              Bem-vindo ao seu portal exclusivo JK Copycenter. Acompanhe seus pedidos ou inicie uma nova solicitação gráfica.
             </p>
           </div>
 
@@ -159,7 +159,7 @@ export default async function DashboardOverview() {
                 Novo Pedido Gráfico
               </h3>
               <p className="mt-2 text-xs sm:text-sm text-slate-500 leading-relaxed">
-                Apostilas, cartões de visita, banners, adesivos e serviços de cópias com cálculo instantâneo de valores.
+                Apostilas, cartões de visita, banners, adesivos e cópias com análise personalizada pela nossa equipe.
               </p>
             </div>
 

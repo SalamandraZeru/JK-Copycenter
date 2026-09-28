@@ -108,7 +108,7 @@ export default function UsuariosPage() {
         <button 
           onClick={startNew}
           disabled={editingId !== null}
-          className="inline-flex items-center gap-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition disabled:opacity-50"
+          className="inline-flex items-center gap-2 bg-[#092653] hover:bg-[#b4232d] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition disabled:opacity-50"
         >
           <Plus className="w-4 h-4" /> Novo Usuário
         </button>
@@ -120,7 +120,8 @@ export default function UsuariosPage() {
         ) : error ? (
           <div className="p-16 text-center text-red-600 font-bold">Erro ao carregar usuários.</div>
         ) : (
-          <table className="w-full text-left">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[680px] text-left">
             <thead className="bg-slate-50 text-slate-800 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4">Usuário</th>
@@ -281,6 +282,7 @@ export default function UsuariosPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

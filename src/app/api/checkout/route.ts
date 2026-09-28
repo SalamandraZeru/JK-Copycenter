@@ -112,6 +112,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       PICKUP_UNAVAILABLE: { message: 'Retirada temporariamente indisponível.', status: 409 },
       DELIVERY_ADDRESS_REQUIRED: { message: 'Informe o endereço para entrega.', status: 400 },
       DELIVERY_AREA_UNAVAILABLE: { message: 'O endereço informado está fora da área de entrega.', status: 400 },
+      MIXED_CART_NOT_ALLOWED: { message: 'Produtos de papelaria e serviços gráficos devem ser enviados separadamente.', status: 400 },
+      GRAPHIC_QUOTE_ENDPOINT_REQUIRED: { message: 'Serviços gráficos devem ser enviados como solicitação de orçamento.', status: 400 },
+      STATIONERY_CHECKOUT_PRODUCT_ONLY: { message: 'O checkout de papelaria aceita somente produtos.', status: 400 },
+      PRODUCT_UNAVAILABLE: { message: 'Um produto não está mais disponível.', status: 409 },
+      STOCK_UNAVAILABLE: { message: 'Estoque insuficiente para um dos produtos.', status: 409 },
     };
     const clientError = clientErrors[code];
 

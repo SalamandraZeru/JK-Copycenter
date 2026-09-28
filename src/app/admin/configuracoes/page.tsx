@@ -66,7 +66,7 @@ export default function ConfiguracoesPage() {
         <button 
           onClick={handleSave}
           disabled={isSaving}
-          className="flex items-center gap-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white px-6 py-2.5 rounded-xl font-bold transition disabled:opacity-50 shadow-md text-sm"
+          className="flex items-center gap-2 bg-[#092653] hover:bg-[#b4232d] text-white px-6 py-2.5 rounded-xl font-bold transition disabled:opacity-50 shadow-md text-sm"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Salvar Configurações

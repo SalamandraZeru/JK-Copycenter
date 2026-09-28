@@ -26,6 +26,8 @@ interface OrderItem {
   payment_method?: string | null;
   payment_status?: string | null;
   delivery_type?: string | null;
+  order_kind: 'legacy_checkout' | 'stationery_sale' | 'graphic_quote';
+  quote_status: string;
 }
 
 export default async function PedidosPage(
@@ -49,7 +51,7 @@ export default async function PedidosPage(
 
   let query = supabase
     .from('orders')
-    .select('id, order_number, status, total, created_at, payment_method, payment_status, delivery_type', { count: 'exact' })
+    .select('id, order_number, status, total, created_at, payment_method, payment_status, delivery_type, order_kind, quote_status', { count: 'exact' })
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
@@ -69,6 +71,8 @@ export default async function PedidosPage(
       payment_method: item.payment_method ? String(item.payment_method) : null,
       payment_status: item.payment_status ? String(item.payment_status) : null,
       delivery_type: item.delivery_type ? String(item.delivery_type) : null,
+      order_kind: item.order_kind,
+      quote_status: item.quote_status,
     }));
   }
   count = totalCount;
@@ -175,9 +179,10 @@ export default async function PedidosPage(
                     <div className="space-y-1">
                       <div className="flex items-center gap-3 flex-wrap">
                         <span className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                          Pedido #{order.order_number}
+                          {order.order_kind === 'graphic_quote' && order.quote_status !== 'accepted' ? 'Solicitação' : 'Pedido'} #{order.order_number}
                         </span>
                         <OrderStatusBadge status={order.status} showPulse={true} />
+                        {order.order_kind === 'graphic_quote' && <span className="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase text-blue-700">{order.quote_status === 'pending' ? 'Em análise' : order.quote_status === 'quoted' ? 'Proposta disponível' : order.quote_status}</span>}
                       </div>
 
                       <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
@@ -203,9 +208,7 @@ export default async function PedidosPage(
                       <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
                         Valor Total
                       </span>
-                      <span className="text-lg font-black text-slate-900">
-                        R$ {order.total.toFixed(2).replace('.', ',')}
-                      </span>
+                      <span className="text-lg font-black text-slate-900">{order.order_kind === 'graphic_quote' && order.quote_status !== 'accepted' ? 'Após aceite' : `R$ ${order.total.toFixed(2).replace('.', ',')}`}</span>
                     </div>
 
                     <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-50 text-slate-700 text-xs font-semibold group-hover:bg-blue-600 group-hover:text-white transition-all">

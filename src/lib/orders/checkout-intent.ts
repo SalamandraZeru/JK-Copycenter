@@ -57,8 +57,8 @@ export const checkoutIntentSchema = z.object({
     }).default({}),
     bookletPaddingApproved: z.boolean().default(false),
     artworkBleedAcknowledged: z.boolean().default(false),
-  }).refine((item) => Boolean(item.serviceId || item.productId), {
-    message: 'Item deve indicar serviço ou produto.',
+  }).refine((item) => Boolean(item.serviceId) !== Boolean(item.productId), {
+    message: 'Item deve indicar exclusivamente um serviço ou um produto.',
   })).min(1, 'Carrinho não pode estar vazio').max(1_000),
   deliveryType: z.enum(['pickup', 'delivery']),
   deliveryAddressId: optionalTrimmedUuid,

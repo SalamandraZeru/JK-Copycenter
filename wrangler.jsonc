@@ -4,6 +4,9 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-08-24",
   "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "SERVICE_MANUAL_QUOTE_ENABLED": "true"
+  },
   "ratelimits": [
     {
       "name": "JK_PRICING_PREVIEW_RATE_LIMIT",
@@ -19,6 +22,11 @@
       "name": "JK_UPLOAD_RATE_LIMIT",
       "namespace_id": "2026082603",
       "simple": { "limit": 15, "period": 60 }
+    },
+    {
+      "name": "JK_PRIVACY_REQUEST_RATE_LIMIT",
+      "namespace_id": "2026091401",
+      "simple": { "limit": 3, "period": 60 }
     }
   ],
   "assets": {

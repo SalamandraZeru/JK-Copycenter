@@ -101,6 +101,7 @@ function revalidationMessage(item: CartItem): string | null {
 export default function CarrinhoPage() {
   const router = useRouter();
   const items = useCartStore((state) => state.items);
+  const quoteDrafts = useCartStore((state) => Object.values(state.quoteDrafts));
   const removeItem = useCartStore((state) => state.removeItem);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const restoreSessionFiles = useCartStore((state) => state.restoreSessionFiles);
@@ -217,7 +218,7 @@ export default function CarrinhoPage() {
 
   if (!mounted) return null;
   if (items.length === 0) {
-    return <div className="mx-auto max-w-4xl px-4 py-20 text-center"><div className="flex flex-col items-center rounded-3xl border border-slate-200 bg-white p-12 shadow-sm"><div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-slate-100"><ShoppingBag className="h-10 w-10 text-slate-400" /></div><h2 className="mb-4 text-3xl font-bold text-slate-900">Seu carrinho está vazio</h2><p className="mb-8 max-w-md text-lg text-slate-600">Adicione serviços gráficos ou produtos de papelaria para continuar.</p><div className="flex gap-4"><Link href="/grafica" className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700">Ver Gráfica</Link><Link href="/papelaria" className="rounded-xl bg-slate-100 px-6 py-3 font-semibold text-slate-900 transition-colors hover:bg-slate-200">Ver Papelaria</Link></div></div></div>;
+    return <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-20"><div className="flex flex-col items-center rounded-3xl border border-slate-200 bg-white p-7 text-center shadow-sm sm:p-12"><div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 sm:h-24 sm:w-24"><ShoppingBag className="h-10 w-10 text-slate-400" /></div><h2 className="mb-4 text-3xl font-bold text-slate-900">Seu carrinho de papelaria está vazio</h2><p className="mb-8 max-w-lg text-base text-slate-600 sm:text-lg">Produtos de papelaria ficam no carrinho. Serviços gráficos são enviados separadamente para análise da equipe.</p>{quoteDrafts.length > 0 && <div className="mb-8 w-full max-w-xl rounded-2xl border border-blue-200 bg-blue-50 p-5 text-left"><h3 className="font-extrabold text-[#0d2b5c]">Solicitações gráficas para continuar</h3><p className="mt-1 text-sm text-blue-900">Suas escolhas seguras foram preservadas, sem preços nem arquivos.</p><div className="mt-4 space-y-2">{quoteDrafts.map((draft) => <Link key={draft.serviceId} href={`/servico/${draft.serviceSlug || draft.serviceId}`} className="flex min-h-11 items-center justify-between rounded-xl bg-white px-4 py-3 font-bold text-[#0d2b5c] shadow-sm hover:bg-slate-50"><span>{draft.serviceName}</span><ArrowRight className="h-4 w-4" /></Link>)}</div></div>}<div className="flex flex-col gap-3 sm:flex-row"><Link href="/grafica" className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700">Solicitar orçamento gráfico</Link><Link href="/papelaria" className="rounded-xl bg-slate-100 px-6 py-3 font-semibold text-slate-900 transition-colors hover:bg-slate-200">Ver papelaria</Link></div></div></div>;
   }
 
   const subtotalCents = items.reduce((total, item) => total + (item.displaySnapshot.estimatedTotalCents ?? 0), 0);
@@ -228,6 +229,7 @@ export default function CarrinhoPage() {
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <h1 className="mb-2 text-3xl font-bold text-slate-900">Meu Carrinho</h1>
       <p className="mb-8 text-slate-600">A cotação exibida é atualizada com o catálogo. O pedido sempre é recalculado no servidor antes da confirmação.</p>
+      {quoteDrafts.length > 0 && <div className="mb-8 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Você também tem {quoteDrafts.length} solicitação(ões) gráfica(s) em rascunho.</strong> Serviços gráficos não entram neste carrinho. <Link href={`/servico/${quoteDrafts[0]?.serviceSlug || quoteDrafts[0]?.serviceId}`} className="font-bold underline">Continuar solicitação</Link></div>}
       <div className="flex flex-col gap-8 lg:flex-row">
         <div className="flex-1 space-y-6">
           {items.map((item) => {

@@ -169,6 +169,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       .insert({
         service_id: body.service_id,
         name: body.name,
+        price_per_page: body.price_per_page,
         price_per_page_cents: reaisToCents(body.price_per_page),
         fallback_behavior: 'block',
         is_active: false,

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils/format';
 import { PreflightReviewPanel } from '@/components/admin/PreflightReviewPanel';
 import { OrderStatusWhatsAppButton } from '@/components/admin/OrderStatusWhatsAppButton';
+import { QuoteManagementPanel } from '@/components/admin/QuoteManagementPanel';
 import { 
   ArrowLeft, Package, User, MapPin, Download, CheckCircle, 
   Loader2, Save, FileText, Printer, PencilLine
@@ -66,12 +67,16 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
   if (error || !order) return <div className="p-20 text-center text-red-500">Erro ao carregar pedido.</div>;
 
   const isProductionView = order.operationView === 'production';
+  const isGraphicQuote = order.order_kind === 'graphic_quote';
+  const hasAcceptedQuote = isGraphicQuote && order.quote_status === 'accepted';
   const productionTargets: Record<string, string[]> = {
     confirmed: ['in_production'],
     in_production: ['ready'],
     ready: ['completed'],
   };
-  const selectableStatuses = isProductionView
+  const selectableStatuses = isGraphicQuote && !hasAcceptedQuote
+    ? []
+    : isProductionView
     ? productionTargets[order.status] || []
     : ['in_production', 'ready', 'completed', 'cancelled'];
   const productionBlockedByPayment = isProductionView && order.payment_status !== 'paid';
@@ -195,7 +200,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">Pedido #{order.order_number}</h1>
+              <h1 className="text-2xl font-bold text-slate-900">{isGraphicQuote && !hasAcceptedQuote ? 'Solicitação' : 'Pedido'} #{order.order_number}</h1>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-blue-100 text-blue-800">
                 {STATUS_LABELS[order.status] || order.status}
               </span>
@@ -205,6 +210,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
         </div>
 
         {!isProductionView && <div className="flex items-center gap-2.5">
+          {(!isGraphicQuote || hasAcceptedQuote) &&
           <Link
             href={`/os/${order.id}`}
             target="_blank"
@@ -213,7 +219,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
           >
             <Printer className="w-4 h-4" />
             Imprimir O.S.
-          </Link>
+          </Link>}
           <OrderStatusWhatsAppButton orderId={order.id} status={order.status} />
         </div>}
       </div>
@@ -244,7 +250,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
                         </div>
                       )}
                     </div>
-                    {!isProductionView && <div className="text-right">
+                    {!isProductionView && (!isGraphicQuote || hasAcceptedQuote) && <div className="text-right">
                       <p className="font-bold text-slate-900">{formatCurrency(item.total_price || item.unit_price * item.quantity)}</p>
                       <p className="text-xs text-slate-500 font-medium">Qtd: {item.quantity}</p>
                     </div>}
@@ -258,7 +264,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
               ))}
             </div>
 
-            {!isProductionView && <div className="mt-6 pt-6 border-t border-slate-200 space-y-2">
+            {!isProductionView && (!isGraphicQuote || hasAcceptedQuote) && <div className="mt-6 pt-6 border-t border-slate-200 space-y-2">
               <div className="flex justify-between text-sm text-slate-600 font-medium">
                 <span>Subtotal</span>
                 <span>{formatCurrency(order.subtotal)}</span>
@@ -274,7 +280,11 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
             </div>}
           </div>
 
-          {!isProductionView && Array.isArray(order.order_price_adjustments) && order.order_price_adjustments.length > 0 && (
+          {!isProductionView && isGraphicQuote && (
+            <QuoteManagementPanel order={order} onUpdated={() => mutate()} />
+          )}
+
+          {!isProductionView && (!isGraphicQuote || hasAcceptedQuote) && Array.isArray(order.order_price_adjustments) && order.order_price_adjustments.length > 0 && (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
               <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <PencilLine className="w-5 h-5 text-blue-600" /> Histórico de ajustes de valor
@@ -400,7 +410,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
             </div>
           </div>
 
-          {!isProductionView && <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
+          {!isProductionView && (!isGraphicQuote || hasAcceptedQuote) && <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2"><PencilLine className="w-5 h-5 text-blue-600" /> Ajuste final do valor</h2>
             <p className="text-sm text-slate-600 mb-4">Use após revisar os arquivos ou conceder desconto. A base calculada é preservada; motivo, versão e valores anterior/novo ficam registrados no pedido.</p>
             {order.payment_status !== 'pending_contact' ? (
@@ -426,7 +436,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
             )}
           </div>}
 
-          {!isProductionView && <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
+          {!isProductionView && (!isGraphicQuote || hasAcceptedQuote) && <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-2">Confirmação manual de pagamento</h2>
             <p className="text-sm text-slate-600 mb-4">Status atual: <strong>{PAYMENT_LABELS[order.payment_status] || order.payment_status}</strong></p>
             <div className="space-y-3">

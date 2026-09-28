@@ -80,6 +80,7 @@ export async function POST(_request: Request, props: { params: Promise<{ id: str
         .insert({
           service_id: duplicate.id,
           name: rule.name,
+          price_per_page: rule.price_per_page,
           price_per_page_cents: rule.price_per_page_cents,
           fallback_behavior: rule.fallback_behavior,
           // Todo preço copiado exige revisão antes de poder ir para o catálogo.

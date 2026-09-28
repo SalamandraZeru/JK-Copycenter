@@ -5,7 +5,6 @@ import React, { useRef, useState } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { Loader2, Plus, Edit2, Trash2, Check, Printer, Settings, Image as ImageIcon, Copy, Download, Upload } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils/format';
 import { ImageUploader } from '@/components/admin/ImageUploader';
 import { pricingProfileTemplates } from '@/lib/pricing/profiles';
 import type { PricingProfile } from '@/types/pricing';
@@ -214,7 +213,7 @@ export default function ServicosPage() {
           <button
             onClick={startNew}
             disabled={editingId !== null}
-            className="inline-flex items-center gap-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition disabled:opacity-50"
+            className="inline-flex items-center gap-2 bg-[#092653] hover:bg-[#b4232d] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition disabled:opacity-50"
           >
             <Plus className="w-4 h-4" /> Novo Serviço
           </button>
@@ -241,7 +240,7 @@ export default function ServicosPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 px-6 py-2 bg-[#0F2040] hover:bg-[#CC1A1A] text-white font-bold rounded-xl text-sm shadow-md transition"
+                className="inline-flex items-center gap-2 px-6 py-2 bg-[#092653] hover:bg-[#b4232d] text-white font-bold rounded-xl text-sm shadow-md transition"
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Salvar Serviço
@@ -353,22 +352,6 @@ export default function ServicosPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
-                    {formData.pricing_profile === 'booklet_imposition' ? 'Mínimo por lote (R$) *' : 'Preço Base Inicial (R$) *'}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.50"
-                    value={formData.base_price || ''}
-                    onChange={(e) => setFormData({ ...formData, base_price: Number(e.target.value) })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
-                  />
-                </div>
-              </div>
-
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">
                   Descrição Completa
@@ -382,24 +365,15 @@ export default function ServicosPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">Estado editorial</label>
-                  <select value={formData.catalog_state} onChange={(e) => setFormData({ ...formData, catalog_state: e.target.value as Service['catalog_state'] })} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition">
-                    <option value="draft">Rascunho</option>
-                    <option value="review">Em revisão</option>
-                    <option value="published">Publicado</option>
-                    <option value="inactive">Inativo</option>
-                  </select>
-                  <p className="mt-1 text-xs text-slate-500">Só serviços publicados aparecem ao cliente.</p>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">Sem regra correspondente</label>
-                  <select value={formData.pricing_fallback_behavior} onChange={(e) => setFormData({ ...formData, pricing_fallback_behavior: e.target.value as Service['pricing_fallback_behavior'] })} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition">
-                    <option value="block">Bloquear cotação</option>
-                    <option value="use_base">Usar preço-base</option>
-                  </select>
-                </div>
+              <div className="pt-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">Estado editorial</label>
+                <select value={formData.catalog_state} onChange={(e) => setFormData({ ...formData, catalog_state: e.target.value as Service['catalog_state'] })} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition sm:max-w-xs">
+                  <option value="draft">Rascunho</option>
+                  <option value="review">Em revisão</option>
+                  <option value="published">Publicado</option>
+                  <option value="inactive">Inativo</option>
+                </select>
+                <p className="mt-1 text-xs text-slate-500">Só serviços publicados aparecem ao cliente. O valor é definido manualmente pela equipe no orçamento.</p>
               </div>
             </div>
           </div>
@@ -419,12 +393,35 @@ export default function ServicosPage() {
             <p className="text-xs text-slate-500 mt-1">Clique em &ldquo;Novo Serviço&rdquo; para criar o primeiro.</p>
           </div>
         ) : (
-          <table className="w-full text-left">
+          <>
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {servicos.map((serv) => (
+              <li key={serv.id} className={`p-4 ${serv.catalog_state !== 'published' ? 'bg-slate-50/50' : ''}`}>
+                <div className="flex gap-3">
+                  {serv.image_url ? <img src={serv.image_url} alt={serv.name} className="h-14 w-14 shrink-0 rounded-xl border border-slate-200 object-cover" /> : <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-500"><ImageIcon className="h-5 w-5" /></div>}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-extrabold text-slate-900">{serv.name}</p>
+                    <p className="truncate font-mono text-xs text-slate-500">{serv.slug}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-[#092653]">Orçamento manual</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${serv.catalog_state === 'published' ? 'bg-emerald-100 text-emerald-800' : serv.catalog_state === 'review' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-800'}`}>{serv.catalog_state === 'draft' ? 'Rascunho' : serv.catalog_state === 'review' ? 'Em revisão' : serv.catalog_state === 'published' ? 'Publicado' : 'Inativo'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link href={`/admin/servicos/${serv.id}`} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-700"><Settings className="h-3.5 w-3.5" /> Personalização</Link>
+                  <button onClick={() => startEdit(serv)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-slate-100 px-3 text-xs font-bold text-slate-700 disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
+                  <button onClick={() => handleDelete(serv.id)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-red-50 px-3 text-xs font-bold text-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> Excluir</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <table className="hidden w-full text-left md:table">
             <thead className="bg-slate-50 text-slate-800 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4 w-20">Foto</th>
                 <th className="px-6 py-4">Nome & Slug</th>
-                <th className="px-6 py-4">Preço Base</th>
+                <th className="px-6 py-4">Modo comercial</th>
                 <th className="px-6 py-4">Estado</th>
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
@@ -445,8 +442,8 @@ export default function ServicosPage() {
                     <p className="font-extrabold text-slate-900">{serv.name}</p>
                     <p className="text-xs text-slate-600 font-mono font-medium">{serv.slug}</p>
                   </td>
-                  <td className="px-6 py-4 font-bold text-slate-900">
-                    A partir de {formatCurrency(serv.base_price)}
+                  <td className="px-6 py-4">
+                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-[#092653]">Orçamento manual</span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 text-xs font-extrabold rounded-full uppercase ${serv.catalog_state === 'published' ? 'bg-emerald-100 text-emerald-800' : serv.catalog_state === 'review' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-800'}`}>{serv.catalog_state === 'draft' ? 'Rascunho' : serv.catalog_state === 'review' ? 'Em revisão' : serv.catalog_state === 'published' ? 'Publicado' : 'Inativo'}</span>
@@ -487,6 +484,7 @@ export default function ServicosPage() {
               ))}
             </tbody>
           </table>
+          </>
         )}
       </div>
     </div>

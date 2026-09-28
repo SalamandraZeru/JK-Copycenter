@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jk-public-v1';
+const CACHE_NAME = 'jk-public-v3';
 const PRECACHE_URLS = [
   '/offline.html',
   '/favicon.ico',
@@ -17,6 +17,8 @@ const EXCLUDED_PREFIXES = [
   '/pedido',
   '/pedido-confirmado',
   '/servico',
+  '/solicitacao-enviada',
+  '/orcamento',
 ];
 const CACHEABLE_PUBLIC_PAGES = new Set(['/', '/grafica', '/papelaria', '/sobre']);
 

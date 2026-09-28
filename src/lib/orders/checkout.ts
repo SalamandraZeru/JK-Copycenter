@@ -19,6 +19,7 @@ import { assessPdfDimensionsForAutomaticQuote } from '@/lib/upload/pdf-dimension
 import { assessBookletFileForAutomaticQuote } from '@/lib/upload/booklet-file';
 import type { AuthorizedCheckoutFile } from '@/lib/upload/access';
 import type { PricingCalculationResult } from '@/types/pricing';
+import { isServiceManualQuoteEnabled } from '@/lib/features/service-manual-quote';
 
 interface ProcessedOrderItem {
   id: string;
@@ -143,6 +144,21 @@ export async function processCheckout(
   context: { userId?: string; guestEmail?: string; guestUploadSessionHash?: string },
   supabase: SupabaseClient<Database>
 ): Promise<CheckoutResult> {
+  if (isServiceManualQuoteEnabled()) {
+    const hasProducts = payload.items.some((item) => Boolean(item.productId));
+    const hasServices = payload.items.some((item) => Boolean(item.serviceId));
+    if (hasProducts && hasServices) throw new Error('MIXED_CART_NOT_ALLOWED');
+    if (hasServices) throw new Error('GRAPHIC_QUOTE_ENDPOINT_REQUIRED');
+    if (!hasProducts || payload.items.some((item) => (
+      !item.productId
+      || Boolean(item.serviceId)
+      || item.fileIds.length > 0
+      || (item.bindingFileIds?.length ?? 0) > 0
+    ))) {
+      throw new Error('STATIONERY_CHECKOUT_PRODUCT_ONLY');
+    }
+  }
+
   const config = await loadSystemConfig(supabase, [
     'pix_key',
     'pix_owner_name',
@@ -438,13 +454,7 @@ export async function processCheckout(
   const total = major(totalCents);
   const pixKeyUsed = payload.paymentMethod === 'pix' ? (config.pix_key || null) : null;
 
-  const { data: committedRows, error: commitError } = await supabase.rpc('commit_checkout', {
-    p_idempotency_key: payload.idempotencyKey,
-    p_request_hash: requestHash,
-    p_user_id: context.userId || null,
-    p_guest_email: guestEmail,
-    p_guest_upload_session_hash: context.userId ? null : context.guestUploadSessionHash || null,
-    p_order: toJson({
+  const orderForCommit = toJson({
       guest_name: customerName,
       guest_phone: customerPhone,
       delivery_type: payload.deliveryType,
@@ -455,8 +465,8 @@ export async function processCheckout(
       payment_method: payload.paymentMethod,
       pix_key_used: pixKeyUsed,
       notes: payload.notes?.trim() || null,
-    }),
-    p_items: toJson(processedItems.map((item) => ({
+    });
+  const itemsForCommit = toJson(processedItems.map((item) => ({
       service_id: item.service_id,
       product_id: item.product_id,
       service_name_snapshot: item.service_name_snapshot,
@@ -473,9 +483,28 @@ export async function processCheckout(
       pricing_rule_snapshot: item.pricing_rule_snapshot,
       discount_cents: item.discount_cents,
       file_ids: item.file_ids,
-    }))),
-    p_file_ids: uniqueFileIds,
-  });
+    })));
+  const commitResult = isServiceManualQuoteEnabled()
+    ? await supabase.rpc('commit_stationery_checkout', {
+      p_idempotency_key: payload.idempotencyKey,
+      p_request_hash: requestHash,
+      p_user_id: context.userId || null,
+      p_guest_email: guestEmail,
+      p_guest_upload_session_hash: null,
+      p_order: orderForCommit,
+      p_items: itemsForCommit,
+    })
+    : await supabase.rpc('commit_checkout', {
+      p_idempotency_key: payload.idempotencyKey,
+      p_request_hash: requestHash,
+      p_user_id: context.userId || null,
+      p_guest_email: guestEmail,
+      p_guest_upload_session_hash: context.userId ? null : context.guestUploadSessionHash || null,
+      p_order: orderForCommit,
+      p_items: itemsForCommit,
+      p_file_ids: uniqueFileIds,
+    });
+  const { data: committedRows, error: commitError } = commitResult;
   if (commitError) {
     if (commitError.message.includes('IDEMPOTENCY_CONFLICT')) throw new Error('IDEMPOTENCY_CONFLICT');
     throw new Error(`TRANSACTION_ERROR: ${commitError.message}`);
@@ -518,6 +547,21 @@ export async function previewCheckout(
   context: { userId?: string; guestEmail?: string; guestUploadSessionHash?: string },
   supabase: SupabaseClient<Database>,
 ): Promise<CheckoutQuote> {
+  if (isServiceManualQuoteEnabled()) {
+    const hasProducts = payload.items.some((item) => Boolean(item.productId));
+    const hasServices = payload.items.some((item) => Boolean(item.serviceId));
+    if (hasProducts && hasServices) throw new Error('MIXED_CART_NOT_ALLOWED');
+    if (hasServices) throw new Error('GRAPHIC_QUOTE_ENDPOINT_REQUIRED');
+    if (!hasProducts || payload.items.some((item) => (
+      !item.productId
+      || Boolean(item.serviceId)
+      || item.fileIds.length > 0
+      || (item.bindingFileIds?.length ?? 0) > 0
+    ))) {
+      throw new Error('STATIONERY_CHECKOUT_PRODUCT_ONLY');
+    }
+  }
+
   const config = await loadSystemConfig(supabase, [
     'delivery_fee_cents',
     'delivery_city',

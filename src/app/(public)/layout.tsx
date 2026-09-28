@@ -3,6 +3,7 @@ import { Header } from '@/components/shared/Header';
 import { Footer } from '@/components/shared/Footer';
 import { FloatingWhatsApp } from '@/components/shared/FloatingWhatsApp';
 import { PwaRegistration } from '@/components/pwa/PwaRegistration';
+import { EssentialStorageNotice } from '@/components/privacy/EssentialStorageNotice';
 
 export default function PublicLayout({
   children,
@@ -12,11 +13,12 @@ export default function PublicLayout({
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
       <Header />
-      <main className="flex-grow flex flex-col">
+      <main className="flex min-w-0 flex-grow flex-col">
         {children}
       </main>
       <FloatingWhatsApp />
       <PwaRegistration />
+      <EssentialStorageNotice />
       <Footer />
     </div>
   );

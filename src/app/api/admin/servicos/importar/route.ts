@@ -138,6 +138,7 @@ export async function POST(request: Request) {
       const { data, error } = await supabase.from('pricing_rules').insert({
         service_id: service.id,
         name: rule.name,
+        price_per_page: rule.price_per_page_cents / 100,
         price_per_page_cents: rule.price_per_page_cents,
         fallback_behavior: rule.fallback_behavior ?? 'block',
         is_active: false,

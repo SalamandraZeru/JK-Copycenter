@@ -11,6 +11,7 @@ import { loadAuthorizedReadyFiles } from '@/lib/upload/access';
 import { enforceCloudflareRateLimit } from '@/lib/security/cloudflare-rate-limit';
 import { assessPdfDimensionsForAutomaticQuote } from '@/lib/upload/pdf-dimensions';
 import { assessBookletFileForAutomaticQuote } from '@/lib/upload/booklet-file';
+import { isServiceManualQuoteEnabled } from '@/lib/features/service-manual-quote';
 
 const previewSchema = z.object({
   serviceId: z.string().uuid(),
@@ -35,6 +36,12 @@ const previewSchema = z.object({
 
 export async function POST(req: NextRequest): Promise<NextResponse<PricingResult>> {
   try {
+    if (isServiceManualQuoteEnabled()) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'QUOTE_UNAVAILABLE', message: 'Serviços gráficos usam orçamento manual.' },
+      }, { status: 410 });
+    }
     if (!validateCsrfOrigin(req.headers.get('origin'), req.headers.get('host'))) {
       return NextResponse.json({
         success: false,

@@ -26,21 +26,20 @@ export function CategoryCard({ category }: CategoryCardProps) {
   const Icon = getCategoryIcon(category.slug || category.name.toLowerCase());
 
   return (
-    <Link href={`/papelaria?categoria=${category.slug}`} className="group block text-center">
-      <div className="relative aspect-square rounded-xl overflow-hidden bg-white border border-slate-200 group-hover:border-[#b4232d]/40 group-hover:shadow-lg transition-all duration-200 mb-3 flex items-center justify-center p-4">
+    <Link href={`/papelaria?categoria=${category.slug}`} className="group flex min-h-28 items-center gap-3 rounded-2xl border border-[#092653]/15 bg-[#fffdf8] p-3 transition hover:-translate-y-0.5 hover:border-[#b4232d]/50">
+      <div className="relative flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-xl bg-white p-2">
         {category.image_url ? (
           <img 
             src={category.image_url} 
             alt={category.name} 
-            className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
+            className="h-full w-full rounded-lg object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="w-14 h-14 rounded-lg bg-[#0d2b5c]/5 group-hover:bg-[#b4232d]/10 text-[#0d2b5c] group-hover:text-[#b4232d] flex items-center justify-center transition-colors duration-200">
+          <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-[#0d2b5c]/5 text-[#0d2b5c] transition-colors duration-200 group-hover:bg-[#b4232d]/10 group-hover:text-[#b4232d]">
             <Icon className="w-7 h-7" />
           </div>
         )}
-      </div>
-      <h3 className="text-sm font-bold text-[#13233b] group-hover:text-[#b4232d] transition-colors leading-tight">
+      </div><h3 className="text-left text-sm font-black leading-tight text-[#13233b] transition-colors group-hover:text-[#b4232d]">
         {category.name}
       </h3>
     </Link>

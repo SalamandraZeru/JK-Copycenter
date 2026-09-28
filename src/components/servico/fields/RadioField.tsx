@@ -22,10 +22,10 @@ export function RadioField({ field, value, onChange, error }: FieldProps) {
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-semibold text-slate-800">
+    <fieldset className="flex flex-col gap-2" aria-invalid={Boolean(error)} aria-describedby={error ? `${field.key}-error` : undefined}>
+      <legend className="text-sm font-semibold text-slate-800">
         {field.label} {field.isRequired && <span className="text-red-600">*</span>}
-      </label>
+      </legend>
       <div className="flex flex-col gap-2.5">
         {field.options.map(opt => (
           <label key={opt.value} className="flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition-colors">
@@ -43,7 +43,7 @@ export function RadioField({ field, value, onChange, error }: FieldProps) {
           </label>
         ))}
       </div>
-      {error && <span className="text-xs font-medium text-red-600">{error}</span>}
-    </div>
+      {error && <span id={`${field.key}-error`} className="text-xs font-medium text-red-600">{error}</span>}
+    </fieldset>
   );
 }

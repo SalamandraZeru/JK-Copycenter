@@ -1,4 +1,5 @@
-import React from 'react';
+import Link from 'next/link';
+import { ArrowRight, FileCheck2, FileUp, MessageSquareText, ShieldCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { ServiceCard } from '@/components/loja/ServiceCard';
 
@@ -6,51 +7,14 @@ export const revalidate = 60;
 
 export default async function GraficaPage() {
   const supabase = await createClient();
+  const { data } = await supabase.from('services').select('id, name, slug, description, image_url').eq('is_active', true).eq('catalog_state', 'published').is('deleted_at', null).order('sort_order');
+  const services = data || [];
 
-  let services: Array<{
-    id: string;
-    name: string;
-    slug: string;
-    description: string | null;
-    image_url: string | null;
-    base_price: number;
-  }> = [];
+  return <div className="jk-paper-grid min-h-screen">
+    <section className="bg-[#092653] text-white"><div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.1fr_.9fr] lg:px-8"><div className="jk-stagger"><p className="text-xs font-black uppercase tracking-[.2em] text-blue-200">Orçamento gráfico</p><h1 className="jk-display mt-4 max-w-3xl text-5xl font-black leading-none sm:text-6xl">Primeiro entendemos o arquivo. Depois vem o preço.</h1><p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200">Escolha um serviço, descreva o pedido e anexe o material. A equipe confere o escopo e registra uma proposta para você decidir.</p><a href="#catalogo" className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-full bg-[#b4232d] px-6 font-black text-white hover:bg-[#951c25]">Escolher serviço <ArrowRight className="h-4 w-4" /></a></div><ol className="grid gap-px overflow-hidden rounded-3xl border border-white/15 bg-white/15 sm:grid-cols-3 lg:grid-cols-1">{[[FileUp, 'Envie'], [FileCheck2, 'A equipe analisa'], [MessageSquareText, 'Você recebe a proposta']].map(([Icon, label], index) => { const ItemIcon = Icon as typeof FileUp; return <li key={String(label)} className="flex items-center gap-4 bg-white/5 p-5"><span className="jk-display text-2xl font-black text-blue-200">0{index + 1}</span><ItemIcon className="h-5 w-5 text-white" /><span className="text-sm font-bold">{String(label)}</span></li>; })}</ol></div></section>
 
-  try {
-    let query = supabase
-      .from('services')
-      .select('id, name, slug, description, image_url, base_price')
-      .eq('is_active', true)
-      .is('deleted_at', null)
-      .order('sort_order');
+    <section id="catalogo" className="mx-auto max-w-7xl scroll-mt-28 px-4 py-16 sm:px-6 sm:py-20 lg:px-8"><div className="mb-10 max-w-2xl"><p className="text-xs font-black uppercase tracking-[.2em] text-[#b4232d]">Catálogo publicado</p><h2 className="jk-display mt-3 text-4xl font-black text-[#092653] sm:text-5xl">O que vamos produzir?</h2><p className="mt-4 leading-7 text-slate-600">Cada formulário mostra apenas opções cadastradas para aquele serviço. O envio não gera cobrança.</p></div>{services.length ? <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{services.map((service) => <ServiceCard key={service.id} service={service} manualQuote />)}</div> : <div className="rounded-3xl border border-[#092653]/15 bg-[#fffdf8] p-10 text-center"><h3 className="text-xl font-black text-[#092653]">Catálogo temporariamente indisponível</h3><p className="mt-2 text-slate-600">Você ainda pode falar com a equipe e explicar o que precisa.</p><a href="https://wa.me/5535991066260" className="mt-5 inline-flex min-h-11 items-center gap-2 font-bold text-blue-700 underline">Abrir WhatsApp <ArrowRight className="h-4 w-4" /></a></div>}</section>
 
-    const { data: dbServices } = await query;
-    if (dbServices && dbServices.length > 0) {
-      services = dbServices;
-    }
-  } catch {}
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="mb-10">
-        <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Serviços Gráficos</h1>
-        <p className="text-lg text-slate-600 max-w-3xl">
-          Escolha o serviço desejado, envie seus arquivos e configure os detalhes da impressão com cálculo em tempo real.
-        </p>
-      </div>
-
-      {services && services.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map(service => (
-            <ServiceCard key={service.id} service={service} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-20 bg-white border border-slate-200 rounded-2xl">
-          <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum serviço encontrado</h3>
-          <p className="text-slate-500">Consulte a loja para solicitar este serviço.</p>
-        </div>
-      )}
-    </div>
-  );
+    <section className="border-t border-[#092653]/10 bg-[#fffdf8]"><div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 sm:px-6 lg:grid-cols-[auto_1fr_auto] lg:items-center lg:px-8"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-[#092653]"><ShieldCheck className="h-7 w-7" /></div><div><h2 className="text-xl font-black text-[#092653]">Arquivos privados e temporários</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">O arquivo não vai na mensagem do WhatsApp. Ele fica protegido para análise e produção e segue a política de eliminação física após o encerramento.</p></div><Link href="/privacidade" className="inline-flex min-h-11 items-center gap-2 text-sm font-black text-[#092653] underline underline-offset-4">Como protegemos <ArrowRight className="h-4 w-4" /></Link></div></section>
+  </div>;
 }
