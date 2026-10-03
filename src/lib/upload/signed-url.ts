@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 import { loadSystemConfig } from '@/lib/orders/config';
+import { createOrderFileDownloadUrl } from '@/lib/storage/order-files';
 
 interface SignedFileAccessInput {
   fileId: string;
@@ -21,10 +22,17 @@ export async function createAuditedSignedFileUrl(
     throw new Error('SIGNED_URL_CONFIG_UNAVAILABLE');
   }
 
-  const { data, error } = await supabase.storage
-    .from('order-files')
-    .createSignedUrl(input.storagePath, expiresIn);
-  if (error || !data?.signedUrl) {
+  let signedUrl: string | null = null;
+  try {
+    signedUrl = createOrderFileDownloadUrl({
+      fileId: input.fileId,
+      storagePath: input.storagePath,
+      expiresInSeconds: expiresIn,
+    });
+  } catch {
+    signedUrl = null;
+  }
+  if (!signedUrl) {
     await supabase.from('file_access_audit').insert({
       file_id: input.fileId,
       actor_user_id: input.actorUserId || null,
@@ -49,7 +57,7 @@ export async function createAuditedSignedFileUrl(
   if (auditError) throw new Error('FILE_ACCESS_AUDIT_FAILED');
 
   return {
-    url: data.signedUrl,
+    url: signedUrl,
     expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
   };
 }

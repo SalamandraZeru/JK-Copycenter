@@ -1,3 +1,5 @@
+import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   agentRules: false,
@@ -69,3 +71,6 @@ const nextConfig = {
 };
 
 export default nextConfig;
+
+// Disponibiliza os bindings do wrangler.jsonc (R2, rate limits) no `next dev`.
+initOpenNextCloudflareForDev();
