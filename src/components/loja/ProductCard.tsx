@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Check, Package, Plus } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/format';
 import { useCartStore } from '@/lib/cart/store';
+import { productCartItem } from '@/lib/cart/product-item';
 
 interface ProductCardProps {
   product: {
@@ -28,20 +29,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const outOfStock = product.stock_quantity !== null && product.stock_quantity <= 0;
 
   const handleAddToCart = () => {
-    addItem({
-      productId: product.id,
-      name: product.name,
-      imageUrl: product.image_url,
-      type: 'product',
-      basePrice: product.price,
-      estimatedTotal: product.price,
-      attributeIds: [],
-      fieldValues: [],
-      pageCount: 1,
-      isFrontAndBack: false,
-      quantity: 1,
-      fileIds: [],
-    });
+    addItem(productCartItem(product));
 
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);

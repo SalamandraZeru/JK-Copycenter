@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Check, Minus, Plus } from 'lucide-react';
 import { useCartStore } from '@/lib/cart/store';
+import { productCartItem } from '@/lib/cart/product-item';
 import { formatCurrency } from '@/lib/utils/format';
 
 interface ProductBuyBoxProps {
@@ -33,20 +34,7 @@ export function ProductBuyBox({ product }: ProductBuyBoxProps) {
 
   const handleAddToCart = () => {
     if (outOfStock) return;
-    addItem({
-      productId: product.id,
-      name: product.name,
-      imageUrl: product.image_url,
-      type: 'product',
-      basePrice: product.price,
-      estimatedTotal: product.price,
-      attributeIds: [],
-      fieldValues: [],
-      pageCount: 1,
-      isFrontAndBack: false,
-      quantity,
-      fileIds: [],
-    });
+    addItem(productCartItem(product, quantity));
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   };
