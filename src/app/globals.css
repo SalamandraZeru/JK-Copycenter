@@ -95,6 +95,15 @@ textarea {
   outline-offset: 3px;
 }
 
+/* Trilho horizontal (celular): rola para o lado sem barra visível. */
+.jk-rail {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.jk-rail::-webkit-scrollbar {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

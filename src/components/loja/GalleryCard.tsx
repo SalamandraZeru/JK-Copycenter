@@ -2,10 +2,8 @@
 
 import Image from 'next/image';
 import { MessageCircle } from 'lucide-react';
+import { WHATSAPP_NUMBER } from '@/lib/site/contact';
 
-// Número institucional usado em todo o site público (Header, Footer, WhatsApp
-// flutuante). Mantido em sincronia com esses componentes.
-const WHATSAPP_NUMBER = '5535991066260';
 
 export interface GalleryCardItem {
   id: string;
