@@ -116,7 +116,7 @@ export default function UsuariosPage() {
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+          <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#092653]" /></div>
         ) : error ? (
           <div className="p-16 text-center text-red-600 font-bold">Erro ao carregar usuários.</div>
         ) : (
@@ -138,7 +138,7 @@ export default function UsuariosPage() {
                       type="text" 
                       required
                       placeholder="Nome Completo" 
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm" 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none text-sm" 
                       value={formData.name || ''} 
                       onChange={e => setFormData({...formData, name: e.target.value})} 
                     />
@@ -146,7 +146,7 @@ export default function UsuariosPage() {
                       type="email" 
                       required
                       placeholder="E-mail de login" 
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm" 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none text-sm" 
                       value={formData.email || ''} 
                       onChange={e => setFormData({...formData, email: e.target.value})} 
                     />
@@ -155,14 +155,14 @@ export default function UsuariosPage() {
                       required
                       minLength={8}
                       placeholder="Senha provisória (mín. 8)" 
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm" 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none text-sm" 
                       value={formData.password || ''} 
                       onChange={e => setFormData({...formData, password: e.target.value})} 
                     />
                   </td>
                   <td className="px-6 py-4">
                     <select 
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm cursor-pointer" 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none text-sm cursor-pointer" 
                       value={formData.role || 'producao'} 
                       onChange={e => setFormData({...formData, role: e.target.value})}
                     >
@@ -175,7 +175,7 @@ export default function UsuariosPage() {
                         type="checkbox" 
                         checked={formData.is_active ?? true} 
                         onChange={e => setFormData({...formData, is_active: e.target.checked})} 
-                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                        className="w-5 h-5 rounded border-slate-300 text-[#092653] focus:ring-2 focus:ring-[#092653]/20"
                       />
                       <span className="text-sm font-semibold text-slate-800">Ativo</span>
                     </label>
@@ -206,14 +206,14 @@ export default function UsuariosPage() {
                   <td className="px-6 py-4 space-y-2">
                     <input 
                       type="text" 
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm" 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none text-sm" 
                       value={formData.name || ''} 
                       onChange={e => setFormData({...formData, name: e.target.value})} 
                     />
                   </td>
                   <td className="px-6 py-4">
                     <select 
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm cursor-pointer" 
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none text-sm cursor-pointer" 
                       value={formData.role || user.role} 
                       onChange={e => setFormData({...formData, role: e.target.value})}
                     >
@@ -226,7 +226,7 @@ export default function UsuariosPage() {
                         type="checkbox" 
                         checked={formData.is_active ?? user.is_active} 
                         onChange={e => setFormData({...formData, is_active: e.target.checked})} 
-                        className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                        className="w-5 h-5 rounded border-slate-300 text-[#092653] focus:ring-2 focus:ring-[#092653]/20"
                       />
                       <span className="text-sm font-semibold text-slate-800">Ativo</span>
                     </label>
@@ -272,7 +272,7 @@ export default function UsuariosPage() {
                     <button 
                       onClick={() => startEdit(user)}
                       disabled={editingId !== null}
-                      className="p-2 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition disabled:opacity-50"
+                      className="p-2 text-slate-700 hover:text-[#092653] hover:bg-blue-50 rounded-xl transition disabled:opacity-50"
                       title="Editar usuário"
                     >
                       <Edit2 className="w-4 h-4" />

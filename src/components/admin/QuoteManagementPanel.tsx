@@ -165,7 +165,7 @@ export function QuoteManagementPanel({ order, onUpdated }: QuoteManagementPanelP
     <section aria-labelledby="quote-management-title" className="rounded-2xl border border-blue-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-700">Orçamento manual</p>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#061a3b]">Orçamento manual</p>
           <h2 id="quote-management-title" className="mt-1 text-xl font-bold text-slate-950">{operation === 'issue' ? 'Registrar primeira proposta' : `Criar revisão v${order.latest_quote_version + 1}`}</h2>
           <p className="mt-1 text-sm text-slate-600">Cada envio cria uma versão imutável. O valor só vira preço do pedido depois do aceite do cliente.</p>
         </div>
@@ -202,7 +202,7 @@ export function QuoteManagementPanel({ order, onUpdated }: QuoteManagementPanelP
 
           {feedback && <p role="alert" className={`rounded-xl border px-4 py-3 text-sm font-semibold ${feedback.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-red-200 bg-red-50 text-red-800'}`}>{feedback.message}</p>}
 
-          <button type="button" onClick={submit} disabled={submitting} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800 disabled:opacity-60">
+          <button type="button" onClick={submit} disabled={submitting} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#061a3b] px-5 py-3 font-bold text-white hover:bg-[#061a3b] disabled:opacity-60">
             {submitting ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <Send className="h-5 w-5" aria-hidden="true" />}
             {operation === 'issue' ? 'Registrar proposta' : 'Registrar nova versão'}
           </button>
@@ -222,11 +222,11 @@ export function QuoteManagementPanel({ order, onUpdated }: QuoteManagementPanelP
         </div>
       )}
 
-      {order.quoteCustomerActionPath && <a href={order.quoteCustomerActionPath} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-blue-700 hover:underline"><ShieldCheck className="h-4 w-4" aria-hidden="true" />Visualizar página segura de decisão</a>}
+      {order.quoteCustomerActionPath && <a href={order.quoteCustomerActionPath} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#061a3b] hover:underline"><ShieldCheck className="h-4 w-4" aria-hidden="true" />Visualizar página segura de decisão</a>}
 
       {(order.quotes || []).length > 0 && (
         <div className="mt-7 border-t border-slate-200 pt-6">
-          <h3 className="flex items-center gap-2 font-bold text-slate-950"><History className="h-5 w-5 text-blue-700" aria-hidden="true" />Histórico de propostas</h3>
+          <h3 className="flex items-center gap-2 font-bold text-slate-950"><History className="h-5 w-5 text-[#061a3b]" aria-hidden="true" />Histórico de propostas</h3>
           <div className="mt-3 space-y-3">
             {(order.quotes || []).map((quote) => (
               <details key={quote.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4" open={quote.version === order.latest_quote_version}>

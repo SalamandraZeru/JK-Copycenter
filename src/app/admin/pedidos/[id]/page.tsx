@@ -63,7 +63,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
   const [adjustmentReason, setAdjustmentReason] = useState('');
   const [updatingPrice, setUpdatingPrice] = useState(false);
 
-  if (isLoading) return <div className="p-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>;
+  if (isLoading) return <div className="p-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-[#092653]" /></div>;
   if (error || !order) return <div className="p-20 text-center text-red-500">Erro ao carregar pedido.</div>;
 
   const isProductionView = order.operationView === 'production';
@@ -201,7 +201,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-slate-900">{isGraphicQuote && !hasAcceptedQuote ? 'Solicitação' : 'Pedido'} #{order.order_number}</h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-blue-100 text-blue-800">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-blue-100 text-[#061a3b]">
                 {STATUS_LABELS[order.status] || order.status}
               </span>
             </div>
@@ -230,7 +230,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Package className="w-5 h-5 text-blue-600" />
+              <Package className="w-5 h-5 text-[#092653]" />
               Itens do Pedido
             </h2>
             
@@ -256,7 +256,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
                     </div>}
                   </div>
                   {(item.pages_count || item.page_count) > 0 && (
-                    <div className="mt-1 text-xs text-blue-800 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md inline-block w-fit font-semibold">
+                    <div className="mt-1 text-xs text-[#061a3b] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md inline-block w-fit font-semibold">
                       {item.pages_count || item.page_count} páginas por cópia
                     </div>
                   )}
@@ -287,7 +287,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
           {!isProductionView && (!isGraphicQuote || hasAcceptedQuote) && Array.isArray(order.order_price_adjustments) && order.order_price_adjustments.length > 0 && (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
               <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <PencilLine className="w-5 h-5 text-blue-600" /> Histórico de ajustes de valor
+                <PencilLine className="w-5 h-5 text-[#092653]" /> Histórico de ajustes de valor
               </h2>
               <p className="mb-4 text-sm text-slate-600">Base calculada: <strong>{formatCurrency(Number(order.original_total_cents ?? order.total_cents) / 100)}</strong> · Total comercial vigente: <strong>{formatCurrency(Number(order.total_cents ?? 0) / 100)}</strong> · Versão {order.price_version ?? 1}</p>
               <div className="space-y-3">
@@ -312,7 +312,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
+                <FileText className="w-5 h-5 text-[#092653]" />
                 Arquivos do Cliente ({order.files?.length || 0})
               </h2>
             </div>
@@ -324,7 +324,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
                 {order.files.map((file: { id: string; original_name: string; size_bytes: number; mime_type: string; status: string; expires_at: string | null }) => (
                   <div key={file.id} className="p-4 border border-slate-200 bg-white rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs hover:border-slate-300 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#092653] flex items-center justify-center flex-shrink-0">
                         <FileText className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
@@ -344,7 +344,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
                         type="button"
                         onClick={() => handleOpenFile(file.id)}
                         disabled={openingFileId === file.id}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors border border-blue-200 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#061a3b] text-xs font-bold rounded-lg transition-colors border border-blue-200 disabled:opacity-50"
                         title="Emitir acesso temporário e abrir arquivo"
                       >
                         {openingFileId === file.id
@@ -387,12 +387,12 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
                 onChange={event => setOperatorNote(event.target.value)}
                 placeholder="Observação obrigatória para a transição"
                 maxLength={2000}
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 font-medium text-slate-900 bg-white outline-none text-sm"
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#092653] font-medium text-slate-900 bg-white outline-none text-sm"
               />
               <select 
                 value={newStatus}
                 onChange={e => setNewStatus(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 font-medium text-slate-900 bg-white outline-none text-sm"
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#092653] font-medium text-slate-900 bg-white outline-none text-sm"
               >
                 <option value="">Selecione um novo status...</option>
                 {Object.entries(STATUS_LABELS).filter(([key]) => selectableStatuses.includes(key)).map(([key, label]) => (
@@ -402,7 +402,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
               <button 
                 onClick={handleStatusChange}
                 disabled={!newStatus || updatingStatus || productionBlockedByPayment}
-                className="w-full py-2.5 bg-blue-600 text-white font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-colors hover:bg-blue-700 shadow-xs text-sm"
+                className="w-full py-2.5 bg-[#092653] text-white font-bold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 transition-colors hover:bg-[#061a3b] shadow-xs text-sm"
               >
                 {updatingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Atualizar Status
@@ -411,7 +411,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
           </div>
 
           {!isProductionView && (!isGraphicQuote || hasAcceptedQuote) && <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2"><PencilLine className="w-5 h-5 text-blue-600" /> Ajuste final do valor</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2"><PencilLine className="w-5 h-5 text-[#092653]" /> Ajuste final do valor</h2>
             <p className="text-sm text-slate-600 mb-4">Use após revisar os arquivos ou conceder desconto. A base calculada é preservada; motivo, versão e valores anterior/novo ficam registrados no pedido.</p>
             {order.payment_status !== 'pending_contact' ? (
               <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600">O valor fica bloqueado após a confirmação ou cancelamento do pagamento.</p>
@@ -455,7 +455,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
 
           {!isProductionView && <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-600" />
+              <User className="w-5 h-5 text-[#092653]" />
               Cliente
             </h2>
             <div className="space-y-3 text-sm">
@@ -477,7 +477,7 @@ export default function PedidoDetalhePage(props: { params: Promise<{ id: string 
           {!isProductionView && order.delivery_type === 'delivery' && (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
               <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-blue-600" />
+                <MapPin className="w-5 h-5 text-[#092653]" />
                 Endereço de Entrega
               </h2>
               <div className="text-sm text-slate-700 space-y-1">

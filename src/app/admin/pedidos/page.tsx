@@ -14,7 +14,7 @@ const fetcher = async (url: string) => {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  created: 'bg-blue-100 text-blue-800 border-blue-200',
+  created: 'bg-blue-100 text-[#061a3b] border-blue-200',
   awaiting_payment: 'bg-amber-100 text-amber-800 border-amber-200',
   confirmed: 'bg-cyan-100 text-cyan-800 border-cyan-200',
   in_production: 'bg-amber-100 text-amber-800 border-amber-200',
@@ -58,7 +58,7 @@ export default function PedidosPage() {
           <input 
             type="text" 
             placeholder="Buscar por número do pedido ou cliente..."
-            className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-medium placeholder:text-slate-500 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+            className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-medium placeholder:text-slate-500 focus:bg-white focus:ring-2 focus:ring-[#092653] focus:border-[#092653] outline-none transition"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -70,7 +70,7 @@ export default function PedidosPage() {
             <select 
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+              className="pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-[#092653] outline-none cursor-pointer"
             >
               <option value="">Todos Status</option>
               {Object.entries(STATUS_LABELS).map(([key, label]) => (
@@ -82,7 +82,7 @@ export default function PedidosPage() {
           <select 
             value={payment}
             onChange={(e) => setPayment(e.target.value)}
-            className="px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+            className="px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-[#092653] outline-none cursor-pointer"
           >
             <option value="">Todo Pagamento</option>
             <option value="pix">PIX</option>
@@ -95,7 +95,7 @@ export default function PedidosPage() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex justify-center p-16">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#092653]" />
           </div>
         ) : error ? (
           <div className="p-16 text-center text-red-600 font-medium">
@@ -114,7 +114,7 @@ export default function PedidosPage() {
               <li key={order.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-mono font-bold text-blue-600">#{order.order_number}</p>
+                    <p className="font-mono font-bold text-[#092653]">#{order.order_number}</p>
                     <p className="truncate font-bold text-slate-900">{order.customer_name}</p>
                     <p className="text-xs text-slate-500">{new Date(order.created_at).toLocaleString('pt-BR')}</p>
                   </div>
@@ -122,7 +122,7 @@ export default function PedidosPage() {
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-3">
                   <span className="font-bold text-slate-900">{order.order_kind === 'graphic_quote' && order.quote_status !== 'accepted' ? 'Após aceite' : formatCurrency(order.total)}</span>
-                  <Link href={`/admin/pedidos/${order.id}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-600"><Eye className="h-3.5 w-3.5" /> Detalhes</Link>
+                  <Link href={`/admin/pedidos/${order.id}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-blue-50 px-3 text-xs font-bold text-[#092653]"><Eye className="h-3.5 w-3.5" /> Detalhes</Link>
                 </div>
               </li>
             ))}
@@ -142,7 +142,7 @@ export default function PedidosPage() {
               <tbody className="divide-y divide-slate-100">
                 {orders.map((order: any) => (
                   <tr key={order.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-blue-600 font-mono">#{order.order_number}</td>
+                    <td className="px-6 py-4 font-bold text-[#092653] font-mono">#{order.order_number}</td>
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-900">{order.customer_name}</p>
                       <p className="text-xs text-slate-500 capitalize">{order.order_kind === 'graphic_quote' && order.quote_status !== 'accepted' ? 'Solicitação gráfica' : order.delivery_type === 'delivery' ? 'Entrega' : 'Retirada na loja'}</p>
@@ -162,7 +162,7 @@ export default function PedidosPage() {
                     <td className="px-6 py-4 text-right">
                       <Link 
                         href={`/admin/pedidos/${order.id}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-lg text-xs font-bold transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-[#092653] text-[#092653] hover:text-white rounded-lg text-xs font-bold transition-colors"
                       >
                         <Eye className="w-3.5 h-3.5" /> Detalhes
                       </Link>

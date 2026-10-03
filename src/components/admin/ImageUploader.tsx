@@ -98,8 +98,8 @@ export function ImageUploader({
         onDrop={handleDrop}
         className={`relative border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center overflow-hidden group ${aspectClass} ${
           imageUrl
-            ? 'border-slate-300 bg-slate-50 hover:border-blue-500'
-            : 'border-slate-300 hover:border-blue-600 bg-white hover:bg-blue-50/40'
+            ? 'border-slate-300 bg-slate-50 hover:border-[#092653]'
+            : 'border-slate-300 hover:border-[#092653] bg-white hover:bg-blue-50/40'
         }`}
       >
         <input
@@ -115,7 +115,7 @@ export function ImageUploader({
         />
 
         {isUploading ? (
-          <div className="flex flex-col items-center justify-center space-y-2 text-blue-600">
+          <div className="flex flex-col items-center justify-center space-y-2 text-[#092653]">
             <Loader2 className="w-8 h-8 animate-spin" />
             <span className="text-xs font-bold text-slate-700">Enviando imagem...</span>
           </div>
@@ -142,10 +142,10 @@ export function ImageUploader({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-2 p-2">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 group-hover:bg-blue-100 text-slate-500 group-hover:text-blue-600 flex items-center justify-center transition-colors">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 group-hover:bg-blue-100 text-slate-500 group-hover:text-[#092653] flex items-center justify-center transition-colors">
               <Upload className="w-5 h-5" />
             </div>
-            <div className="text-xs font-bold text-slate-800 group-hover:text-blue-600">
+            <div className="text-xs font-bold text-slate-800 group-hover:text-[#092653]">
               Clique ou arraste foto
             </div>
             <div className="text-[10px] text-slate-500 font-medium">PNG, JPG ou WEBP (até 10MB)</div>

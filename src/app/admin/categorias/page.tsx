@@ -129,7 +129,7 @@ export default function CategoriasPage() {
 
       {/* Editor Card */}
       {editingId && (
-        <div className="bg-white rounded-3xl border-2 border-blue-500 shadow-xl p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
+        <div className="bg-white rounded-3xl border-2 border-[#092653] shadow-xl p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
           <div className="flex justify-between items-center border-b border-slate-200 pb-4">
             <h2 className="text-lg font-bold text-slate-900 font-serif">
               {editingId === 'new' ? 'Cadastrar Nova Categoria' : 'Editar Categoria'}
@@ -187,7 +187,7 @@ export default function CategoriasPage() {
                         slug: editingId === 'new' ? slug : formData.slug,
                       });
                     }}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
 
@@ -200,7 +200,7 @@ export default function CategoriasPage() {
                     placeholder="papeis-especiais"
                     value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
               </div>
@@ -214,7 +214,7 @@ export default function CategoriasPage() {
                   placeholder="Breve descrição dos itens agrupados nesta categoria..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                 />
               </div>
 
@@ -227,7 +227,7 @@ export default function CategoriasPage() {
                     type="number"
                     value={formData.sort_order}
                     onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
 
@@ -237,7 +237,7 @@ export default function CategoriasPage() {
                       type="checkbox"
                       checked={formData.is_active}
                       onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                      className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                      className="w-5 h-5 rounded border-slate-300 text-[#092653] focus:ring-2 focus:ring-[#092653]/20"
                     />
                     <span className="text-sm font-semibold text-slate-800">Categoria Ativa na Loja</span>
                   </label>
@@ -251,7 +251,7 @@ export default function CategoriasPage() {
       {/* Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+          <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#092653]" /></div>
         ) : error ? (
           <div className="p-16 text-center text-red-600 font-bold">Erro ao carregar categorias.</div>
         ) : categorias.length === 0 ? (
@@ -271,7 +271,7 @@ export default function CategoriasPage() {
                   <p className="truncate font-mono text-xs text-slate-500">#{cat.sort_order} · {cat.slug}</p>
                   <div className="mt-1.5 flex items-center gap-2">
                     {cat.is_active ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-emerald-800">Ativo</span> : <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-extrabold uppercase text-slate-800">Inativo</span>}
-                    <button onClick={() => startEdit(cat)} disabled={editingId !== null} className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-700 disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
+                    <button onClick={() => startEdit(cat)} disabled={editingId !== null} className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-[#061a3b] disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
                     <button onClick={() => handleDelete(cat.id)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-red-50 px-3 text-xs font-bold text-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                 </div>
@@ -316,7 +316,7 @@ export default function CategoriasPage() {
                     <button 
                       onClick={() => startEdit(cat)}
                       disabled={editingId !== null}
-                      className="p-2 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition disabled:opacity-50"
+                      className="p-2 text-slate-700 hover:text-[#092653] hover:bg-blue-50 rounded-xl transition disabled:opacity-50"
                       title="Editar categoria"
                     >
                       <Edit2 className="w-4 h-4" />

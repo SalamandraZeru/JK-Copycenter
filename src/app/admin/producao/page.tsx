@@ -9,7 +9,7 @@ import { productionNextStatus } from '@/lib/orders/operation';
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 const COLUMNS = [
-  { id: 'confirmed', title: 'Pagamentos Confirmados', color: 'bg-blue-600 text-white', badge: 'bg-blue-100 text-blue-800' },
+  { id: 'confirmed', title: 'Pagamentos Confirmados', color: 'bg-[#092653] text-white', badge: 'bg-blue-100 text-[#061a3b]' },
   { id: 'in_production', title: 'Em Produção', color: 'bg-amber-600 text-white', badge: 'bg-amber-100 text-amber-800' },
   { id: 'ready', title: 'Pronto p/ Retirada', color: 'bg-emerald-600 text-white', badge: 'bg-emerald-100 text-emerald-800' },
 ];
@@ -47,7 +47,7 @@ export default function ProducaoPage() {
 
       {isLoading ? (
         <div className="flex justify-center p-20">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#092653]" />
         </div>
       ) : error ? (
         <div className="p-16 text-center text-red-600 font-medium bg-white rounded-2xl border border-slate-200">
@@ -79,9 +79,9 @@ export default function ProducaoPage() {
                       </div>
                     ) : (
                       columnOrders.map((order: any) => (
-                        <div key={order.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:border-blue-400 hover:shadow-md transition-all">
+                        <div key={order.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:border-[#092653] hover:shadow-md transition-all">
                           <div className="flex justify-between items-start mb-2">
-                            <span className="font-mono text-sm font-extrabold text-blue-600">
+                            <span className="font-mono text-sm font-extrabold text-[#092653]">
                               #{order.order_number}
                             </span>
                             <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
@@ -110,7 +110,7 @@ export default function ProducaoPage() {
                           <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
                             <Link 
                               href={`/admin/pedidos/${order.id}`}
-                              className="text-xs font-bold text-slate-600 hover:text-blue-600 flex items-center gap-1"
+                              className="text-xs font-bold text-slate-600 hover:text-[#092653] flex items-center gap-1"
                             >
                               <Eye className="w-3.5 h-3.5" /> Ver arquivos
                             </Link>

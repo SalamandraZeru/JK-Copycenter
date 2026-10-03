@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen bg-[#092653] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="flex justify-center mb-4">
           <div className="rounded-xl bg-white p-2 shadow-lg">
@@ -48,23 +48,23 @@ export default function AdminLoginPage() {
         <h2 className="text-center text-3xl font-extrabold text-white tracking-tight font-serif">
           Painel Administrativo
         </h2>
-        <p className="mt-2 text-center text-sm font-medium text-slate-300">
+        <p className="mt-2 text-center text-sm font-medium text-blue-100/80">
           Acesso restrito para operadores e gerência da JK Copycenter
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4">
-        <div className="bg-slate-900/95 backdrop-blur-xl py-8 px-6 shadow-2xl rounded-3xl sm:px-10 border border-slate-700">
+        <div className="bg-[#fffdf8] py-8 px-6 shadow-2xl rounded-3xl sm:px-10">
           
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-red-950/80 border border-red-700 text-red-200 font-medium text-sm">
+            <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 font-medium text-sm">
               {error}
             </div>
           )}
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-200 mb-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
                 E-mail Corporativo
               </label>
               <div className="relative">
@@ -74,14 +74,14 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-11 pr-4 text-white font-medium text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-slate-500 transition"
+                  className="w-full bg-white border border-slate-300 rounded-xl py-2.5 pl-11 pr-4 text-slate-900 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-[#092653]/20 focus:border-[#092653] placeholder:text-slate-400 transition"
                   placeholder="admin@jkcopycenter.com.br"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-200 mb-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
                 Senha de Acesso
               </label>
               <div className="relative">
@@ -91,7 +91,7 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-11 pr-4 text-white font-medium text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-slate-500 transition"
+                  className="w-full bg-white border border-slate-300 rounded-xl py-2.5 pl-11 pr-4 text-slate-900 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-[#092653]/20 focus:border-[#092653] placeholder:text-slate-400 transition"
                   placeholder="••••••••"
                 />
               </div>
@@ -100,14 +100,14 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
+              className="w-full bg-[#b4232d] hover:bg-[#951c25] text-white text-sm font-bold py-3 px-4 rounded-xl shadow-md transition flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
             >
               {loading ? 'Verificando...' : 'Acessar com Senha'}
             </button>
           </form>
 
           <div className="mt-6 text-center">
-            <Link href="/" className="text-xs font-semibold text-slate-400 hover:text-white transition">
+            <Link href="/" className="text-xs font-semibold text-slate-500 hover:text-[#092653] transition">
               ← Voltar para a Loja Pública
             </Link>
           </div>
