@@ -141,7 +141,7 @@ export default function GaleriaAdminPage() {
       </div>
 
       {editingId && (
-        <div className="bg-white rounded-3xl border-2 border-blue-500 shadow-xl p-6 sm:p-8 space-y-6">
+        <div className="bg-white rounded-3xl border-2 border-[#092653] shadow-xl p-6 sm:p-8 space-y-6">
           <div className="flex justify-between items-center border-b border-slate-200 pb-4">
             <h2 className="text-lg font-bold text-slate-900 font-serif">
               {editingId === 'new' ? 'Adicionar Trabalho' : 'Editar Trabalho'}
@@ -173,7 +173,7 @@ export default function GaleriaAdminPage() {
                   placeholder="Ex: Folder institucional 3 dobras"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                 />
               </div>
 
@@ -184,7 +184,7 @@ export default function GaleriaAdminPage() {
                   placeholder="Papel, acabamento ou detalhe que ajude o cliente a reconhecer o trabalho"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                 />
               </div>
 
@@ -194,7 +194,7 @@ export default function GaleriaAdminPage() {
                   <select
                     value={formData.service_id}
                     onChange={(e) => setFormData({ ...formData, service_id: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   >
                     <option value="">Sem vínculo</option>
                     {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -206,7 +206,7 @@ export default function GaleriaAdminPage() {
                     type="number"
                     value={formData.sort_order}
                     onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
               </div>
@@ -216,7 +216,7 @@ export default function GaleriaAdminPage() {
                   type="checkbox"
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                  className="w-5 h-5 rounded border-slate-300 text-[#092653] focus:ring-2 focus:ring-[#092653]/20"
                 />
                 <span className="text-sm font-semibold text-slate-800">Visível na galeria pública</span>
               </label>
@@ -227,7 +227,7 @@ export default function GaleriaAdminPage() {
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+          <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#092653]" /></div>
         ) : error ? (
           <div className="p-16 text-center text-red-600 font-bold">Erro ao carregar a galeria.</div>
         ) : items.length === 0 ? (
@@ -247,7 +247,7 @@ export default function GaleriaAdminPage() {
                   <p className="truncate text-xs text-slate-500">#{item.sort_order} · {serviceName(item) || 'Sem vínculo'}</p>
                   <div className="mt-1.5 flex items-center gap-2">
                     {item.is_active ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold uppercase text-emerald-800">Visível</span> : <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-extrabold uppercase text-slate-800">Oculto</span>}
-                    <button onClick={() => startEdit(item)} disabled={editingId !== null} className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-700 disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
+                    <button onClick={() => startEdit(item)} disabled={editingId !== null} className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-[#061a3b] disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
                     <button onClick={() => handleDelete(item.id)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-red-50 px-3 text-xs font-bold text-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /></button>
                   </div>
                 </div>
@@ -287,7 +287,7 @@ export default function GaleriaAdminPage() {
                     )}
                   </td>
                   <td className="px-6 py-4 text-right space-x-1">
-                    <button onClick={() => startEdit(item)} disabled={editingId !== null} className="p-2 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition disabled:opacity-50" title="Editar"><Edit2 className="w-4 h-4" /></button>
+                    <button onClick={() => startEdit(item)} disabled={editingId !== null} className="p-2 text-slate-700 hover:text-[#092653] hover:bg-blue-50 rounded-xl transition disabled:opacity-50" title="Editar"><Edit2 className="w-4 h-4" /></button>
                     <button onClick={() => handleDelete(item.id)} disabled={editingId !== null} className="p-2 text-slate-700 hover:text-red-600 hover:bg-red-50 rounded-xl transition disabled:opacity-50" title="Excluir"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>

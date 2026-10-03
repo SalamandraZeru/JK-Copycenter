@@ -198,7 +198,7 @@ export default function ProdutosPage() {
 
       {/* Editor Box */}
       {editingId && (
-        <div className="bg-white rounded-3xl border-2 border-blue-500 shadow-xl p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
+        <div className="bg-white rounded-3xl border-2 border-[#092653] shadow-xl p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
           <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-bold text-slate-900 font-serif">
               {editingId === 'new' ? 'Cadastrar Novo Produto' : 'Editar Produto'}
@@ -256,7 +256,7 @@ export default function ProdutosPage() {
                         slug: editingId === 'new' ? slug : formData.slug,
                       });
                     }}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
 
@@ -269,7 +269,7 @@ export default function ProdutosPage() {
                     placeholder="resma-sulfite-a4"
                     value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
 
@@ -282,7 +282,7 @@ export default function ProdutosPage() {
                     placeholder="Ex: PAP-RESMA-A4-500"
                     value={formData.sku}
                     onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase().replace(/[^A-Z0-9._/-]/g, '') })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
               </div>
@@ -299,7 +299,7 @@ export default function ProdutosPage() {
                     placeholder="0.00"
                     value={formData.price || ''}
                     onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
 
@@ -312,7 +312,7 @@ export default function ProdutosPage() {
                     placeholder="unidade, pacote, caixa..."
                     value={formData.unit_label}
                     onChange={(e) => setFormData({ ...formData, unit_label: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
 
@@ -325,7 +325,7 @@ export default function ProdutosPage() {
                     min="1"
                     value={formData.package_quantity}
                     onChange={(e) => setFormData({ ...formData, package_quantity: Math.max(1, Number(e.target.value)) })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
 
@@ -338,7 +338,7 @@ export default function ProdutosPage() {
                     placeholder="Sem saldo informado"
                     value={formData.stock_quantity}
                     onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
               </div>
@@ -365,7 +365,7 @@ export default function ProdutosPage() {
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggleCategory(category.id)}
-                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#092653] focus:ring-2 focus:ring-[#092653]/20"
                           />
                           <span className="min-w-0 break-words leading-5">{category.name}</span>
                         </label>
@@ -384,7 +384,7 @@ export default function ProdutosPage() {
                   placeholder="Detalhes, especificações técnicas e marca..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                 />
               </div>
 
@@ -394,7 +394,7 @@ export default function ProdutosPage() {
                     type="checkbox"
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                    className="w-5 h-5 rounded border-slate-300 text-[#092653] focus:ring-2 focus:ring-[#092653]/20"
                   />
                   <span className="text-sm font-semibold text-slate-800">Produto Ativo na Loja</span>
                 </label>
@@ -403,7 +403,7 @@ export default function ProdutosPage() {
                     type="checkbox"
                     checked={formData.stock_control_enabled}
                     onChange={(e) => setFormData({ ...formData, stock_control_enabled: e.target.checked })}
-                    className="mt-0.5 w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                    className="mt-0.5 w-5 h-5 rounded border-slate-300 text-[#092653] focus:ring-2 focus:ring-[#092653]/20"
                   />
                   <span className="text-sm font-semibold text-slate-800">
                     Controlar estoque e reservar no checkout
@@ -419,7 +419,7 @@ export default function ProdutosPage() {
       {/* Table */}
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         {prodLoading ? (
-          <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+          <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#092653]" /></div>
         ) : prodError ? (
           <div className="p-16 text-center text-red-600 font-bold">Erro ao carregar produtos.</div>
         ) : produtos.length === 0 ? (
@@ -450,7 +450,7 @@ export default function ProdutosPage() {
                       : <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-extrabold uppercase text-slate-800">Inativo</span>}
                   </div>
                   <div className="mt-2 flex gap-2">
-                    <button onClick={() => startEdit(prod)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-700 disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
+                    <button onClick={() => startEdit(prod)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-[#061a3b] disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
                     <button onClick={() => handleDelete(prod.id)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-red-50 px-3 text-xs font-bold text-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> Excluir</button>
                   </div>
                 </div>
@@ -496,7 +496,7 @@ export default function ProdutosPage() {
                     {productCategories(prod).length > 0 ? (
                       <div className="flex min-w-[170px] flex-wrap gap-1.5">
                         {productCategories(prod).map((category) => (
-                          <span key={category.id} className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-800">
+                          <span key={category.id} className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-[#061a3b]">
                             {category.name}
                           </span>
                         ))}
@@ -522,7 +522,7 @@ export default function ProdutosPage() {
                     <button 
                       onClick={() => startEdit(prod)}
                       disabled={editingId !== null}
-                      className="p-2 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition disabled:opacity-50"
+                      className="p-2 text-slate-700 hover:text-[#092653] hover:bg-blue-50 rounded-xl transition disabled:opacity-50"
                       title="Editar produto"
                     >
                       <Edit2 className="w-4 h-4" />

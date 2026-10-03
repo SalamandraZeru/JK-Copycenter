@@ -69,7 +69,7 @@ export function PreflightReviewPanel({ orderId, onUpdated }: { orderId: string; 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
       <div className="flex items-start gap-3">
-        <FileSearch className="mt-0.5 h-5 w-5 text-blue-600" />
+        <FileSearch className="mt-0.5 h-5 w-5 text-[#092653]" />
         <div><h2 className="text-lg font-bold text-slate-900">Pré-impressão</h2><p className="text-sm text-slate-600">Arquivos só podem seguir para produção após esta liberação.</p></div>
       </div>
       <div className="mt-5 space-y-4">
@@ -82,7 +82,7 @@ export function PreflightReviewPanel({ orderId, onUpdated }: { orderId: string; 
                 <textarea value={notes[report.id] ?? report.staff_note ?? ''} onChange={(event) => setNotes((current) => ({ ...current, [report.id]: event.target.value }))} maxLength={2000} placeholder="Parecer técnico ou instruções para o cliente" className="min-h-20 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
                 <div className="flex flex-wrap gap-2">
                   <button type="button" disabled={workingId === report.id} onClick={() => review(report, 'correction_requested')} className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-900 disabled:opacity-60"><Undo2 className="h-4 w-4" />Pedir correção</button>
-                  <button type="button" disabled={workingId === report.id} onClick={() => review(report, 'awaiting_customer_approval')} className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"><Send className="h-4 w-4" />Enviar para aprovação</button>
+                  <button type="button" disabled={workingId === report.id} onClick={() => review(report, 'awaiting_customer_approval')} className="inline-flex items-center gap-2 rounded-lg bg-[#061a3b] px-3 py-2 text-sm font-bold text-white disabled:opacity-60"><Send className="h-4 w-4" />Enviar para aprovação</button>
                 </div>
                 <label className="flex items-start gap-2 text-xs font-medium text-slate-700"><input type="checkbox" checked={Boolean(allowDirect[report.id])} onChange={(event) => setAllowDirect((current) => ({ ...current, [report.id]: event.target.checked }))} className="mt-0.5 h-4 w-4" />Dispensar aprovação do cliente nesta versão (uso interno, já aprovado em outro canal).</label>
                 {allowDirect[report.id] && <button type="button" disabled={workingId === report.id} onClick={() => review(report, 'approved_for_production')} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"><CheckCircle2 className="h-4 w-4" />Liberar diretamente para produção</button>}

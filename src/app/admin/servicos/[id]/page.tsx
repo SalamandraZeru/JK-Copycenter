@@ -91,7 +91,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
   });
   const [isSaving, setIsSaving] = useState(false);
 
-  if (isLoading) return <div className="p-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" /></div>;
+  if (isLoading) return <div className="p-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-[#092653]" /></div>;
   if (error || !data || data.error) return <div className="p-20 text-center text-red-600 font-bold">Erro ao carregar campos do serviço.</div>;
 
   const { fields = [], ...service } = data;
@@ -293,10 +293,10 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
 
       {/* Editor Box */}
       {editingId && (
-        <div className="bg-white rounded-3xl border-2 border-blue-500 shadow-xl p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
+        <div className="bg-white rounded-3xl border-2 border-[#092653] shadow-xl p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
           <div className="flex justify-between items-center border-b border-slate-200 pb-4">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 font-serif">
-              <Settings2 className="w-5 h-5 text-blue-600" />
+              <Settings2 className="w-5 h-5 text-[#092653]" />
               {editingId === 'new' ? 'Novo Campo de Personalização' : 'Editar Campo'}
             </h2>
             <div className="flex gap-2">
@@ -338,7 +338,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                     key: editingId === 'new' ? autoKey : formData.key,
                   });
                 }}
-                className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
               />
             </div>
 
@@ -351,7 +351,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                 placeholder="Ex: tipo_papel, acabamento"
                 value={formData.key}
                 onChange={(e) => setFormData({ ...formData, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
               />
             </div>
 
@@ -362,7 +362,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
               <select
                 value={formData.field_type}
                 onChange={(e) => setFormData({ ...formData, field_type: e.target.value })}
-                className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none cursor-pointer transition"
+                className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none cursor-pointer transition"
               >
                 <option value="select">Seleção Dropdown (Select)</option>
                 <option value="radio">Botões de Opção (Radio)</option>
@@ -382,7 +382,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                   type="number"
                   value={formData.sort_order}
                   onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })}
-                  className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                 />
               </div>
 
@@ -392,7 +392,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                     type="checkbox"
                     checked={formData.is_required}
                     onChange={(e) => setFormData({ ...formData, is_required: e.target.checked })}
-                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                    className="w-5 h-5 rounded border-slate-300 text-[#092653] focus:ring-2 focus:ring-[#092653]/20"
                   />
                   <span className="text-sm font-semibold text-slate-800">Obrigatório</span>
                 </label>
@@ -402,7 +402,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                     type="checkbox"
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-600/20"
+                    className="w-5 h-5 rounded border-slate-300 text-[#092653] focus:ring-2 focus:ring-[#092653]/20"
                   />
                   <span className="text-sm font-semibold text-slate-800">Ativo</span>
                 </label>
@@ -420,7 +420,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                 <button
                   type="button"
                   onClick={addOption}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-[#061a3b] hover:text-[#061a3b] bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition"
                 >
                   <Plus className="w-3.5 h-3.5" /> Adicionar Opção
                 </button>
@@ -436,7 +436,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                         placeholder="Ex: Sulfite 75g"
                         value={opt.label}
                         onChange={(e) => updateOption(idx, 'label', e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm transition"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none text-sm transition"
                       />
                     </div>
 
@@ -447,7 +447,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                         placeholder="sulfite_75g"
                         value={opt.value}
                         onChange={(e) => updateOption(idx, 'value', e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm transition"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none text-sm transition"
                       />
                     </div>
 
@@ -461,7 +461,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                           placeholder="Ex: 100"
                           value={opt.run_quantity ?? ''}
                           onChange={(e) => updateOption(idx, 'runQuantity', e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm transition"
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none text-sm transition"
                         />
                       </div>
                     )}
@@ -472,7 +472,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                         value={opt.price_effect?.type || 'none'}
                         onChange={(e) => updateOption(idx, 'effectType', e.target.value)}
                         disabled={isClosedRunField}
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-xs cursor-pointer transition"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none text-xs cursor-pointer transition"
                       >
                         <option value="none">Sem Efeito (R$ 0,00)</option>
                         <option value="fixed">Acréscimo Fixo (+ R$)</option>
@@ -491,7 +491,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                           disabled={isClosedRunField || opt.price_effect?.type === 'none'}
                           value={opt.price_effect?.value || ''}
                           onChange={(e) => updateOption(idx, 'effectValue', e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm disabled:bg-slate-100 disabled:text-slate-400 transition"
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none text-sm disabled:bg-slate-100 disabled:text-slate-400 transition"
                         />
                       </div>
                       <button
@@ -535,7 +535,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
             <h2 className="text-lg font-bold text-slate-900 font-serif">Campos Atuais do Serviço</h2>
             <p className="text-xs font-medium text-slate-600">Renderizados dinamicamente na página pública do configurador</p>
           </div>
-          <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-extrabold rounded-full">
+          <span className="px-3 py-1 bg-blue-100 text-[#061a3b] text-xs font-extrabold rounded-full">
             {fields.length} campos configurados
           </span>
         </div>
@@ -551,7 +551,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
             {fields.map((field) => (
               <div key={field.id} className="p-6 flex flex-col sm:flex-row justify-between sm:items-center gap-4 hover:bg-slate-50/80 transition">
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#061a3b] flex items-center justify-center font-bold text-sm shrink-0">
                     {field.sort_order}
                   </div>
                   <div>
@@ -576,7 +576,7 @@ export default function ServicoCamposPage(props: { params: Promise<{ id: string 
                   <button
                     onClick={() => startEdit(field)}
                     disabled={editingId !== null}
-                    className="p-2 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition"
+                    className="p-2 text-slate-700 hover:text-[#092653] hover:bg-blue-50 rounded-xl transition"
                     title="Editar campo"
                   >
                     <Edit2 className="w-4 h-4" />

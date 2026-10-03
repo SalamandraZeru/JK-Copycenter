@@ -222,7 +222,7 @@ export default function ServicosPage() {
 
       {/* Editor Box */}
       {editingId && (
-        <div className="bg-white rounded-3xl border-2 border-blue-500 shadow-xl p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
+        <div className="bg-white rounded-3xl border-2 border-[#092653] shadow-xl p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
           <div className="flex justify-between items-center border-b border-slate-200 pb-4">
             <h2 className="text-lg font-bold text-slate-900 font-serif">
               {editingId === 'new' ? 'Cadastrar Novo Serviço Gráfico' : 'Editar Serviço'}
@@ -280,12 +280,12 @@ export default function ServicosPage() {
                         slug: editingId === 'new' ? slug : formData.slug,
                       });
                     }}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">Ordem no Catálogo</label>
-                  <input type="number" value={formData.sort_order} onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition" />
+                  <input type="number" value={formData.sort_order} onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition" />
                 </div>
 
                 <div>
@@ -297,7 +297,7 @@ export default function ServicosPage() {
                     placeholder="impressao-pb-a4"
                     value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   />
                 </div>
                 <div>
@@ -314,7 +314,7 @@ export default function ServicosPage() {
                         pricing_profile_config: JSON.stringify(pricingProfileTemplates[pricingProfile], null, 2),
                       });
                     }}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   >
                     <option value="per_page">Por página</option>
                     <option value="per_item">Por unidade</option>
@@ -338,7 +338,7 @@ export default function ServicosPage() {
                   rows={5}
                   value={formData.pricing_profile_config}
                   onChange={(event) => setFormData({ ...formData, pricing_profile_config: event.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-xs shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-mono text-xs shadow-sm focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                   aria-describedby="pricing-profile-help"
                 />
                 <p id="pricing-profile-help" className="mt-1 text-xs text-slate-500">
@@ -361,13 +361,13 @@ export default function ServicosPage() {
                   placeholder="Informações técnicas de impressão, papéis suportados e especificações..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm placeholder:text-slate-400 focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition"
                 />
               </div>
 
               <div className="pt-2">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-1.5">Estado editorial</label>
-                <select value={formData.catalog_state} onChange={(e) => setFormData({ ...formData, catalog_state: e.target.value as Service['catalog_state'] })} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none transition sm:max-w-xs">
+                <select value={formData.catalog_state} onChange={(e) => setFormData({ ...formData, catalog_state: e.target.value as Service['catalog_state'] })} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-900 font-medium shadow-sm focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20 outline-none transition sm:max-w-xs">
                   <option value="draft">Rascunho</option>
                   <option value="review">Em revisão</option>
                   <option value="published">Publicado</option>
@@ -383,7 +383,7 @@ export default function ServicosPage() {
       {/* Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         {servLoading ? (
-          <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+          <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#092653]" /></div>
         ) : servError ? (
           <div className="p-16 text-center text-red-600 font-bold">Erro ao carregar serviços.</div>
         ) : servicos.length === 0 ? (
@@ -409,7 +409,7 @@ export default function ServicosPage() {
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Link href={`/admin/servicos/${serv.id}`} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-700"><Settings className="h-3.5 w-3.5" /> Personalização</Link>
+                  <Link href={`/admin/servicos/${serv.id}`} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-bold text-[#061a3b]"><Settings className="h-3.5 w-3.5" /> Personalização</Link>
                   <button onClick={() => startEdit(serv)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-slate-100 px-3 text-xs font-bold text-slate-700 disabled:opacity-50"><Edit2 className="h-3.5 w-3.5" /> Editar</button>
                   <button onClick={() => handleDelete(serv.id)} disabled={editingId !== null} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-red-50 px-3 text-xs font-bold text-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> Excluir</button>
                 </div>
@@ -452,7 +452,7 @@ export default function ServicosPage() {
                   <td className="px-6 py-4 text-right space-x-1">
                     <Link
                       href={`/admin/servicos/${serv.id}`}
-                      className="inline-flex items-center gap-1 p-2 text-blue-700 hover:bg-blue-50 rounded-xl text-xs font-bold transition"
+                      className="inline-flex items-center gap-1 p-2 text-[#061a3b] hover:bg-blue-50 rounded-xl text-xs font-bold transition"
                       title="Configurar campos dinâmicos e opções"
                     >
                       <Settings className="w-4 h-4" /> Personalização
@@ -460,15 +460,15 @@ export default function ServicosPage() {
                     <button 
                       onClick={() => startEdit(serv)}
                       disabled={editingId !== null}
-                      className="p-2 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition disabled:opacity-50"
+                      className="p-2 text-slate-700 hover:text-[#092653] hover:bg-blue-50 rounded-xl transition disabled:opacity-50"
                       title="Editar serviço"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDuplicate(serv.id)} disabled={editingId !== null} className="p-2 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition disabled:opacity-50" title="Duplicar como rascunho">
+                    <button onClick={() => handleDuplicate(serv.id)} disabled={editingId !== null} className="p-2 text-slate-700 hover:text-[#092653] hover:bg-blue-50 rounded-xl transition disabled:opacity-50" title="Duplicar como rascunho">
                       <Copy className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleExport(serv.id, serv.slug)} disabled={editingId !== null} className="p-2 text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition disabled:opacity-50" title="Exportar configuração sem dados pessoais">
+                    <button onClick={() => handleExport(serv.id, serv.slug)} disabled={editingId !== null} className="p-2 text-slate-700 hover:text-[#092653] hover:bg-blue-50 rounded-xl transition disabled:opacity-50" title="Exportar configuração sem dados pessoais">
                       <Download className="w-4 h-4" />
                     </button>
                     <button 

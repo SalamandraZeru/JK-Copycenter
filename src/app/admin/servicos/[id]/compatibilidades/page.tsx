@@ -346,7 +346,7 @@ export default function CompatibilidadesServicoPage(props: { params: Promise<{ i
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleNodeOption(node.id, option.value)}
-                        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#092653] focus:ring-[#092653]"
                       />
                       <span className="min-w-0 break-words leading-5">{option.label}</span>
                     </label>
@@ -360,7 +360,7 @@ export default function CompatibilidadesServicoPage(props: { params: Promise<{ i
                         <button
                           type="button"
                           onClick={() => addChildNode(node.id, option.value)}
-                          className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-blue-700 hover:text-blue-900"
+                          className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-[#061a3b] hover:text-[#061a3b]"
                         >
                           <Plus className="h-3.5 w-3.5" /> Vincular outro campo a esta opção
                         </button>
@@ -377,7 +377,7 @@ export default function CompatibilidadesServicoPage(props: { params: Promise<{ i
   });
 
   if (isLoading) {
-    return <div className="p-20 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600" /></div>;
+    return <div className="p-20 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-[#092653]" /></div>;
   }
   if (serviceError || !service || service.error) {
     return <div className="p-20 text-center font-bold text-red-600">Erro ao carregar as compatibilidades do serviço.</div>;
@@ -410,7 +410,7 @@ export default function CompatibilidadesServicoPage(props: { params: Promise<{ i
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 bg-slate-50/70 p-6">
           <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-slate-900">
-            <Link2 className="h-5 w-5 text-blue-600" /> Árvore de escolhas permitidas
+            <Link2 className="h-5 w-5 text-[#092653]" /> Árvore de escolhas permitidas
           </h2>
           <p className="mt-1 max-w-3xl text-sm text-slate-600">
             Escolha uma opção inicial e, por caixas de seleção, libere os materiais, gramaturas, acabamentos e outras escolhas que ela suporta. Cada ramificação pode continuar para quantos campos forem necessários.
@@ -451,8 +451,8 @@ export default function CompatibilidadesServicoPage(props: { params: Promise<{ i
         ) : (
           <div className="space-y-4 p-6">
             <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-              <p className="text-sm font-bold text-blue-950">Início: {rootField?.label} = {optionLabel(rootField, rootOptionValue)}</p>
-              <p className="mt-1 text-xs text-blue-800">{ruleCount} vínculo(s) serão gravados para esta opção inicial.</p>
+              <p className="text-sm font-bold text-[#061a3b]">Início: {rootField?.label} = {optionLabel(rootField, rootOptionValue)}</p>
+              <p className="mt-1 text-xs text-[#061a3b]">{ruleCount} vínculo(s) serão gravados para esta opção inicial.</p>
             </div>
 
             {tree.length > 0 && <div className="space-y-3">{renderNodes(tree, rootCondition, 0)}</div>}
@@ -460,7 +460,7 @@ export default function CompatibilidadesServicoPage(props: { params: Promise<{ i
             <button
               type="button"
               onClick={() => setTree((current) => [...current, createNode()])}
-              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-blue-800 transition hover:bg-blue-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-[#061a3b] transition hover:bg-blue-50"
             >
               <Plus className="h-4 w-4" /> Vincular um campo a {optionLabel(rootField, rootOptionValue)}
             </button>
