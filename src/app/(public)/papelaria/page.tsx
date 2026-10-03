@@ -177,7 +177,7 @@ export default async function PapelariaPage(
         <div className="flex-1 flex flex-col">
           {products && products.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-12 lg:grid-cols-4">
                 {products.map(product => (
                   <ProductCard key={product.id} product={product} />
                 ))}

@@ -37,29 +37,30 @@ export function GalleryCard({ item }: { item: GalleryCardItem }) {
       href={buildQuoteUrl(item)}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex scroll-mt-28 flex-col overflow-hidden rounded-2xl border border-[#092653]/15 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+      className="group relative block aspect-[4/5] scroll-mt-28 overflow-hidden rounded-xl bg-[#092653] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#b4232d]"
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#f4f0e8]">
-        <Image
-          src={item.image_url}
-          alt={item.title}
-          fill
-          sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 90vw"
-          className="object-cover transition duration-500 group-hover:scale-105"
-        />
-        {item.serviceName && (
-          <span className="absolute left-3 top-3 rounded-full bg-[#092653]/90 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white backdrop-blur-sm">
-            {item.serviceName}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="text-base font-black text-[#092653]">{item.title}</h3>
+      <Image
+        src={item.image_url}
+        alt={item.title}
+        fill
+        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+        className="object-cover transition duration-700 ease-out group-hover:scale-[1.04]"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#061a3b]/90 via-[#061a3b]/20 to-transparent" />
+
+      {item.serviceName && (
+        <span className="absolute left-4 top-4 rounded-full bg-[#fffdf8] px-3 py-1 text-xs font-bold text-[#092653]">
+          {item.serviceName}
+        </span>
+      )}
+
+      <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
+        <h3 className="jk-display text-2xl font-black leading-tight text-white sm:text-3xl">{item.title}</h3>
         {item.description && (
-          <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">{item.description}</p>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/80">{item.description}</p>
         )}
-        <span className="mt-4 inline-flex items-center gap-2 text-sm font-black text-[#b4232d]">
-          <MessageCircle className="h-4 w-4" />
+        <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#25d366] px-4 py-2 text-sm font-bold text-[#062b14] transition-transform duration-300 group-hover:-translate-y-0.5">
+          <MessageCircle className="h-4 w-4" aria-hidden="true" />
           Quero algo parecido
         </span>
       </div>

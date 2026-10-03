@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { Layers, PenTool, Archive, Printer, Package, Laptop, ShoppingBag } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 
 interface CategoryCardProps {
   category: {
@@ -12,34 +12,43 @@ interface CategoryCardProps {
   };
 }
 
-function getCategoryIcon(slug: string) {
-  if (slug.includes('papel') || slug.includes('envelope')) return Layers;
-  if (slug.includes('escrita') || slug.includes('caneta')) return PenTool;
-  if (slug.includes('arquivo') || slug.includes('organizacao')) return Archive;
-  if (slug.includes('grafica') || slug.includes('impresso')) return Printer;
-  if (slug.includes('embalage') || slug.includes('envio')) return Package;
-  if (slug.includes('informatica') || slug.includes('cabo')) return Laptop;
-  return ShoppingBag;
-}
-
+// Cartão editorial: a foto ocupa o cartão inteiro e o título em serifa fica
+// sobre ela. Sem foto cadastrada, o nome vira o elemento visual sobre papel.
 export function CategoryCard({ category }: CategoryCardProps) {
-  const Icon = getCategoryIcon(category.slug || category.name.toLowerCase());
-
   return (
-    <Link href={`/papelaria?categoria=${category.slug}`} className="group flex min-h-28 items-center gap-3 rounded-2xl border border-[#092653]/15 bg-[#fffdf8] p-3 transition hover:-translate-y-0.5 hover:border-[#b4232d]/50">
-      <div className="relative flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-xl bg-white p-2">
-        {category.image_url ? (
-          <img 
-            src={category.image_url} 
-            alt={category.name} 
-            className="h-full w-full rounded-lg object-cover transition-transform duration-300 group-hover:scale-105"
+    <Link
+      href={`/papelaria?categoria=${category.slug}`}
+      className="group relative block aspect-[4/5] overflow-hidden rounded-xl bg-[#092653] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#b4232d]"
+    >
+      {category.image_url ? (
+        <>
+          <Image
+            src={category.image_url}
+            alt=""
+            fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 45vw, 90vw"
+            className="object-cover transition duration-700 ease-out group-hover:scale-[1.04]"
           />
-        ) : (
-          <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-[#0d2b5c]/5 text-[#0d2b5c] transition-colors duration-200 group-hover:bg-[#b4232d]/10 group-hover:text-[#b4232d]">
-            <Icon className="w-7 h-7" />
-          </div>
-        )}
-      </div><h3 className="text-left text-sm font-black leading-tight text-[#13233b] transition-colors group-hover:text-[#b4232d]">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#061a3b]/85 via-[#061a3b]/15 to-transparent" />
+        </>
+      ) : (
+        <div className="jk-paper-grid absolute inset-0" />
+      )}
+
+      <span
+        className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full transition duration-300 group-hover:rotate-45 sm:right-4 sm:top-4 sm:h-10 sm:w-10 ${
+          category.image_url ? 'bg-white/90 text-[#092653]' : 'bg-[#092653] text-white'
+        }`}
+        aria-hidden="true"
+      >
+        <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" />
+      </span>
+
+      <h3
+        className={`jk-display absolute inset-x-0 bottom-0 p-4 text-2xl font-black leading-none [overflow-wrap:anywhere] sm:p-6 sm:text-4xl ${
+          category.image_url ? 'text-white' : 'text-[#092653]'
+        }`}
+      >
         {category.name}
       </h3>
     </Link>
