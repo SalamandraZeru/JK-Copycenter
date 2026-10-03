@@ -10,6 +10,7 @@ import {
   validateUploadMetadata,
 } from './validator';
 import { processFileIsolated } from './isolated-processor';
+import { putOrderFile, removeOrderFiles } from '@/lib/storage/order-files';
 
 export interface UploadOrchestrationResult {
   fileId: string;
@@ -125,14 +126,12 @@ export async function processUpload(
     const canonicalMime = canonicalMimeForType(metadata.fileType, metadata.declaredMime);
     const contentSha256 = crypto.createHash('sha256').update(buffer).digest('hex');
 
-    const { error: storageError } = await supabase.storage
-      .from('order-files')
-      .upload(storagePath, buffer, {
-        contentType: canonicalMime,
-        cacheControl: '0',
-        upsert: false,
-      });
-    if (storageError) throw new Error(`STORAGE_UPLOAD_FAILED: ${storageError.message}`);
+    try {
+      await putOrderFile(storagePath, buffer, canonicalMime);
+    } catch (storageError) {
+      const reason = storageError instanceof Error ? storageError.message : 'unknown';
+      throw new Error(`STORAGE_UPLOAD_FAILED: ${reason}`);
+    }
     storageCreated = true;
 
     const processingStartedAt = new Date().toISOString();
@@ -193,8 +192,7 @@ export async function processUpload(
     };
   } catch (error) {
     if (storageCreated && storagePath) {
-      const { error: cleanupError } = await supabase.storage.from('order-files').remove([storagePath]);
-      cleanupRequired = Boolean(cleanupError);
+      cleanupRequired = await removeOrderFiles([storagePath]).then(() => false, () => true);
     }
 
     const code = rejectionCode(error);

@@ -29,6 +29,12 @@
       "simple": { "limit": 3, "period": 60 }
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "ORDER_FILES",
+      "bucket_name": "jk-order-files"
+    }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
