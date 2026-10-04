@@ -3,6 +3,7 @@ import { Header } from '@/components/shared/Header';
 import { Footer } from '@/components/shared/Footer';
 import { FloatingWhatsApp } from '@/components/shared/FloatingWhatsApp';
 import { PwaRegistration } from '@/components/pwa/PwaRegistration';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { EssentialStorageNotice } from '@/components/privacy/EssentialStorageNotice';
 
 export default function PublicLayout({
@@ -18,6 +19,7 @@ export default function PublicLayout({
       </main>
       <FloatingWhatsApp />
       <PwaRegistration />
+      <InstallPrompt />
       <EssentialStorageNotice />
       <Footer />
     </div>

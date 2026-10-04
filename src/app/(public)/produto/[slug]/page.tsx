@@ -2,9 +2,10 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowRight, PackageOpen, ShieldCheck, Store } from 'lucide-react';
+import { ArrowLeft, ArrowRight, PackageOpen, ShieldCheck, Store } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { ProductBuyBox } from '@/components/loja/ProductBuyBox';
+import { ProductRailCard } from '@/components/loja/CompactCards';
 
 export const revalidate = 60;
 
@@ -41,6 +42,26 @@ async function loadProduct(slug: string): Promise<ProductRow | null> {
   return data as ProductRow;
 }
 
+// Outros produtos da mesma categoria (ou do catálogo, se não houver categoria).
+async function loadRelated(product: ProductRow, categorySlug: string | null) {
+  const supabase = await createClient();
+  const select = 'id, name, slug, image_url, price, stock_quantity, stock_control_enabled, reserved_quantity';
+  const query = categorySlug
+    ? supabase.from('products').select(`${select}, product_categories!inner(categories!inner(slug))`).eq('product_categories.categories.slug', categorySlug)
+    : supabase.from('products').select(select);
+  const { data } = await query.eq('is_active', true).is('deleted_at', null).neq('id', product.id).order('sort_order').limit(10);
+  return (data ?? []).map((item) => ({
+    id: item.id,
+    name: item.name,
+    slug: item.slug,
+    image_url: item.image_url,
+    price: item.price,
+    stock_quantity: item.stock_control_enabled && item.stock_quantity !== null
+      ? Math.max(0, item.stock_quantity - (item.reserved_quantity ?? 0))
+      : null,
+  }));
+}
+
 function categoriesOf(product: ProductRow): CategoryRef[] {
   return (product.product_categories ?? []).flatMap((link) => {
     if (!link.categories) return [];
@@ -52,7 +73,7 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   const { slug } = await props.params;
   const product = await loadProduct(slug);
   return {
-    title: `${product?.name ?? 'Produto indisponível'} | JK Copycenter`,
+    title: product?.name ?? 'Produto indisponível',
     description: product?.description?.slice(0, 160) ?? 'Papelaria e materiais na JK Copycenter, em Passos/MG.',
   };
 }
@@ -64,6 +85,7 @@ export default async function ProdutoPage(props: { params: Promise<{ slug: strin
 
   const categories = categoriesOf(product);
   const primaryCategory = categories[0] ?? null;
+  const related = await loadRelated(product, primaryCategory?.slug ?? null);
   const availableStock = product.stock_control_enabled && product.stock_quantity !== null
     ? Math.max(0, product.stock_quantity - (product.reserved_quantity ?? 0))
     : null;
@@ -79,8 +101,11 @@ export default async function ProdutoPage(props: { params: Promise<{ slug: strin
 
   return (
     <div className="jk-paper-grid min-h-screen">
-      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-        <nav className="mb-6 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-10 lg:px-8">
+        <Link href={primaryCategory ? `/papelaria?categoria=${primaryCategory.slug}` : '/papelaria'} className="mb-3 inline-flex min-h-10 items-center gap-1.5 text-sm font-bold text-[#092653] sm:hidden">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {primaryCategory?.name ?? 'Papelaria'}
+        </Link>
+        <nav className="mb-6 hidden flex-wrap items-center gap-x-2 text-sm text-slate-500 sm:flex">
           <Link href="/" className="hover:text-[#092653]">Home</Link>
           <span>/</span>
           <Link href="/papelaria" className="hover:text-[#092653]">Papelaria</Link>
@@ -92,9 +117,9 @@ export default async function ProdutoPage(props: { params: Promise<{ slug: strin
           <span className="font-semibold text-slate-900">{product.name}</span>
         </nav>
 
-        <div className="grid gap-6 lg:grid-cols-[1.15fr_.85fr] lg:gap-10">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1.15fr_.85fr] lg:gap-10">
           {/* Imagem */}
-          <div className="jk-reveal relative aspect-square w-full overflow-hidden rounded-3xl border border-[#092653]/12 bg-white">
+          <div className="jk-reveal relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-[#092653]/12 bg-white sm:aspect-square sm:rounded-3xl">
             {product.image_url ? (
               <Image src={product.image_url} alt={product.name} fill sizes="(min-width:1024px) 55vw, 100vw" className="object-contain p-6" priority />
             ) : (
@@ -103,10 +128,10 @@ export default async function ProdutoPage(props: { params: Promise<{ slug: strin
           </div>
 
           {/* Info + buy box */}
-          <div className="jk-reveal flex flex-col gap-5">
+          <div className="jk-reveal flex flex-col gap-4 sm:gap-5">
             <div>
               {primaryCategory && <p className="text-xs font-black uppercase tracking-[.18em] text-[#b4232d]">{primaryCategory.name}</p>}
-              <h1 className="jk-display mt-2 text-3xl font-black leading-tight text-[#092653] sm:text-4xl">{product.name}</h1>
+              <h1 className="jk-display mt-1 text-2xl font-black leading-tight text-[#092653] sm:mt-2 sm:text-4xl">{product.name}</h1>
             </div>
             <ProductBuyBox
               product={{
@@ -126,7 +151,7 @@ export default async function ProdutoPage(props: { params: Promise<{ slug: strin
         </div>
 
         {/* Descrição + ficha técnica */}
-        <div className="mt-10 grid gap-8 lg:grid-cols-[1.15fr_.85fr]">
+        <div className="mt-8 grid gap-6 sm:mt-10 sm:gap-8 lg:grid-cols-[1.15fr_.85fr]">
           <section>
             <h2 className="jk-display text-2xl font-black text-[#092653]">Descrição</h2>
             <p className="mt-3 whitespace-pre-line leading-7 text-slate-700">
@@ -146,11 +171,19 @@ export default async function ProdutoPage(props: { params: Promise<{ slug: strin
           </section>
         </div>
 
-        <div className="mt-10">
-          <Link href="/papelaria" className="inline-flex items-center gap-2 font-bold text-[#092653] underline decoration-[#b4232d] underline-offset-4">
-            Ver mais produtos da papelaria <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
+        {related.length > 0 && (
+          <section className="mt-10">
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <h2 className="jk-display text-2xl font-black text-[#092653]">{primaryCategory ? `Mais em ${primaryCategory.name}` : 'Mais da papelaria'}</h2>
+              <Link href={primaryCategory ? `/papelaria?categoria=${primaryCategory.slug}` : '/papelaria'} className="inline-flex min-h-10 flex-none items-center gap-1 text-sm font-bold text-[#b4232d] hover:underline">
+                Ver todos <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
+            <div className="jk-rail -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-5">
+              {related.map((item) => <ProductRailCard key={item.id} product={item} />)}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

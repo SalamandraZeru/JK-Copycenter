@@ -6,6 +6,7 @@ import { processCheckout } from '@/lib/orders/checkout';
 import { validateCsrfOrigin } from '@/lib/security/csrf';
 import type { CheckoutPayload, CheckoutResult } from '@/types/index';
 import { checkoutIntentSchema } from '@/lib/orders/checkout-intent';
+import { dispatchPush, notifyAdminsNewOrder } from '@/lib/push/notify';
 import { readGuestUploadSession } from '@/lib/upload/guest-session';
 
 export const dynamic = 'force-dynamic';
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const supabaseAdmin = createServiceRoleClient();
     const result: CheckoutResult = await processCheckout(payload, context, supabaseAdmin);
+    dispatchPush(notifyAdminsNewOrder(supabaseAdmin, { id: result.orderId, orderNumber: result.orderNumber, kind: 'order' }));
 
     return NextResponse.json({ success: true, data: result }, { status: 200 });
   } catch (error: unknown) {

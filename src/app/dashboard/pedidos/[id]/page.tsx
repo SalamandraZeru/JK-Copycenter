@@ -9,6 +9,7 @@ import { OrderTimeline } from '@/components/dashboard/OrderTimeline';
 import { ArtworkApprovalPanel } from '@/components/dashboard/ArtworkApprovalPanel';
 import { formatCurrency } from '@/lib/utils/format';
 import { QuoteDecisionPanel } from '@/components/orders/QuoteDecisionPanel';
+import { OrderPushOptIn } from '@/components/orders/OrderPushOptIn';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -136,6 +137,8 @@ export default async function PedidoDetalhesPage(props: { params: Promise<{ id: 
           </p>
         </div>
       </div>
+
+      {order.status !== 'completed' && order.status !== 'cancelled' && <OrderPushOptIn orderId={order.id} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Info */}

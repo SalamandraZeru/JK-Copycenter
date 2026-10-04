@@ -63,6 +63,7 @@ precisam existir como **build variables** (não apenas runtime):
 | `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública (anon) do Supabase |
 | `NEXT_PUBLIC_SITE_URL` | URL final do site (ver nota abaixo) |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Chave pública das notificações push (par da `VAPID_PRIVATE_KEY`) |
 | `NODE_VERSION` | `20` |
 
 ### 4.2 Secrets de RUNTIME (privados)
@@ -73,6 +74,9 @@ Cadastre como **secrets** do Worker (nunca como variável pública):
 |---|---|
 | `SUPABASE_SERVICE_ROLE_KEY` | Chave service role do Supabase (somente backend) |
 | `CRON_SECRET` | (Opcional) autenticação de rotinas agendadas/webhooks |
+| `VAPID_PRIVATE_KEY` | Chave privada das notificações push. Trocar o par desativa os avisos já ativados nos aparelhos |
+
+> Para gerar um novo par VAPID: `node -e "const c=require('crypto');const k=c.generateKeyPairSync('ec',{namedCurve:'prime256v1'});console.log('pública:',k.publicKey.export({format:'der',type:'spki'}).subarray(-65).toString('base64url'));console.log('privada:',k.privateKey.export({format:'jwk'}).d)"`
 
 ### 4.3 Já versionado (não precisa cadastrar)
 
@@ -80,7 +84,10 @@ Definidos em `wrangler.jsonc` e aplicados no deploy automaticamente:
 
 - `SERVICE_MANUAL_QUOTE_ENABLED = "true"`
 - Rate limits: `JK_PRICING_PREVIEW_RATE_LIMIT`, `JK_UPLOAD_INTENTS_RATE_LIMIT`,
-  `JK_UPLOAD_RATE_LIMIT`, `JK_PRIVACY_REQUEST_RATE_LIMIT`
+  `JK_UPLOAD_RATE_LIMIT`, `JK_PRIVACY_REQUEST_RATE_LIMIT`, `JK_PUSH_SUBSCRIBE_RATE_LIMIT`
+- Bucket R2 `ORDER_FILES` (arquivos dos pedidos, apagados em 15 dias)
+- Cron diário (`triggers.crons`): o `worker.ts` faz uma consulta leve ao Supabase
+  todo dia, para o plano gratuito não pausar o banco em semanas sem pedidos
 
 > **Atenção — `NEXT_PUBLIC_SITE_URL`:** cada conta Cloudflare tem seu próprio
 > subdomínio `*.workers.dev`. Ao publicar em uma conta diferente, a URL muda

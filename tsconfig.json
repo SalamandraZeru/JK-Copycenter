@@ -45,6 +45,7 @@
   "exclude": [
     "node_modules",
     ".wrangler",
-    "supabase/functions"
+    "supabase/functions",
+    "worker.ts"
   ]
 }

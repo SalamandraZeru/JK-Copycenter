@@ -4,6 +4,7 @@ import { getAdminSession } from '@/lib/auth/admin';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { AdminPwaRegistration } from '@/components/pwa/AdminPwaRegistration';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 
 export const metadata: Metadata = {
   title: 'Administração',
@@ -31,6 +32,7 @@ export default async function AdminLayout({
     return (
       <>
         <AdminPwaRegistration />
+        <InstallPrompt variant="admin" />
         {children}
       </>
     );
@@ -48,7 +50,8 @@ export default async function AdminLayout({
           <Header user={session} />
         </div>
         <AdminPwaRegistration />
-        
+        <InstallPrompt variant="admin" />
+
         <main className="admin-main flex-1 overflow-y-auto p-4 sm:p-6 print:hidden">
           {children}
         </main>

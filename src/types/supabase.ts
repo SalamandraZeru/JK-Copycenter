@@ -1873,6 +1873,60 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          admin_user_id: string | null
+          audience: string
+          auth: string
+          created_at: string
+          endpoint: string
+          failure_count: number
+          id: string
+          last_success_at: string | null
+          order_id: string | null
+          p256dh: string
+        }
+        Insert: {
+          admin_user_id?: string | null
+          audience: string
+          auth: string
+          created_at?: string
+          endpoint: string
+          failure_count?: number
+          id?: string
+          last_success_at?: string | null
+          order_id?: string | null
+          p256dh: string
+        }
+        Update: {
+          admin_user_id?: string | null
+          audience?: string
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          failure_count?: number
+          id?: string
+          last_success_at?: string | null
+          order_id?: string | null
+          p256dh?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_admin_user_id_fkey"
+            columns: ["admin_user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_subscriptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category_id: string | null

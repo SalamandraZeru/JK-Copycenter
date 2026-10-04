@@ -5,6 +5,7 @@ import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { validateCsrfOrigin } from '@/lib/security/csrf';
 import { enforceCloudflareRateLimit } from '@/lib/security/cloudflare-rate-limit';
 import { isUuid } from '@/lib/security/admin-input';
+import { dispatchPush, notifyAdminsQuoteAnswer } from '@/lib/push/notify';
 import { customerQuoteActionSchema, quoteCommandHash } from '@/lib/orders/manual-quote';
 
 export const dynamic = 'force-dynamic';
@@ -188,6 +189,13 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     if (response.error) throw response.error;
     const result = response.data?.[0];
     if (!result) throw new Error('QUOTE_RESPONSE_EMPTY');
+    if (!result.replayed) {
+      dispatchPush(notifyAdminsQuoteAnswer(admin, {
+        id: access.order.id,
+        orderNumber: access.order.order_number,
+        accepted: parsed.data.action === 'accept',
+      }));
+    }
     return NextResponse.json({ success: true, data: result });
   } catch (caught) {
     const message = caught instanceof Error ? caught.message : 'QUOTE_ACTION_FAILED';

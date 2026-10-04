@@ -8,6 +8,7 @@ import { readGuestUploadSession } from '@/lib/upload/guest-session';
 import { isServiceManualQuoteEnabled } from '@/lib/features/service-manual-quote';
 import { graphicQuoteRequestIntentSchema } from '@/lib/orders/graphic-quote-request-intent';
 import { processGraphicQuoteRequest } from '@/lib/orders/graphic-quote-request';
+import { dispatchPush, notifyAdminsNewOrder } from '@/lib/push/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,11 +72,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    const admin = createServiceRoleClient();
     const result = await processGraphicQuoteRequest(parsed.data, {
       ...(user ? { userId: user.id } : {}),
       ...(parsed.data.guestEmail ? { guestEmail: parsed.data.guestEmail } : {}),
       ...(guestSession?.hash ? { guestUploadSessionHash: guestSession.hash } : {}),
-    }, createServiceRoleClient());
+    }, admin);
+    if (!result.replayed) {
+      dispatchPush(notifyAdminsNewOrder(admin, { id: result.requestId, orderNumber: result.protocol, kind: 'quote' }));
+    }
     return NextResponse.json({ success: true, data: result }, { status: result.replayed ? 200 : 201 });
   } catch (error) {
     const response = publicError(error);

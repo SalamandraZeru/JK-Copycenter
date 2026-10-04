@@ -6,6 +6,7 @@ import { loadAuthorizedReadyFiles, type AuthorizedCheckoutFile } from '@/lib/upl
 import { loadSystemConfig } from './config';
 import { buildWhatsAppUrl } from './whatsapp';
 import {
+  isFieldNotApplicable,
   isFieldOptionSelectionAllowed,
   resolveFieldOptionAvailability,
   type FieldOptionDependency,
@@ -223,10 +224,7 @@ function prepareItem(
       field.id,
       compatibilityOptions,
     );
-    const unavailableCheckbox = field.fieldType === 'checkbox'
-      && availability.isRestricted
-      && !availability.allowedOptionValues.has('true');
-    if (!unavailableCheckbox) throw new Error('SERVICE_FIELD_REQUIRED');
+    if (!isFieldNotApplicable(field.fieldType, availability)) throw new Error('SERVICE_FIELD_REQUIRED');
   }
   for (const field of service.fields) {
     if (!isFieldOptionSelectionAllowed(

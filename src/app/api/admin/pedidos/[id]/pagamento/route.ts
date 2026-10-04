@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireApiAdminPermission } from '@/lib/auth/api-admin';
 import { isUuid, parseAdminJson } from '@/lib/security/admin-input';
+import { dispatchPush, notifyCustomerOrderUpdate } from '@/lib/push/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     }
     const result = data?.[0];
     if (!result) throw new Error('PAYMENT_TRANSITION_EMPTY');
+    if (!result.replayed) {
+      dispatchPush(notifyCustomerOrderUpdate(supabase, params.id, { type: 'status', status: result.order_status }));
+    }
     return NextResponse.json({ success: true, data: result });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erro ao registrar pagamento';
