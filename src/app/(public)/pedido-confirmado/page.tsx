@@ -5,6 +5,7 @@ import { CheckCircle2, Copy, Loader2, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import type { CheckoutResult } from '@/types/checkout';
 import { formatCurrency } from '@/lib/utils/format';
+import { OrderPushOptIn } from '@/components/orders/OrderPushOptIn';
 
 type ConfirmationData = CheckoutResult & { isGuest: boolean };
 
@@ -69,6 +70,10 @@ export default function PedidoConfirmadoPage() {
             <p className="text-xs text-slate-600 mt-2">Guarde este código. A consulta também exigirá o e-mail do pedido.</p>
           </div>
         )}
+
+        <div className="mb-6 w-full">
+          <OrderPushOptIn orderId={order.orderId} {...(order.isGuest ? { orderCode: order.orderCode } : {})} />
+        </div>
 
         <div className="w-full space-y-3">
           <a href={order.whatsappUrl} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center gap-2 bg-green-500 text-white font-bold py-4 rounded-xl"><MessageCircle className="w-5 h-5" />Enviar pedido pelo WhatsApp</a>

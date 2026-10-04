@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { GraphicQuoteSuccess } from '@/components/servico/GraphicQuoteSuccess';
+import { OrderPushOptIn } from '@/components/orders/OrderPushOptIn';
 import {
   GRAPHIC_QUOTE_CONFIRMATION_KEY,
   parseGraphicQuoteConfirmation,
@@ -31,6 +32,9 @@ export default function SolicitacaoEnviadaPage() {
             whatsappUrl={confirmation.whatsappUrl}
             whatsappMessage={confirmation.whatsappMessage}
           />
+          <div className="mt-6">
+            <OrderPushOptIn orderId={confirmation.requestId} orderCode={confirmation.requestCode} />
+          </div>
           <div className="mt-6 flex flex-col gap-3 text-center sm:flex-row sm:justify-center">
             <Link href="/grafica" className="inline-flex min-h-11 items-center justify-center rounded-xl px-5 py-3 font-bold text-[#0d2b5c] hover:bg-white">
               Solicitar outro orçamento

@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabase/admin';
 import { requireApiAdminPermission } from '@/lib/auth/api-admin';
 import type { OrderStatus } from '@/types';
 import { isUuid, parseAdminJson } from '@/lib/security/admin-input';
+import { dispatchPush, notifyCustomerOrderUpdate } from '@/lib/push/notify';
 import { canProductionAdvanceOrder } from '@/lib/orders/operation';
 
 export const dynamic = 'force-dynamic';
@@ -178,6 +179,9 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     }
     const result = data?.[0];
     if (!result) throw new Error('ORDER_TRANSITION_EMPTY');
+    if (!result.replayed) {
+      dispatchPush(notifyCustomerOrderUpdate(supabase, params.id, { type: 'status', status: result.order_status as OrderStatus }));
+    }
     return NextResponse.json({ success: true, status: result.order_status, replayed: result.replayed });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erro ao atualizar pedido';

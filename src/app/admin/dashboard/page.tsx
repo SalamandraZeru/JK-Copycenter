@@ -7,6 +7,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell
 } from 'recharts';
 import { DollarSign, ShoppingCart, TrendingUp, Package, Loader2 } from 'lucide-react';
+import { AdminPushToggle } from '../components/AdminPushToggle';
 import { formatCurrency } from '@/lib/utils/format';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -33,6 +34,8 @@ export default function DashboardPage() {
           <option value={90}>Últimos 90 dias</option>
         </select>
       </div>
+
+      <AdminPushToggle />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">

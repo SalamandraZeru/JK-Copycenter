@@ -130,7 +130,7 @@ export async function generateMetadata(props: { params: Promise<{ id: string }> 
   const canonicalId = SERVICE_ALIASES[params.id] ?? params.id;
   const service = await loadService(canonicalId);
   return {
-    title: `${service?.name ?? 'Serviço indisponível'} | JK Copycenter`,
+    title: service?.name ?? 'Serviço indisponível',
     description: service?.description ?? 'Consulte os serviços disponíveis no catálogo.',
   };
 }
@@ -142,11 +142,11 @@ export default async function ServicoPage(props: { params: Promise<{ id: string 
   if (!service) notFound();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-      <nav className="flex mb-8 text-sm text-slate-500">
-        <Link href="/" className="hover:text-blue-600 transition-colors">Home</Link>
-        <span className="mx-2">/</span>
-        <Link href="/grafica" className="hover:text-blue-600 transition-colors">Gráfica</Link>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 w-full">
+      <nav className="mb-3 flex text-sm text-slate-500 sm:mb-8">
+        <Link href="/" className="hidden transition-colors hover:text-[#092653] sm:inline">Home</Link>
+        <span className="mx-2 hidden sm:inline">/</span>
+        <Link href="/grafica" className="font-bold text-[#092653] transition-colors hover:text-[#b4232d] sm:font-normal sm:text-slate-500">← Gráfica</Link>
         <span className="mx-2">/</span>
         <span className="text-slate-900 font-medium">{service.name}</span>
       </nav>

@@ -112,7 +112,7 @@ export async function inspectServicePublication(
     errors.push('O preço-base do serviço é inválido.');
   }
 
-  const [fieldsResult, rulesResult, bindingTiersResult, dependenciesResult] = await Promise.all([
+  const [fieldsResult, rulesResult, bindingTiersResult, dependenciesResult, commercialResult] = await Promise.all([
     supabase
       .from('service_fields')
       .select('id, key, label, field_type, options, is_required, is_active')
@@ -136,9 +136,14 @@ export async function inspectServicePublication(
       .from('service_field_option_dependencies')
       .select('source_field_id, source_option_value, source_conditions, target_field_id, target_option_value')
       .eq('service_id', serviceId),
+    supabase
+      .from('services')
+      .select('commercial_mode')
+      .eq('id', serviceId)
+      .maybeSingle(),
   ]);
 
-  if (fieldsResult.error || rulesResult.error || bindingTiersResult.error || dependenciesResult.error) {
+  if (fieldsResult.error || rulesResult.error || bindingTiersResult.error || dependenciesResult.error || commercialResult.error) {
     return {
       ready: false,
       errors: ['Não foi possível validar os campos e regras do serviço.'],
@@ -242,7 +247,9 @@ export async function inspectServicePublication(
   }
 
   if (candidate.state === 'published') {
-    const isManualQuote = candidate.pricingProfile === 'manual_quote';
+    // Serviços vendidos sob orçamento manual não exigem regra de preço automática.
+    const isManualQuote = candidate.pricingProfile === 'manual_quote'
+      || commercialResult.data?.commercial_mode === 'manual_quote';
     const isBindingByFile = candidate.pricingProfile === 'binding_by_file_pages';
     const isPrintRun = candidate.pricingProfile === 'per_print_run';
     if (isBindingByFile && (bindingTiersResult.data?.length ?? 0) === 0) {

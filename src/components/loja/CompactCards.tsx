@@ -3,41 +3,72 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Check, FileText, Package, Plus, ShoppingBag } from 'lucide-react';
+import {
+  ArrowRight, BookOpen, Camera, Check, CreditCard, FileText, Flag, Layers, Mail, Map as MapIcon, NotebookPen,
+  Package, Plus, Printer, ShoppingBag, Sticker, type LucideIcon,
+} from 'lucide-react';
 import { formatCurrency } from '@/lib/utils/format';
 import { useCartStore } from '@/lib/cart/store';
 import { productCartItem } from '@/lib/cart/product-item';
 
-// Cartões compactos da home: pensados para trilhos que rolam para o lado no
-// celular e viram grade no desktop. Sempre com a foto cadastrada no admin.
+// Cartões compactos: trilhos que rolam para o lado no celular e viram grade no
+// desktop (ou grade fluida com `fluid`). Sempre com a foto cadastrada no admin.
 
-export function CategoryBubble({ category }: {
+// Enquanto o serviço não tem foto, um ícone do tipo de trabalho ocupa o lugar.
+const SERVICE_ICONS: Array<[RegExp, LucideIcon]> = [
+  [/encaderna|livreto|apostila/, BookOpen],
+  [/cart(ao|oes)/, CreditCard],
+  [/banner|faixa|lona/, Flag],
+  [/adesivo|etiqueta/, Sticker],
+  [/convite/, Mail],
+  [/foto/, Camera],
+  [/bloco|talao|taloes/, NotebookPen],
+  [/plotagem|projeto/, MapIcon],
+  [/folder|panfleto|flyer/, Layers],
+  [/impress/, Printer],
+];
+
+export function serviceIcon(slug: string): LucideIcon {
+  return SERVICE_ICONS.find(([pattern]) => pattern.test(slug))?.[1] ?? FileText;
+}
+
+export function CategoryBubble({ category, href, active = false }: {
   category: { id: string; name: string; slug: string; image_url: string | null };
+  href?: string;
+  active?: boolean;
 }) {
   return (
     <Link
-      href={`/papelaria?categoria=${category.slug}`}
+      href={href ?? `/papelaria?categoria=${category.slug}`}
+      aria-current={active ? 'page' : undefined}
       className="group flex w-[4.75rem] flex-none snap-start flex-col items-center gap-2 text-center sm:w-24"
     >
-      <span className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[#e8f1fa] ring-2 ring-[#092653]/10 transition group-hover:ring-[#b4232d] sm:h-20 sm:w-20">
+      <span className={`relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[#e8f1fa] transition sm:h-20 sm:w-20 ${
+        active ? 'ring-[3px] ring-[#b4232d]' : 'ring-2 ring-[#092653]/10 group-hover:ring-[#b4232d]'
+      }`}>
         {category.image_url ? (
           <Image src={category.image_url} alt="" fill sizes="80px" className="object-cover" />
         ) : (
           <ShoppingBag className="h-6 w-6 text-[#092653]" aria-hidden="true" />
         )}
       </span>
-      <span className="text-xs font-bold leading-tight text-[#13233b] group-hover:text-[#b4232d] sm:text-sm">{category.name}</span>
+      <span className={`text-xs font-bold leading-tight group-hover:text-[#b4232d] sm:text-sm ${active ? 'text-[#b4232d]' : 'text-[#13233b]'}`}>{category.name}</span>
     </Link>
   );
 }
 
-export function ServiceRailCard({ service }: {
+export function ServiceRailCard({ service, fluid = false }: {
   service: { id: string; name: string; slug: string; image_url: string | null };
+  /** Ocupa a célula da grade em vez da largura fixa do trilho. */
+  fluid?: boolean;
 }) {
+  const Icon = serviceIcon(service.slug);
   return (
     <Link
       href={`/servico/${service.slug}`}
-      className="group flex w-40 flex-none snap-start flex-col overflow-hidden rounded-xl border border-[#092653]/10 bg-[#fffdf8] transition hover:border-[#092653]/30 sm:w-48 md:w-auto"
+      className={`group flex flex-col overflow-hidden rounded-xl border border-[#092653]/10 bg-[#fffdf8] transition hover:border-[#092653]/30 ${
+        fluid ? 'w-full' : 'w-40 flex-none snap-start sm:w-48 md:w-auto'
+      }`}
     >
       <span className="relative block aspect-[4/3] bg-[#061a3b]">
         {service.image_url ? (
@@ -49,7 +80,7 @@ export function ServiceRailCard({ service }: {
             className="object-cover transition duration-500 group-hover:scale-[1.03]"
           />
         ) : (
-          <FileText className="absolute inset-0 m-auto h-8 w-8 text-white/50" aria-hidden="true" />
+          <Icon className="absolute inset-0 m-auto h-10 w-10 text-[#9ed0ff]" strokeWidth={1.5} aria-hidden="true" />
         )}
       </span>
       <span className="flex flex-1 flex-col p-3">
@@ -62,8 +93,9 @@ export function ServiceRailCard({ service }: {
   );
 }
 
-export function ProductRailCard({ product }: {
+export function ProductRailCard({ product, fluid = false }: {
   product: { id: string; name: string; slug: string; image_url: string | null; price: number; stock_quantity: number | null };
+  fluid?: boolean;
 }) {
   const addItem = useCartStore((state) => state.addItem);
   const [added, setAdded] = useState(false);
@@ -77,7 +109,9 @@ export function ProductRailCard({ product }: {
   };
 
   return (
-    <div className="relative flex w-36 flex-none snap-start flex-col overflow-hidden rounded-xl border border-[#092653]/10 bg-white sm:w-44 md:w-auto">
+    <div className={`relative flex flex-col overflow-hidden rounded-xl border border-[#092653]/10 bg-white ${
+      fluid ? 'w-full' : 'w-36 flex-none snap-start sm:w-44 md:w-auto'
+    }`}>
       <span className="relative block aspect-square bg-white">
         {product.image_url ? (
           <Image

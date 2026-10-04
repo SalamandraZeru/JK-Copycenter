@@ -103,6 +103,21 @@ export function resolveFieldOptionAvailability(
   };
 }
 
+/**
+ * A field whose saved tree allows no option for the current choices does not
+ * apply to this configuration (e.g. hardcover color on a spiral binding), so it
+ * is hidden and not required. Checkboxes are unavailable when `true` is barred.
+ */
+export function isFieldNotApplicable(
+  fieldType: string,
+  availability: FieldOptionAvailability | undefined,
+): boolean {
+  if (!availability?.isRestricted) return false;
+  if (fieldType === 'checkbox') return !availability.allowedOptionValues.has('true');
+  if (fieldType === 'select' || fieldType === 'radio') return availability.allowedOptionValues.size === 0;
+  return false;
+}
+
 export function isFieldOptionSelectionAllowed(
   dependencies: readonly FieldOptionDependency[],
   selectedByFieldId: FieldSelectionMap,

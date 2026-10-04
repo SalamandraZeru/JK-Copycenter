@@ -3,6 +3,7 @@ import type { Json } from '@/types/supabase';
 import { requireApiAdminPermission } from '@/lib/auth/api-admin';
 import { isUuid, parseAdminJson } from '@/lib/security/admin-input';
 import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { dispatchPush, notifyCustomerOrderUpdate } from '@/lib/push/notify';
 import {
   adminQuoteCommandSchema,
   buildQuoteWhatsAppMessage,
@@ -124,6 +125,9 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     if (response.error) throw response.error;
     const result = response.data?.[0];
     if (!result) throw new Error('QUOTE_RESPONSE_EMPTY');
+    if (!result.replayed) {
+      dispatchPush(notifyCustomerOrderUpdate(supabase, order.id, { type: 'quote_issued' }));
+    }
 
     const actionUrl = customerActionUrl(request, order);
     const message = buildQuoteWhatsAppMessage({

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import type { FieldValue, GraphicQuoteService, ServiceField } from '@/types/service';
 import type { PricingDimensions } from '@/types/pricing';
-import { isFieldOptionSelectionAllowed, resolveFieldOptionAvailability } from '@/lib/services/field-option-dependencies';
+import { isFieldNotApplicable, isFieldOptionSelectionAllowed, resolveFieldOptionAvailability } from '@/lib/services/field-option-dependencies';
 import { formatBrazilianPhone, digitsOnly } from '@/lib/forms/brazil';
 import { useCartStore } from '@/lib/cart/store';
 import { GRAPHIC_QUOTE_CONFIRMATION_KEY } from '@/lib/orders/graphic-quote-confirmation';
@@ -27,6 +27,7 @@ import { TextareaField } from './fields/TextareaField';
 import { CheckboxField } from './fields/CheckboxField';
 import { FileUploadDropzone, type UploadedFileItem } from './FileUploadDropzone';
 import { GraphicQuoteSuccess } from './GraphicQuoteSuccess';
+import { serviceIcon } from '@/components/loja/CompactCards';
 
 interface GraphicQuoteConfiguratorProps {
   service: GraphicQuoteService;
@@ -206,12 +207,26 @@ export function GraphicQuoteConfigurator({ service }: GraphicQuoteConfiguratorPr
     ));
   };
 
+  // Quando a árvore deixa uma única opção, ela já vem marcada (menos toques no celular).
+  useEffect(() => {
+    const autoValues: FieldValue[] = [];
+    for (const field of service.fields) {
+      if (field.fieldType !== 'select' && field.fieldType !== 'radio') continue;
+      const availability = fieldOptionAvailability.get(field.id);
+      if (!availability?.isRestricted || availability.allowedOptionValues.size !== 1) continue;
+      if (fieldValues.some((value) => value.fieldKey === field.key)) continue;
+      const option = field.options.find((candidate) => availability.allowedOptionValues.has(candidate.value));
+      if (option) autoValues.push({ fieldKey: field.key, value: option.value, label: field.label, selectedOption: option });
+    }
+    if (autoValues.length > 0) {
+      setFieldValues((current) => normalizeDependentFieldValues(service, [...current, ...autoValues]));
+    }
+  }, [fieldOptionAvailability, fieldValues, service]);
+
   const renderField = (field: ServiceField) => {
     const availability = fieldOptionAvailability.get(field.id);
-    const checkboxUnavailable = field.fieldType === 'checkbox'
-      && availability?.isRestricted
-      && !availability.allowedOptionValues.has('true');
-    if (checkboxUnavailable) {
+    if (isFieldNotApplicable(field.fieldType, availability)) {
+      if (field.fieldType !== 'checkbox') return null;
       return (
         <div key={field.key} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
           <strong>{field.label}:</strong> indisponível para as opções escolhidas.
@@ -248,9 +263,7 @@ export function GraphicQuoteConfigurator({ service }: GraphicQuoteConfiguratorPr
     const next: FormErrors = {};
     for (const field of service.fields) {
       if (!field.isRequired) continue;
-      const availability = fieldOptionAvailability.get(field.id);
-      if (field.fieldType === 'checkbox' && availability?.isRestricted
-          && !availability.allowedOptionValues.has('true')) continue;
+      if (isFieldNotApplicable(field.fieldType, fieldOptionAvailability.get(field.id))) continue;
       const selected = fieldValues.find((value) => value.fieldKey === field.key);
       if (!selected || selected.value === '' || selected.value === false) next[field.key] = 'Campo obrigatório';
     }
@@ -370,31 +383,40 @@ export function GraphicQuoteConfigurator({ service }: GraphicQuoteConfiguratorPr
   const selectedSummary = fieldValues
     .filter((field) => field.value !== '' && field.value !== false)
     .map((field) => `${field.label}: ${field.selectedOption?.label ?? (field.value === true ? 'Sim' : String(field.value))}`);
+  const ServiceIcon = serviceIcon(service.slug);
   const bookletNeedsPadding = service.technicalRequirements.kind === 'booklet'
     && pageCount > 0
     && pageCount % (service.technicalRequirements.pageMultiple ?? 4) !== 0;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8" noValidate>
-      <header className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      {/* No celular: miniatura ao lado do nome, para os campos aparecerem logo. */}
+      <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:rounded-3xl">
         <div className="grid md:grid-cols-[minmax(0,1fr)_18rem]">
-          <div className="p-6 sm:p-8">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#b4232d]">Atendimento gráfico personalizado</p>
-            <h1 className="mt-2 text-3xl font-extrabold text-[#13233b] sm:text-4xl">{service.name}</h1>
-            <p className="mt-3 max-w-2xl leading-7 text-slate-600">
-              {service.description || 'Escolha os detalhes, envie os arquivos e receba o orçamento diretamente da equipe JK Copycenter.'}
-            </p>
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-bold text-[#0d2b5c]">
-              <MessageCircle className="h-4 w-4" aria-hidden="true" />
-              Valor informado após análise humana
+          <div className="flex gap-4 p-4 sm:p-8">
+            <div className="relative h-16 w-16 flex-none overflow-hidden rounded-xl bg-[#092653] md:hidden">
+              {service.imageUrl
+                ? <img src={service.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                : <ServiceIcon className="absolute inset-0 m-auto h-8 w-8 text-[#9ed0ff]" strokeWidth={1.5} aria-hidden="true" />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#b4232d] sm:text-xs">Orçamento sob medida</p>
+              <h1 className="mt-1 text-2xl font-extrabold leading-tight text-[#13233b] sm:mt-2 sm:text-4xl">{service.name}</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:mt-3 sm:text-base sm:leading-7">
+                {service.description || 'Escolha os detalhes, envie os arquivos e receba o orçamento diretamente da equipe JK Copycenter.'}
+              </p>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#092653]/15 bg-[#e8f1fa] px-3 py-1 text-xs font-bold text-[#092653] sm:mt-5 sm:text-sm">
+                <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                Valor informado após análise da equipe
+              </div>
             </div>
           </div>
-          <div className="relative min-h-52 bg-[#0d2b5c]">
+          <div className="relative hidden min-h-52 bg-[#092653] md:block">
             {service.imageUrl ? (
               <img src={service.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
             ) : (
               <div className="flex h-full min-h-52 items-center justify-center text-[#9ed0ff]">
-                <FileText className="h-20 w-20" aria-hidden="true" />
+                <ServiceIcon className="h-20 w-20" strokeWidth={1.25} aria-hidden="true" />
               </div>
             )}
           </div>

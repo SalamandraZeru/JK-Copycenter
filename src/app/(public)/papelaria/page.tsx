@@ -1,7 +1,8 @@
 import React from 'react';
-import { createClient } from '@/lib/supabase/server';
-import { ProductCard } from '@/components/loja/ProductCard';
 import Link from 'next/link';
+import { LayoutGrid, Search } from 'lucide-react';
+import { createClient } from '@/lib/supabase/server';
+import { CategoryBubble, ProductRailCard } from '@/components/loja/CompactCards';
 
 export const revalidate = 60;
 
@@ -107,112 +108,124 @@ export default async function PapelariaPage(
   } catch {}
 
   const totalPages = Math.ceil(count / limit);
+  const activeCategory = categoriaSlug && categoriaSlug !== 'todas' ? categoriaSlug : null;
+  const activeCategoryName = categories.find((category) => category.slug === activeCategory)?.name;
+  const queryFor = (overrides: { categoria?: string | null; page?: number }) => {
+    const params = new URLSearchParams();
+    const categoria = overrides.categoria === undefined ? activeCategory : overrides.categoria;
+    if (categoria) params.set('categoria', categoria);
+    if (search) params.set('q', search);
+    if (sort !== 'nome') params.set('ordem', sort);
+    if (overrides.page && overrides.page > 1) params.set('page', String(overrides.page));
+    const query = params.toString();
+    return query ? `/papelaria?${query}` : '/papelaria';
+  };
 
   return (
-    <div className="jk-paper-grid mx-auto min-h-screen w-full min-w-0 max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-      <div className="mb-10">
-        <p className="mb-3 text-xs font-black uppercase tracking-[.2em] text-[#b4232d]">Catálogo com preço e estoque</p>
-        <h1 className="jk-display mb-4 text-5xl font-black text-[#092653] sm:text-6xl">Papelaria para a rotina.</h1>
-        <p className="text-lg text-slate-600 max-w-3xl">
-          Consulte os itens publicados, compare preços e adicione ao carrinho. A disponibilidade exibida vem do estoque cadastrado.
-        </p>
-        <form action="/papelaria" className="mt-6 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_190px_auto]">
-          {categoriaSlug && categoriaSlug !== 'todas' && <input type="hidden" name="categoria" value={categoriaSlug} />}
-          <label className="sr-only" htmlFor="catalog-search">Buscar produto</label>
-          <input
-            id="catalog-search"
-            name="q"
-            defaultValue={search}
-            maxLength={120}
-            placeholder="Buscar produto de papelaria"
-            className="min-w-0 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
-          />
-          <label className="sr-only" htmlFor="catalog-sort">Ordenar produtos</label>
-          <select id="catalog-sort" name="ordem" defaultValue={sort} className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20">
-            <option value="nome">Ordenar: catálogo</option>
-            <option value="menor_preco">Menor preço</option>
-            <option value="maior_preco">Maior preço</option>
-          </select>
-          <button type="submit" className="rounded-xl bg-[#0F2040] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700">Buscar</button>
-        </form>
-      </div>
-
-      <div className="flex flex-col gap-8">
-        {/* Sidebar Filters */}
-        <div className="w-full">
-          <div className="rounded-2xl border border-slate-200 bg-[#fffdf8] p-4 shadow-sm">
-            <h3 className="font-bold text-slate-900 mb-4 text-sm uppercase tracking-wider text-slate-500">Categorias</h3>
-            <ul className="flex gap-2 overflow-x-auto pb-1">
-              <li>
-                <Link 
-                  href="/papelaria"
-                  className={`block whitespace-nowrap px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                    !categoriaSlug || categoriaSlug === 'todas'
-                      ? 'bg-blue-600 text-white shadow-sm' 
-                      : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  Todos os Produtos
-                </Link>
-              </li>
-              {categories.map(cat => (
-                <li key={cat.id}>
-                  <Link 
-                    href={`/papelaria?categoria=${cat.slug}${search ? `&q=${encodeURIComponent(search)}` : ''}${sort !== 'nome' ? `&ordem=${sort}` : ''}`}
-                    className={`block whitespace-nowrap px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                      categoriaSlug === cat.slug
-                        ? 'bg-blue-600 text-white shadow-sm' 
-                        : 'text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    {cat.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Products Grid */}
-        <div className="flex-1 flex flex-col">
-          {products && products.length > 0 ? (
-            <>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-12 lg:grid-cols-4">
-                {products.map(product => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-              
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-12 flex justify-center gap-2">
-                  {Array.from({ length: totalPages }).map((_, i) => {
-                    const pageNum = i + 1;
-                    const isActive = pageNum === page;
-                    return (
-                      <Link
-                        key={pageNum}
-                        href={`/papelaria?${categoriaSlug ? `categoria=${categoriaSlug}&` : ''}${search ? `q=${encodeURIComponent(search)}&` : ''}${sort !== 'nome' ? `ordem=${sort}&` : ''}page=${pageNum}`}
-                        className={`w-10 h-10 flex items-center justify-center rounded-xl font-medium transition-colors ${
-                          isActive 
-                            ? 'bg-blue-600 text-white shadow-sm' 
-                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        {pageNum}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-20 bg-white border border-slate-200 rounded-2xl">
-              <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum produto encontrado</h3>
-              <p className="text-slate-500">Tente selecionar outra categoria.</p>
+    <div className="jk-paper-grid min-h-screen w-full min-w-0">
+      {/* Topo curto com busca: produtos aparecem já na primeira tela do celular */}
+      <section className="border-b border-[#092653]/10 bg-[#fffdf8]">
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
+          <p className="text-[11px] font-black uppercase tracking-[.16em] text-[#b4232d]">Papelaria · preço na hora</p>
+          <h1 className="jk-display mt-1 text-[1.9rem] font-black leading-tight text-[#092653] sm:text-5xl">Papelaria para a rotina.</h1>
+          <form action="/papelaria" className="mt-4 flex gap-2" role="search">
+            {activeCategory && <input type="hidden" name="categoria" value={activeCategory} />}
+            {sort !== 'nome' && <input type="hidden" name="ordem" value={sort} />}
+            <label className="sr-only" htmlFor="catalog-search">Buscar produto</label>
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+              <input
+                id="catalog-search"
+                name="q"
+                type="search"
+                defaultValue={search}
+                maxLength={120}
+                placeholder="Buscar caderno, caneta, papel…"
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition focus:border-[#092653] focus:ring-2 focus:ring-[#092653]/20"
+              />
             </div>
-          )}
+            <button type="submit" className="h-11 rounded-xl bg-[#092653] px-4 text-sm font-bold text-white transition hover:bg-[#b4232d]">Buscar</button>
+          </form>
         </div>
+      </section>
+
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
+        {categories.length > 0 && (
+          <nav aria-label="Categorias" className="jk-rail -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:gap-5 sm:px-6 md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
+            <Link
+              href={queryFor({ categoria: null })}
+              aria-current={!activeCategory ? 'page' : undefined}
+              className="group flex w-[4.75rem] flex-none snap-start flex-col items-center gap-2 text-center sm:w-24"
+            >
+              <span className={`flex h-16 w-16 items-center justify-center rounded-full bg-[#092653] text-white transition sm:h-20 sm:w-20 ${!activeCategory ? 'ring-[3px] ring-[#b4232d] ring-offset-2' : 'ring-2 ring-[#092653]/10 group-hover:ring-[#b4232d]'}`}>
+                <LayoutGrid className="h-6 w-6" aria-hidden="true" />
+              </span>
+              <span className={`text-xs font-bold leading-tight sm:text-sm ${!activeCategory ? 'text-[#b4232d]' : 'text-[#13233b]'}`}>Todos</span>
+            </Link>
+            {categories.map((category) => (
+              <CategoryBubble
+                key={category.id}
+                category={{ ...category, image_url: category.image_url ?? null }}
+                href={queryFor({ categoria: category.slug })}
+                active={activeCategory === category.slug}
+              />
+            ))}
+          </nav>
+        )}
+
+        <div className="mb-3 mt-5 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-slate-600">
+            {count} {count === 1 ? 'produto' : 'produtos'}
+            {activeCategoryName && <> em <strong className="text-[#092653]">{activeCategoryName}</strong></>}
+            {search && <> para “<strong className="text-[#092653]">{search}</strong>”</>}
+          </p>
+          <form action="/papelaria" className="flex items-center gap-2">
+            {activeCategory && <input type="hidden" name="categoria" value={activeCategory} />}
+            {search && <input type="hidden" name="q" value={search} />}
+            <label className="sr-only" htmlFor="catalog-sort">Ordenar produtos</label>
+            <select id="catalog-sort" name="ordem" defaultValue={sort} className="h-9 rounded-lg border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-800 outline-none focus:border-[#092653]">
+              <option value="nome">Ordem do catálogo</option>
+              <option value="menor_preco">Menor preço</option>
+              <option value="maior_preco">Maior preço</option>
+            </select>
+            <button type="submit" className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-[#092653] hover:bg-slate-50">Ordenar</button>
+          </form>
+        </div>
+
+        {products.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 lg:gap-4">
+              {products.map((product) => <ProductRailCard key={product.id} product={product} fluid />)}
+            </div>
+
+            {totalPages > 1 && (
+              <nav aria-label="Páginas" className="mt-8 flex flex-wrap justify-center gap-2">
+                {Array.from({ length: totalPages }).map((_, index) => {
+                  const pageNumber = index + 1;
+                  const isActive = pageNumber === page;
+                  return (
+                    <Link
+                      key={pageNumber}
+                      href={queryFor({ page: pageNumber })}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold transition-colors ${
+                        isActive ? 'bg-[#092653] text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {pageNumber}
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
+          </>
+        ) : (
+          <div className="rounded-2xl border border-[#092653]/15 bg-[#fffdf8] px-6 py-12 text-center">
+            <h3 className="text-lg font-black text-[#092653]">Nenhum produto encontrado</h3>
+            <p className="mt-1 text-sm text-slate-600">Tente outra categoria ou outra palavra na busca.</p>
+            <Link href="/papelaria" className="mt-4 inline-flex font-bold text-[#b4232d] underline underline-offset-4">Ver todos os produtos</Link>
+          </div>
+        )}
       </div>
     </div>
   );

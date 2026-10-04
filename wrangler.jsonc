@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "jk-copycenter",
-  "main": ".open-next/worker.js",
+  "main": "worker.ts",
   "compatibility_date": "2026-08-24",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
@@ -27,6 +27,11 @@
       "name": "JK_PRIVACY_REQUEST_RATE_LIMIT",
       "namespace_id": "2026091401",
       "simple": { "limit": 3, "period": 60 }
+    },
+    {
+      "name": "JK_PUSH_SUBSCRIBE_RATE_LIMIT",
+      "namespace_id": "2026100401",
+      "simple": { "limit": 10, "period": 60 }
     }
   ],
   "r2_buckets": [
@@ -38,6 +43,10 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
+  },
+  // Uma vez por dia (06:17 em Brasília): consulta leve que mantém o Supabase gratuito ativo.
+  "triggers": {
+    "crons": ["17 9 * * *"]
   },
   "observability": {
     "enabled": true
